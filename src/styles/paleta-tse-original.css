@@ -1,0 +1,57 @@
+/*
+Paleta TSE original, guardada em 19/10/2026 antes do teste slate/steel.
+Este arquivo fica comentado de propósito: o Tailwind lê qualquer CSS do projeto,
+e um @theme ativo aqui recoloca o amarelo por cima do teste.
+
+Para reverter a casca, copie os blocos abaixo para src/app/globals.css,
+no lugar dos tokens do teste.
+
+:root {
+  --tse-yellow: #ebb402;
+  --tse-yellow-strong: #f1c300;
+  --tse-soft: #fff8d6;
+  --tse-gold: #b8960b;
+  --tse-olive: #6a8421;
+  --tse-bg: #f4f4f2;
+  --tse-text: #333333;
+  --tse-muted: #717171;
+  color-scheme: light;
+  accent-color: #ebb402;
+}
+
+@theme inline {
+  --color-tse-yellow: #ebb402;
+  --color-tse-yellow-strong: #f1c300;
+  --color-tse-soft: #fff8d6;
+  --color-tse-gold: #b8960b;
+  --color-tse-olive: #6a8421;
+  --color-tse-green: #9eb737;
+  --color-tse-bg: #f4f4f2;
+  --color-tse-bar: #f9f9f9;
+  --color-tse-text: #333333;
+  --color-tse-muted: #717171;
+  --color-tse-line: #e6e6e3;
+  --color-tse-border: #dddddd;
+  --color-tse-top-line: #d9a502;
+  --font-sans: var(--font-source), "Source Sans 3", sans-serif;
+  --font-display: var(--font-michroma), sans-serif;
+}
+
+body { background: var(--tse-bg); color: var(--tse-text); }
+::selection { background: #fff8d6; }
+:focus-visible { outline: 2px solid #ebb402; outline-offset: 2px; }
+
+Ajustes fora do globals.css, para reverter junto:
+wordmark.tsx — AERO em text-[#333333]
+layout.tsx e public/manifest.webmanifest — theme #EBB402
+labels.ts — eduardo #EBB402, marina #6A8421, leme #005B8F
+CORES_SOCIO #EBB402 #6A8421 #005B8F #8A6A00 #9F2A2A
+categoryBarColor voo #EBB402, estrutura #6A8421, manutenção #005B8F
+selos verdes #E7F0D4 / #3D5210
+selos amarelos #FFF8D6 / #8A6A00
+alertas #FDECEC / #9F2A2A
+relatorios-rateio.ts — débito #9F2A2A, crédito #6A8421
+baixar-relatorio.ts — as mesmas cores e cabeçalho #FFF8D6
+hovers de botão #58701B e fundo #F4F7EA
+painel-view.tsx — atenção com bg-tse-yellow
+*/

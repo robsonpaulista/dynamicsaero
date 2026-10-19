@@ -1,0 +1,9 @@
+{
+  "name": "Dynamics Aero",
+  "short_name": "Aero",
+  "start_url": "/painel",
+  "display": "standalone",
+  "background_color": "#F4F4F2",
+  "theme_color": "#1E293B",
+  "lang": "pt-BR"
+}
