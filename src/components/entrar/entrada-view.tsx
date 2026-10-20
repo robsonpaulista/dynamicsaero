@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, ScanFace } from "lucide-react";
 import { cn } from "@/lib/format";
 import { CHAVE_BIO_PENDENTE, CHAVE_BIOMETRIA, CHAVE_EMAIL, COOKIE_LEMBRAR } from "@/lib/lembrar-cookie";
 import { clienteNavegador } from "@/services/supabase-navegador";
-import { criarPrimeiroAcesso, entrar, validarSessao } from "@/services/usuarios";
+import { validarSessao } from "@/services/usuarios";
 
 function aparelhoComFaceId(): boolean {
   return /iPhone|iPad/.test(navigator.userAgent);
@@ -30,12 +30,6 @@ async function biometriaDoAparelho(): Promise<boolean> {
 function guardarEmail(valor: string, lembrar: boolean): void {
   if (lembrar) window.localStorage.setItem(CHAVE_EMAIL, valor.trim().toLowerCase());
   else window.localStorage.removeItem(CHAVE_EMAIL);
-}
-
-function ehRedirecionamento(erro: unknown): boolean {
-  if (!erro || typeof erro !== "object" || !("digest" in erro)) return false;
-  const digest = erro.digest;
-  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
 }
 
 type FaseEntrada = "splash" | "form";
@@ -142,23 +136,12 @@ export function EntradaView({
     });
   }, []);
 
-  async function aoEnviar(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setEnviando(true);
-    setErro("");
+  function aoEnviar() {
     guardarEmail(email, lembrar);
     if (lembrar && usarBiometria && biometria) {
       window.localStorage.setItem(CHAVE_BIO_PENDENTE, "1");
     } else {
       window.localStorage.removeItem(CHAVE_BIO_PENDENTE);
-    }
-    const falha = primeiroAcesso
-      ? await criarPrimeiroAcesso(nome, email, senha, lembrar)
-      : await entrar(email, senha, lembrar);
-    if (falha) {
-      window.localStorage.removeItem(CHAVE_BIO_PENDENTE);
-      setErro(falha);
-      setEnviando(false);
     }
   }
 
@@ -185,8 +168,8 @@ export function EntradaView({
         setEnviando(false);
         return;
       }
+      window.location.assign("/painel");
     } catch (falha) {
-      if (ehRedirecionamento(falha)) throw falha;
       const mensagem =
         falha instanceof Error ? mensagemBiometria(falha) : "Não foi possível entrar com a biometria.";
       setErro(mensagem);
@@ -202,11 +185,12 @@ export function EntradaView({
         <MarcaEntrada animada={fase === "splash"} compacta={fase === "form"} />
         {fase === "form" ? (
           <form
-            onSubmit={(event) => {
-              void aoEnviar(event);
-            }}
+            method="post"
+            action="/acesso"
+            onSubmit={aoEnviar}
             className="aero-sobe mt-8 w-full"
           >
+            <input type="hidden" name="primeiro" value={primeiroAcesso ? "1" : "0"} />
             <p className="text-center text-[11px] font-semibold tracking-[0.28em] text-white/55 uppercase">
               {primeiroAcesso ? "Primeiro acesso" : "Acesso"}
             </p>
@@ -227,6 +211,7 @@ export function EntradaView({
                   </span>
                   <input
                     required
+                    name="nome"
                     autoComplete="name"
                     value={nome}
                     onChange={(event) => setNome(event.target.value)}
@@ -241,6 +226,7 @@ export function EntradaView({
                 <input
                   required
                   type="email"
+                  name="email"
                   autoComplete={primeiroAcesso ? "username" : "username webauthn"}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -254,6 +240,7 @@ export function EntradaView({
                 <span className="relative block">
                   <input
                     required
+                    name="senha"
                     type={mostrarSenha ? "text" : "password"}
                     autoComplete={primeiroAcesso ? "new-password" : "current-password"}
                     minLength={8}
@@ -277,6 +264,8 @@ export function EntradaView({
               <label className="flex items-center gap-2 text-[14px] text-white/80">
                 <input
                   type="checkbox"
+                  name="lembrar"
+                  value="1"
                   checked={lembrar}
                   onChange={(event) => {
                     const marcado = event.target.checked;

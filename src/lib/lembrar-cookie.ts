@@ -3,8 +3,8 @@ export const CHAVE_EMAIL = "dynamics-aero-email";
 export const CHAVE_BIOMETRIA = "dynamics-aero-biometria";
 export const CHAVE_BIO_PENDENTE = "dynamics-aero-biometria-pendente";
 
-export function cookieSeguro(): boolean {
-  return process.env.NODE_ENV === "production";
+export function cookieSeguro(https: boolean): boolean {
+  return https;
 }
 
 type OpcoesComPrazo = {

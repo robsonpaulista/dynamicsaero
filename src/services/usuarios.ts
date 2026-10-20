@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { clienteServico } from "@/services/supabase-servidor";
 import { criarClienteSessao } from "@/services/supabase-sessao";
 import type { PapelUsuario, SessaoUsuario, UsuarioAcesso } from "@/types/usuario";
@@ -195,7 +194,7 @@ export async function entrar(email: string, senha: string, lembrar = true): Prom
     await supabase.auth.signOut();
     return "Este acesso ainda não está na operação.";
   }
-  redirect("/painel");
+  return null;
 }
 
 export async function sair(): Promise<void> {
@@ -205,12 +204,10 @@ export async function sair(): Promise<void> {
 
 export async function validarSessao(): Promise<string | null> {
   const sessao = await sessaoAtual();
-  if (!sessao) {
-    const supabase = await criarClienteSessao();
-    await supabase.auth.signOut();
-    return "Este acesso ainda não está na operação.";
-  }
-  redirect("/painel");
+  if (sessao) return null;
+  const supabase = await criarClienteSessao();
+  await supabase.auth.signOut();
+  return "Este acesso ainda não está na operação.";
 }
 
 export async function criarPrimeiroAcesso(

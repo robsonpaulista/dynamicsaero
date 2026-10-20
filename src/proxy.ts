@@ -8,11 +8,14 @@ export async function proxy(request: NextRequest) {
   if (!url || !chave) return NextResponse.next();
 
   let response = NextResponse.next({ request });
+  const https =
+    request.nextUrl.protocol === "https:" ||
+    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() === "https";
   const supabase = createServerClient(url, chave, {
     cookieOptions: {
       path: "/",
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: https,
     },
     cookies: {
       getAll() {
@@ -34,7 +37,7 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getUser();
   const caminho = request.nextUrl.pathname;
 
-  if (caminho === "/sair") return response;
+  if (caminho === "/sair" || caminho === "/acesso") return response;
 
   if (!data.user && caminho !== "/entrar") {
     return redirecionar(request, response, "/entrar");

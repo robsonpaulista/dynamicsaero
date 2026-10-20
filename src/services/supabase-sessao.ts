@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { COOKIE_LEMBRAR, cookieSeguro, opcoesConformeLembranca } from "@/lib/lembrar-cookie";
+
+async function requisicaoHttps(): Promise<boolean> {
+  const cabecalhos = await headers();
+  const proto = cabecalhos.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  return proto === "https";
+}
 
 export async function criarClienteSessao(lembrar?: boolean) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,7 +16,7 @@ export async function criarClienteSessao(lembrar?: boolean) {
   }
 
   const jar = await cookies();
-  const seguro = cookieSeguro();
+  const seguro = cookieSeguro(await requisicaoHttps());
   if (lembrar === true) {
     jar.set(COOKIE_LEMBRAR, "1", {
       path: "/",
