@@ -52,6 +52,22 @@ function lerObjeto(bruto: string): SessaoCookie | null {
   }
 }
 
+export function usuarioDoToken(accessToken: string): string | null {
+  const partes = accessToken.split(".");
+  if (partes.length < 2) return null;
+  try {
+    const json = Buffer.from(partes[1] ?? "", "base64url").toString("utf8");
+    const valor: unknown = JSON.parse(json);
+    if (!valor || typeof valor !== "object") return null;
+    const sub = (valor as Record<string, unknown>).sub;
+    if (typeof sub !== "string") return null;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)) return null;
+    return sub;
+  } catch {
+    return null;
+  }
+}
+
 export function lerSessaoCookie(
   cookies: { name: string; value: string }[],
   chave: string,

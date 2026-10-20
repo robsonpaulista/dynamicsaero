@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { sessaoAtual, usuarioDaRequisicao } from "@/services/usuarios";
 
+export const dynamic = "force-dynamic";
+
 export default async function CockpitLayout({ children }: { children: ReactNode }) {
   const userId = await usuarioDaRequisicao();
   if (!userId) redirect("/entrar");

@@ -96,6 +96,7 @@ export function BackLink({ href, children }: { href: string; children: ReactNode
   return (
     <Link
       href={href}
+      prefetch={false}
       className="text-[12px] font-bold uppercase tracking-wide text-tse-olive hover:underline"
     >
       {children}

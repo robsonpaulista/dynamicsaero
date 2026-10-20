@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { COOKIE_LEMBRAR, opcoesConformeLembranca } from "@/lib/lembrar-cookie";
-import { CABECALHO_USUARIO, chaveAuth, lerSessaoCookie } from "@/lib/sessao-cookie";
+import { CABECALHO_USUARIO, chaveAuth, lerSessaoCookie, usuarioDoToken } from "@/lib/sessao-cookie";
 import { renovarSessao } from "@/services/renovar-sessao";
 
 function copiarCookies(origem: NextResponse, destino: NextResponse) {
@@ -52,14 +52,14 @@ export async function proxy(request: NextRequest) {
   });
 
   const sessao = lerSessaoCookie(request.cookies.getAll(), chaveAuth(url));
+  const tokenValido = Boolean(sessao && sessao.expires_at * 1000 > Date.now() + 5_000);
   let userId: string | null = null;
 
-  if (sessao && sessao.expires_at * 1000 > Date.now() + 5_000) {
+  if (tokenValido && sessao) {
     const checado = await supabase.auth.getUser(sessao.access_token);
-    if (!checado.error && checado.data.user) userId = checado.data.user.id;
-  }
-
-  if (!userId && sessao) {
+    userId =
+      !checado.error && checado.data.user ? checado.data.user.id : usuarioDoToken(sessao.access_token);
+  } else if (sessao && request.headers.get("sec-fetch-dest") === "document") {
     const novo = await renovarSessao(url, chave, sessao.refresh_token);
     if (novo) {
       const gravado = await supabase.auth.setSession({

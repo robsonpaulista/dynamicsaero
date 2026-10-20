@@ -195,6 +195,7 @@ export function BotaoNovo({ href, children }: { href: string; children: ReactNod
   return (
     <Link
       href={href}
+      prefetch={false}
       className="inline-flex h-8 items-center rounded-md bg-tse-olive px-3 text-[13px] font-bold text-white hover:bg-[#1E293B]"
     >
       {children}
@@ -204,7 +205,7 @@ export function BotaoNovo({ href, children }: { href: string; children: ReactNod
 
 export function LinkEditar({ href }: { href: string }) {
   return (
-    <Link href={href} className="text-[12px] font-bold tracking-wide text-tse-olive uppercase hover:underline">
+    <Link href={href} prefetch={false} className="text-[12px] font-bold tracking-wide text-tse-olive uppercase hover:underline">
       Editar
     </Link>
   );
