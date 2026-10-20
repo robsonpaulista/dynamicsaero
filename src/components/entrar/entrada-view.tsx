@@ -1,15 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff, ScanFace } from "lucide-react";
 import { cn } from "@/lib/format";
-import { COOKIE_LEMBRAR } from "@/lib/lembrar-cookie";
+import { CHAVE_BIO_PENDENTE, CHAVE_BIOMETRIA, CHAVE_EMAIL, COOKIE_LEMBRAR } from "@/lib/lembrar-cookie";
 import { clienteNavegador } from "@/services/supabase-navegador";
 import { criarPrimeiroAcesso, entrar, validarSessao } from "@/services/usuarios";
-
-const CHAVE_EMAIL = "dynamics-aero-email";
-const CHAVE_BIOMETRIA = "dynamics-aero-biometria";
 
 function aparelhoComFaceId(): boolean {
   return /iPhone|iPad/.test(navigator.userAgent);
@@ -36,12 +32,10 @@ function guardarEmail(valor: string, lembrar: boolean): void {
   else window.localStorage.removeItem(CHAVE_EMAIL);
 }
 
-async function registrarBiometria(): Promise<void> {
-  const supabase = clienteNavegador();
-  const sessao = await supabase.auth.getSession();
-  if (!sessao.data.session) return;
-  const registro = await supabase.auth.registerPasskey();
-  if (!registro.error) window.localStorage.setItem(CHAVE_BIOMETRIA, "1");
+function ehRedirecionamento(erro: unknown): boolean {
+  if (!erro || typeof erro !== "object" || !("digest" in erro)) return false;
+  const digest = erro.digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
 }
 
 type FaseEntrada = "splash" | "form";
@@ -115,7 +109,6 @@ export function EntradaView({
   primeiroAcesso: boolean;
   avisoInicial: string;
 }) {
-  const router = useRouter();
   const [fase, setFase] = useState<FaseEntrada>("splash");
   const [nome, setNome] = useState<string>("");
   const [email, setEmail] = useState<string>("");
@@ -153,25 +146,28 @@ export function EntradaView({
     event.preventDefault();
     setEnviando(true);
     setErro("");
+    guardarEmail(email, lembrar);
+    if (lembrar && usarBiometria && biometria) {
+      window.localStorage.setItem(CHAVE_BIO_PENDENTE, "1");
+    } else {
+      window.localStorage.removeItem(CHAVE_BIO_PENDENTE);
+    }
     const falha = primeiroAcesso
       ? await criarPrimeiroAcesso(nome, email, senha, lembrar)
       : await entrar(email, senha, lembrar);
     if (falha) {
+      window.localStorage.removeItem(CHAVE_BIO_PENDENTE);
       setErro(falha);
       setEnviando(false);
-      return;
     }
-    guardarEmail(email, lembrar);
-    if (lembrar && usarBiometria && biometria) await registrarBiometria();
-    router.push("/painel");
-    router.refresh();
   }
 
   async function aoUsarBiometria() {
     setEnviando(true);
     setErro("");
     try {
-      document.cookie = `${COOKIE_LEMBRAR}=1; Path=/; Max-Age=${400 * 24 * 60 * 60}; SameSite=Lax`;
+      const seguro = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `${COOKIE_LEMBRAR}=1; Path=/; Max-Age=${400 * 24 * 60 * 60}; SameSite=Lax${seguro}`;
       const supabase = clienteNavegador();
       const resultado = await supabase.auth.signInWithPasskey();
       if (resultado.error || !resultado.data.session) {
@@ -189,9 +185,8 @@ export function EntradaView({
         setEnviando(false);
         return;
       }
-      router.push("/painel");
-      router.refresh();
     } catch (falha) {
+      if (ehRedirecionamento(falha)) throw falha;
       const mensagem =
         falha instanceof Error ? mensagemBiometria(falha) : "Não foi possível entrar com a biometria.";
       setErro(mensagem);

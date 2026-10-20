@@ -12,7 +12,9 @@ import { cn } from "@/lib/format";
 import { NAV_ITEMS, titleForPath } from "@/components/shell/nav";
 import { Wordmark } from "@/components/shell/wordmark";
 import { useErroBanco } from "@/hooks/use-dados";
+import { CHAVE_BIO_PENDENTE, CHAVE_BIOMETRIA } from "@/lib/lembrar-cookie";
 import { hidratarBanco, restaurarDemonstracao } from "@/services/dados";
+import { clienteNavegador } from "@/services/supabase-navegador";
 
 function NavLinks({
   onNavigate,
@@ -221,6 +223,20 @@ function HidratarDados() {
   return null;
 }
 
+function AtivarBiometria() {
+  useEffect(() => {
+    if (window.localStorage.getItem(CHAVE_BIO_PENDENTE) !== "1") return;
+    window.localStorage.removeItem(CHAVE_BIO_PENDENTE);
+    const supabase = clienteNavegador();
+    void supabase.auth.getSession().then(async (sessao) => {
+      if (!sessao.data.session) return;
+      const registro = await supabase.auth.registerPasskey();
+      if (!registro.error) window.localStorage.setItem(CHAVE_BIOMETRIA, "1");
+    });
+  }, []);
+  return null;
+}
+
 function AvisoBanco() {
   const erro = useErroBanco();
   if (!erro) return null;
@@ -280,6 +296,7 @@ export function AppShell({
   return (
     <OperacaoProvider>
       <HidratarDados />
+      <AtivarBiometria />
       <ShellFrame sessao={sessao}>{children}</ShellFrame>
     </OperacaoProvider>
   );

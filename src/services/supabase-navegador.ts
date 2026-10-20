@@ -6,5 +6,11 @@ export function clienteNavegador() {
   if (!url || !chave) {
     throw new Error("Faltam a URL ou a chave anônima do Supabase.");
   }
-  return createBrowserClient(url, chave);
+  return createBrowserClient(url, chave, {
+    cookieOptions: {
+      path: "/",
+      sameSite: "lax",
+      secure: window.location.protocol === "https:",
+    },
+  });
 }

@@ -9,6 +9,11 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(url, chave, {
+    cookieOptions: {
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    },
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -32,20 +37,25 @@ export async function proxy(request: NextRequest) {
   if (caminho === "/sair") return response;
 
   if (!data.user && caminho !== "/entrar") {
-    const destino = request.nextUrl.clone();
-    destino.pathname = "/entrar";
-    destino.search = "";
-    return NextResponse.redirect(destino);
+    return redirecionar(request, response, "/entrar");
   }
 
   if (data.user && caminho === "/entrar") {
-    const destino = request.nextUrl.clone();
-    destino.pathname = "/painel";
-    destino.search = "";
-    return NextResponse.redirect(destino);
+    return redirecionar(request, response, "/painel");
   }
 
   return response;
+}
+
+function redirecionar(request: NextRequest, response: NextResponse, caminho: string) {
+  const destino = request.nextUrl.clone();
+  destino.pathname = caminho;
+  destino.search = "";
+  const redirect = NextResponse.redirect(destino);
+  response.headers.getSetCookie().forEach((cookie) => {
+    redirect.headers.append("set-cookie", cookie);
+  });
+  return redirect;
 }
 
 export const config = {

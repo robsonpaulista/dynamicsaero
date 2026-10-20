@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { COOKIE_LEMBRAR, opcoesConformeLembranca } from "@/lib/lembrar-cookie";
+import { COOKIE_LEMBRAR, cookieSeguro, opcoesConformeLembranca } from "@/lib/lembrar-cookie";
 
 export async function criarClienteSessao(lembrar?: boolean) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,18 +10,25 @@ export async function criarClienteSessao(lembrar?: boolean) {
   }
 
   const jar = await cookies();
+  const seguro = cookieSeguro();
   if (lembrar === true) {
     jar.set(COOKIE_LEMBRAR, "1", {
       path: "/",
       sameSite: "lax",
       httpOnly: false,
+      secure: seguro,
       maxAge: 400 * 24 * 60 * 60,
     });
   } else if (lembrar === false) {
-    jar.set(COOKIE_LEMBRAR, "0", { path: "/", sameSite: "lax", httpOnly: false });
+    jar.set(COOKIE_LEMBRAR, "0", { path: "/", sameSite: "lax", httpOnly: false, secure: seguro });
   }
 
   return createServerClient(url, chave, {
+    cookieOptions: {
+      path: "/",
+      sameSite: "lax",
+      secure: seguro,
+    },
     cookies: {
       getAll() {
         return jar.getAll();
@@ -32,8 +39,9 @@ export async function criarClienteSessao(lembrar?: boolean) {
             const gravar = lembrar === undefined ? options : opcoesConformeLembranca(options, lembrar);
             jar.set(name, value, gravar);
           });
-        } catch {
-          // Em páginas o Next não deixa gravar cookie. O proxy renova a sessão.
+        } catch (erro) {
+          const mensagem = erro instanceof Error ? erro.message : "";
+          if (!mensagem.includes("Cookies can only be modified")) throw erro;
         }
       },
     },

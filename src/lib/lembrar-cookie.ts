@@ -1,4 +1,11 @@
 export const COOKIE_LEMBRAR = "aero-lembrar";
+export const CHAVE_EMAIL = "dynamics-aero-email";
+export const CHAVE_BIOMETRIA = "dynamics-aero-biometria";
+export const CHAVE_BIO_PENDENTE = "dynamics-aero-biometria-pendente";
+
+export function cookieSeguro(): boolean {
+  return process.env.NODE_ENV === "production";
+}
 
 type OpcoesComPrazo = {
   maxAge?: number;
