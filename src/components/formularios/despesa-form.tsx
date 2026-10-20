@@ -22,7 +22,7 @@ export function DespesaForm({ id }: { id?: string }) {
   if (!pronto) {
     return (
       <FormPage voltarHref="/despesas" voltar="Voltar às despesas" titulo="Despesa">
-        <p className="text-[13px] text-tse-muted">Carregando o cadastro deste navegador…</p>
+        <p className="text-[13px] text-tse-muted">Carregando o cadastro…</p>
       </FormPage>
     );
   }

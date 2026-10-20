@@ -5,6 +5,8 @@ import {
   Plane,
   Receipt,
   Route,
+  Signpost,
+  UserRoundCog,
   Users,
   Warehouse,
   Wrench,
@@ -21,12 +23,14 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/painel", title: "Painel", icon: LayoutDashboard },
   { href: "/frota", title: "Frota", icon: Plane },
   { href: "/itinerarios", title: "Itinerários", icon: Route },
+  { href: "/rotas", title: "Rotas", icon: Signpost },
   { href: "/despesas", title: "Despesas", icon: Receipt },
   { href: "/hangar", title: "Hangar", icon: Warehouse },
   { href: "/pessoal", title: "Pessoal", icon: Users },
   { href: "/manutencao", title: "Manutenção", icon: Wrench },
   { href: "/rateio", title: "Rateio", icon: PieChart },
   { href: "/agente", title: "Agente", icon: MessageCircle },
+  { href: "/usuarios", title: "Usuários", icon: UserRoundCog },
 ];
 
 export function titleForPath(pathname: string): string {

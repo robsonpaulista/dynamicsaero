@@ -23,7 +23,7 @@ export function AporteForm({ id }: { id?: string }) {
   if (!pronto) {
     return (
       <FormPage voltarHref="/rateio" voltar="Voltar ao rateio" titulo="Aporte">
-        <p className="text-[13px] text-tse-muted">Carregando o cadastro deste navegador…</p>
+        <p className="text-[13px] text-tse-muted">Carregando o cadastro…</p>
       </FormPage>
     );
   }

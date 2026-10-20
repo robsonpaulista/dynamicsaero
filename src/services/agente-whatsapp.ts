@@ -143,28 +143,49 @@ function textoFrota(): string {
   return `Frota agora\n\n${linhas.join("\n\n")}`;
 }
 
+function porData(left: Itinerary, right: Itinerary): number {
+  return (left.legs[0]?.date ?? "").localeCompare(right.legs[0]?.date ?? "");
+}
+
+function linhaAgenda(trip: Itinerary, comStatus: boolean): string {
+  const craft = getAircraft(trip.aircraftId);
+  const periodo = itinerarySpan(trip);
+  const quando = periodo
+    ? periodo.first === periodo.last
+      ? formatDateShort(periodo.first)
+      : `${formatDateShort(periodo.first)} a ${formatDateShort(periodo.last)}`
+    : "sem data";
+  const status = comStatus ? ` · ${STATUS_LABEL[trip.status] ?? trip.status}` : "";
+  return `${quando} · ${craft?.registration ?? "Aeronave"} · ${partnerShort(trip.requestedBy)}\n${trip.title} · ${itineraryCities(trip)}${status}`;
+}
+
+function blocoAgenda(titulo: string, voos: Itinerary[], vazio: string, comStatus: boolean): string {
+  if (voos.length === 0) return `${titulo}\n${vazio}`;
+  return `${titulo}\n${voos.map((trip) => linhaAgenda(trip, comStatus)).join("\n\n")}`;
+}
+
 function textoAgenda(month: string): string {
-  const voos = itinerariesIn(month, "todas")
-    .slice()
-    .sort((left, right) => (left.legs[0]?.date ?? "").localeCompare(right.legs[0]?.date ?? ""));
+  const voos = itinerariesIn(month, "todas").slice().sort(porData);
   if (voos.length === 0) {
     return `Agenda de ${monthLabel(month).toLowerCase()}\n\nNenhum voo nesta competência.`;
   }
-  const visiveis = voos.slice(0, 12);
-  const linhas = visiveis.map((trip) => {
-    const craft = getAircraft(trip.aircraftId);
-    const periodo = itinerarySpan(trip);
-    const quando = periodo
-      ? periodo.first === periodo.last
-        ? formatDateShort(periodo.first)
-        : `${formatDateShort(periodo.first)} a ${formatDateShort(periodo.last)}`
-      : "sem data";
-    const status = STATUS_LABEL[trip.status] ?? trip.status;
-    return `${quando} · ${craft?.registration ?? "Aeronave"} · ${partnerShort(trip.requestedBy)}\n${trip.title} · ${itineraryCities(trip)} · ${status}`;
-  });
-  const resto = voos.length - visiveis.length;
-  const fechamento = resto > 0 ? `\n\nE mais ${resto} voos nesta competência.` : "";
-  return `Agenda de ${monthLabel(month).toLowerCase()}\nTodos os cotistas\n\n${linhas.join("\n\n")}${fechamento}`;
+  const agendados = voos.filter(
+    (trip) => trip.status === "em_voo" || trip.status === "confirmado" || trip.status === "previsto",
+  );
+  const realizados = voos.filter((trip) => trip.status === "concluido");
+  const cancelados = voos.filter((trip) => trip.status === "cancelado");
+  const partes = [
+    `Agenda de ${monthLabel(month).toLowerCase()}`,
+    "Todos os cotistas",
+    "",
+    blocoAgenda("Agendados", agendados, "Nenhum voo à frente.", true),
+    "",
+    blocoAgenda("Realizados", realizados, "Nenhum voo concluído.", false),
+  ];
+  if (cancelados.length > 0) {
+    partes.push("", blocoAgenda("Cancelados", cancelados, "", false));
+  }
+  return partes.join("\n");
 }
 
 function textoExtrato(partnerId: string, month: string): string {

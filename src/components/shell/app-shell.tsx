@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
+import type { SessaoUsuario } from "@/types/usuario";
+import { PAPEL_USUARIO } from "@/types/usuario";
 import { OperacaoProvider } from "@/context/operacao-context";
 import { OPERACAO } from "@/data/calendario";
 import { cn } from "@/lib/format";
 import { NAV_ITEMS, titleForPath } from "@/components/shell/nav";
 import { Wordmark } from "@/components/shell/wordmark";
-import { hidratarLocal, restaurarDemonstracao } from "@/services/dados";
+import { useErroBanco } from "@/hooks/use-dados";
+import { hidratarBanco, restaurarDemonstracao } from "@/services/dados";
 
 function NavLinks({
   onNavigate,
@@ -56,33 +59,52 @@ function NavLinks({
   );
 }
 
-function Viewer({ compact = false }: { compact?: boolean }) {
+function iniciaisDe(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter((parte) => parte.length > 0);
+  const letras = partes.slice(0, 2).map((parte) => parte[0]?.toUpperCase() ?? "");
+  const texto = letras.join("");
+  return texto.length > 0 ? texto : "•";
+}
+
+function Viewer({ sessao, compact = false }: { sessao: SessaoUsuario; compact?: boolean }) {
+  const iniciais = iniciaisDe(sessao.nome);
   return (
     <div
       className={cn(
-        "flex items-center gap-3 border-t border-tse-line py-4",
-        compact ? "justify-center px-2" : "px-4",
+        "flex border-t border-tse-line py-4",
+        compact ? "flex-col items-center gap-2 px-2" : "items-center gap-3 px-4",
       )}
-      title={compact ? OPERACAO.viewerName : undefined}
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tse-yellow text-[12px] font-bold text-white">
-        {OPERACAO.viewerInitials}
+        {iniciais}
       </span>
-      {compact ? null : (
+      {compact ? (
+        <Link
+          href="/sair"
+          title="Sair"
+          aria-label="Sair"
+          className="flex size-9 items-center justify-center rounded-md text-tse-muted hover:bg-tse-soft"
+        >
+          <LogOut className="size-4" aria-hidden />
+        </Link>
+      ) : (
         <span className="min-w-0">
-          <span className="block truncate text-[13px] font-bold text-tse-text">
-            {OPERACAO.viewerName}
-          </span>
-          <span className="block truncate text-[12px] text-tse-muted">
-            {OPERACAO.viewerRole}
-          </span>
+          <span className="block truncate text-[13px] font-bold text-tse-text">{sessao.nome}</span>
+          <span className="block truncate text-[12px] text-tse-muted">{PAPEL_USUARIO[sessao.papel]}</span>
+          <Link
+            href="/sair"
+            className="mt-1 inline-flex items-center gap-1 text-[12px] font-bold text-tse-olive"
+          >
+            <LogOut className="size-3.5" aria-hidden />
+            Sair
+          </Link>
         </span>
       )}
     </div>
   );
 }
 
-function ShellFrame({ children }: { children: React.ReactNode }) {
+function ShellFrame({ children, sessao }: { children: React.ReactNode; sessao: SessaoUsuario }) {
   const pathname = usePathname();
   const [openPath, setOpenPath] = useState<string | null>(null);
   const [recolhida, setRecolhida] = useState<boolean>(false);
@@ -123,7 +145,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
           </>
         )}
         <NavLinks compact={recolhida} />
-        <Viewer compact={recolhida} />
+        <Viewer sessao={sessao} compact={recolhida} />
         {recolhida ? null : <RodapeCadastro />}
       </aside>
 
@@ -152,7 +174,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
             </p>
             <p className="px-4 pb-1 text-[13px] font-semibold">{OPERACAO.name}</p>
             <NavLinks onNavigate={closeMenu} />
-            <Viewer />
+            <Viewer sessao={sessao} />
             <RodapeCadastro />
           </aside>
         </div>
@@ -179,14 +201,13 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
             {title}
           </h1>
           <div className="ml-auto flex items-center gap-2 text-white">
-            <span className="hidden text-[13px] font-semibold sm:inline">
-              {OPERACAO.viewerName}
-            </span>
+            <span className="hidden text-[13px] font-semibold sm:inline">{sessao.nome}</span>
             <span className="flex size-8 items-center justify-center rounded-full bg-white text-[12px] font-bold text-[#333333]">
-              {OPERACAO.viewerInitials}
+              {iniciaisDe(sessao.nome)}
             </span>
           </div>
         </header>
+        <AvisoBanco />
         <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
@@ -195,9 +216,17 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
 
 function HidratarDados() {
   useEffect(() => {
-    hidratarLocal();
+    void hidratarBanco();
   }, []);
   return null;
+}
+
+function AvisoBanco() {
+  const erro = useErroBanco();
+  if (!erro) return null;
+  return (
+    <p className="bg-[#FEF2F2] px-4 py-2 text-[13px] font-semibold text-[#EF4444]">{erro}</p>
+  );
 }
 
 function RodapeCadastro() {
@@ -206,7 +235,7 @@ function RodapeCadastro() {
   return (
     <div className="px-4 pb-4">
       <p className="text-[11px] leading-4 text-tse-muted">
-        Os lançamentos ficam neste navegador. O banco entra na etapa seguinte.
+        Os lançamentos ficam no banco da operação.
       </p>
       {confirmar ? (
         <div className="mt-2 flex flex-wrap gap-2">
@@ -241,11 +270,17 @@ function RodapeCadastro() {
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  sessao,
+}: {
+  children: React.ReactNode;
+  sessao: SessaoUsuario;
+}) {
   return (
     <OperacaoProvider>
       <HidratarDados />
-      <ShellFrame>{children}</ShellFrame>
+      <ShellFrame sessao={sessao}>{children}</ShellFrame>
     </OperacaoProvider>
   );
 }

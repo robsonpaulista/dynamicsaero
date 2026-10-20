@@ -9,11 +9,13 @@ export function FormPage({
   voltarHref,
   voltar,
   titulo,
+  texto = "O lançamento entra na leitura e no rateio e fica salvo no banco da operação.",
   children,
 }: {
   voltarHref: string;
   voltar: string;
   titulo: string;
+  texto?: string;
   children: ReactNode;
 }) {
   return (
@@ -26,9 +28,7 @@ export function FormPage({
       </Link>
       <section className="rounded-2xl bg-white p-5 shadow-sm">
         <h2 className="text-[22px] font-bold tracking-tight">{titulo}</h2>
-        <p className="mt-1 text-[13px] text-tse-muted">
-          O lançamento entra na leitura e no rateio. Fica salvo neste navegador até o banco existir.
-        </p>
+        <p className="mt-1 text-[13px] text-tse-muted">{texto}</p>
         <div className="mt-5">{children}</div>
       </section>
     </PageStack>

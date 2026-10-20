@@ -92,7 +92,7 @@ export function ItinerarioForm({ id }: { id?: string }) {
   if (!pronto) {
     return (
       <FormPage voltarHref="/itinerarios" voltar="Voltar aos itinerários" titulo="Itinerário">
-        <p className="text-[13px] text-tse-muted">Carregando o cadastro deste navegador…</p>
+        <p className="text-[13px] text-tse-muted">Carregando o cadastro…</p>
       </FormPage>
     );
   }
@@ -239,6 +239,32 @@ function ItinerarioCampos({ id }: { id?: string }) {
               <legend className="px-1 text-[12px] font-bold tracking-wide text-tse-muted uppercase">
                 Perna {index + 1}
               </legend>
+              {base.rotas.length > 0 ? (
+                <div className="mb-3">
+                  <CampoSelect
+                    label="Rota cadastrada"
+                    value=""
+                    onChange={(rotaId) => {
+                      const rota = base.rotas.find((item) => item.id === rotaId);
+                      if (!rota) return;
+                      atualizarPerna(perna.id, {
+                        fromIcao: rota.fromIcao,
+                        toIcao: rota.toIcao,
+                        fromCity: rota.fromCity,
+                        toCity: rota.toCity,
+                        blockHours: String(rota.blockHours),
+                      });
+                    }}
+                  >
+                    <option value="">Preencher com uma rota</option>
+                    {base.rotas.map((rota) => (
+                      <option key={rota.id} value={rota.id}>
+                        {rota.nome}
+                      </option>
+                    ))}
+                  </CampoSelect>
+                </div>
+              ) : null}
               <Grade>
                 <Campo label="Data" value={perna.date} onChange={(value) => atualizarPerna(perna.id, { date: value })} type="date" />
                 <CampoSelect

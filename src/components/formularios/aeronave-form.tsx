@@ -22,7 +22,7 @@ export function AeronaveForm({ id }: { id?: string }) {
   if (!pronto) {
     return (
       <FormPage voltarHref="/frota" voltar="Voltar à frota" titulo="Aeronave">
-        <p className="text-[13px] text-tse-muted">Carregando o cadastro deste navegador…</p>
+        <p className="text-[13px] text-tse-muted">Carregando o cadastro…</p>
       </FormPage>
     );
   }

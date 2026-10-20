@@ -21,6 +21,7 @@ import type {
   MaintenanceItem,
   Partner,
   Posting,
+  Rota,
   Rateio,
   RateioPartner,
 } from "@/types/operacao";
@@ -84,6 +85,14 @@ export function listMaintenance(): MaintenanceItem[] {
 
 export function getMaintenance(id: string): MaintenanceItem | undefined {
   return getBase().maintenance.find((item) => item.id === id);
+}
+
+export function listRotas(): Rota[] {
+  return getBase().rotas;
+}
+
+export function getRota(id: string): Rota | undefined {
+  return getBase().rotas.find((item) => item.id === id);
 }
 
 export function listItinerarySource(): Itinerary[] {

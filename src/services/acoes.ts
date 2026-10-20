@@ -9,6 +9,7 @@ import type {
   Aporte,
   MaintenanceItem,
   Partner,
+  Rota,
 } from "@/types/operacao";
 
 function upsert<T extends { id: string }>(list: T[], item: T): T[] {
@@ -17,6 +18,14 @@ function upsert<T extends { id: string }>(list: T[], item: T): T[] {
   const next = [...list];
   next[index] = item;
   return next;
+}
+
+export function salvarRota(item: Rota): void {
+  updateBase((atual) => ({ ...atual, rotas: upsert(atual.rotas, item) }));
+}
+
+export function excluirRota(id: string): void {
+  updateBase((atual) => ({ ...atual, rotas: atual.rotas.filter((item) => item.id !== id) }));
 }
 
 export function salvarSocio(item: Partner): void {

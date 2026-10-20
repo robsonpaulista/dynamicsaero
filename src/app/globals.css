@@ -44,3 +44,144 @@ body {
   outline: 2px solid #38bdf8;
   outline-offset: 2px;
 }
+
+@keyframes aero-traco {
+  from {
+    stroke-dashoffset: 46;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes aero-barra {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes aero-palavra {
+  from {
+    opacity: 0;
+    letter-spacing: 0.62em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.34em;
+  }
+}
+
+@keyframes aero-nome {
+  from {
+    opacity: 0;
+    letter-spacing: 0.46em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.2em;
+  }
+}
+
+@keyframes aero-brilho {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  45% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+}
+
+@keyframes aero-varredura {
+  0% {
+    opacity: 0;
+    transform: translateY(40%);
+  }
+  30% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120%);
+  }
+}
+
+@keyframes aero-sobe {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.aero-traco {
+  stroke-dasharray: 46;
+  stroke-dashoffset: 46;
+  animation: aero-traco 1.05s ease-out 0.28s forwards;
+}
+
+.aero-barra {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: aero-barra 0.5s ease-out 1.05s forwards;
+}
+
+.aero-dynamics {
+  opacity: 0;
+  animation: aero-palavra 0.75s ease-out 1.12s forwards;
+}
+
+.aero-aero {
+  opacity: 0;
+  animation: aero-nome 0.85s ease-out 1.32s forwards;
+}
+
+.aero-brilho {
+  animation: aero-brilho 1.8s ease-out forwards;
+}
+
+.aero-varredura {
+  background: linear-gradient(to bottom, transparent, rgba(56, 189, 248, 0.18), transparent);
+  animation: aero-varredura 1.6s ease-out 0.15s forwards;
+}
+
+.aero-sobe {
+  animation: aero-sobe 0.7s ease-out both;
+}
+
+.aero-campo:-webkit-autofill,
+.aero-campo:-webkit-autofill:hover,
+.aero-campo:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  box-shadow: 0 0 0 1000px #162033 inset;
+  transition: background-color 9999s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aero-traco,
+  .aero-barra,
+  .aero-dynamics,
+  .aero-aero,
+  .aero-brilho,
+  .aero-varredura,
+  .aero-sobe {
+    animation: none;
+    opacity: 1;
+    stroke-dashoffset: 0;
+    transform: none;
+  }
+}

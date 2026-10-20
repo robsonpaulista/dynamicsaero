@@ -22,7 +22,7 @@ export function HangarForm({ id }: { id?: string }) {
   if (!pronto) {
     return (
       <FormPage voltarHref="/hangar" voltar="Voltar ao hangar" titulo="Hangar">
-        <p className="text-[13px] text-tse-muted">Carregando o cadastro deste navegador…</p>
+        <p className="text-[13px] text-tse-muted">Carregando o cadastro…</p>
       </FormPage>
     );
   }

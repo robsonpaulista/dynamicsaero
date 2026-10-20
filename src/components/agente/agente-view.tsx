@@ -22,6 +22,37 @@ type Bolha = {
 
 const NUMERO_FORA = "11900000000";
 
+const TITULOS_AGENDA = new Set(["Agendados", "Realizados", "Cancelados"]);
+
+function classeDoTitulo(linha: string): string {
+  if (linha === "Cancelados") return "bg-[#FEF2F2] text-[#EF4444]";
+  if (linha === "Agendados") return "bg-[#E0F2FE] text-[#0F172A]";
+  return "bg-[#F1F5F9] text-tse-text";
+}
+
+function TextoDaBolha({ texto }: { texto: string }) {
+  const linhas = texto.split("\n");
+  return linhas.map((linha, indice) => {
+    if (linha === "") return <span key={indice} className="block h-2" />;
+    if (TITULOS_AGENDA.has(linha)) {
+      return (
+        <span key={indice} className="mt-1 mb-1 block">
+          <span
+            className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-bold tracking-wide uppercase ${classeDoTitulo(linha)}`}
+          >
+            {linha}
+          </span>
+        </span>
+      );
+    }
+    return (
+      <span key={indice} className="block">
+        {linha}
+      </span>
+    );
+  });
+}
+
 export function AgenteView() {
   useDados();
   const { month } = useOperacao();
@@ -120,7 +151,7 @@ function Conversa({ telefone, month }: { telefone: string; month: string }) {
                 : "bg-white text-tse-text shadow-sm"
             }`}
           >
-            {bolha.texto}
+            <TextoDaBolha texto={bolha.texto} />
           </p>
         ))}
         {opcoes.length > 0 ? (

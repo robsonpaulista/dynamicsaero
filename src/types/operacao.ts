@@ -111,6 +111,17 @@ export type Insurance = {
   description: string;
 };
 
+export type Rota = {
+  id: string;
+  nome: string;
+  fromIcao: string;
+  toIcao: string;
+  fromCity: string;
+  toCity: string;
+  blockHours: number;
+  note: string;
+};
+
 export type Leg = {
   id: string;
   date: string;
