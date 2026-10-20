@@ -223,12 +223,23 @@ function HidratarDados() {
   return null;
 }
 
+function ManterSessao() {
+  useEffect(() => {
+    const supabase = clienteNavegador();
+    void supabase.auth.startAutoRefresh();
+    return () => {
+      void supabase.auth.stopAutoRefresh();
+    };
+  }, []);
+  return null;
+}
+
 function AtivarBiometria() {
   useEffect(() => {
     if (window.localStorage.getItem(CHAVE_BIO_PENDENTE) !== "1") return;
     window.localStorage.removeItem(CHAVE_BIO_PENDENTE);
     const supabase = clienteNavegador();
-    void supabase.auth.getSession().then(async (sessao) => {
+    void supabase.auth.getSession().then(async (sessao: Awaited<ReturnType<typeof supabase.auth.getSession>>) => {
       if (!sessao.data.session) return;
       const registro = await supabase.auth.registerPasskey();
       if (!registro.error) window.localStorage.setItem(CHAVE_BIOMETRIA, "1");
@@ -296,6 +307,7 @@ export function AppShell({
   return (
     <OperacaoProvider>
       <HidratarDados />
+      <ManterSessao />
       <AtivarBiometria />
       <ShellFrame sessao={sessao}>{children}</ShellFrame>
     </OperacaoProvider>

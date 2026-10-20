@@ -1,5 +1,7 @@
 "use server";
 
+import { headers } from "next/headers";
+import { CABECALHO_USUARIO } from "@/lib/sessao-cookie";
 import { clienteServico } from "@/services/supabase-servidor";
 import { criarClienteSessao } from "@/services/supabase-sessao";
 import type { PapelUsuario, SessaoUsuario, UsuarioAcesso } from "@/types/usuario";
@@ -146,12 +148,17 @@ async function membroDoUsuario(userId: string): Promise<UsuarioAcesso | null> {
   return ehUsuario(data) ? data : null;
 }
 
+export async function usuarioDaRequisicao(): Promise<string | null> {
+  const cabecalhos = await headers();
+  const valor = cabecalhos.get(CABECALHO_USUARIO) ?? "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(valor)) return null;
+  return valor;
+}
+
 export async function sessaoAtual(): Promise<SessaoUsuario | null> {
-  const supabase = await criarClienteSessao();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  if (!user) return null;
-  const membro = await membroDoUsuario(user.id);
+  const userId = await usuarioDaRequisicao();
+  if (!userId) return null;
+  const membro = await membroDoUsuario(userId);
   if (!membro) return null;
   return {
     membroId: membro.id,
