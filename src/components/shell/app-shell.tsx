@@ -82,25 +82,29 @@ function Viewer({ sessao, compact = false }: { sessao: SessaoUsuario; compact?: 
         {iniciais}
       </span>
       {compact ? (
-        <Link
-          href="/sair"
-          title="Sair"
-          aria-label="Sair"
-          className="flex size-9 items-center justify-center rounded-md text-tse-muted hover:bg-tse-soft"
-        >
-          <LogOut className="size-4" aria-hidden />
-        </Link>
+        <form action="/sair" method="post">
+          <button
+            type="submit"
+            title="Sair"
+            aria-label="Sair"
+            className="flex size-9 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-tse-muted hover:bg-tse-soft"
+          >
+            <LogOut className="size-4" aria-hidden />
+          </button>
+        </form>
       ) : (
         <span className="min-w-0">
           <span className="block truncate text-[13px] font-bold text-tse-text">{sessao.nome}</span>
           <span className="block truncate text-[12px] text-tse-muted">{PAPEL_USUARIO[sessao.papel]}</span>
-          <Link
-            href="/sair"
-            className="mt-1 inline-flex items-center gap-1 text-[12px] font-bold text-tse-olive"
-          >
-            <LogOut className="size-3.5" aria-hidden />
-            Sair
-          </Link>
+          <form action="/sair" method="post">
+            <button
+              type="submit"
+              className="mt-1 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-[12px] font-bold text-tse-olive"
+            >
+              <LogOut className="size-3.5" aria-hidden />
+              Sair
+            </button>
+          </form>
         </span>
       )}
     </div>

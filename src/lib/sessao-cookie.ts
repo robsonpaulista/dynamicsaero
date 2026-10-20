@@ -52,20 +52,30 @@ function lerObjeto(bruto: string): SessaoCookie | null {
   }
 }
 
-export function usuarioDoToken(accessToken: string): string | null {
+function claimDoToken(accessToken: string, claim: string): unknown {
   const partes = accessToken.split(".");
   if (partes.length < 2) return null;
   try {
     const json = Buffer.from(partes[1] ?? "", "base64url").toString("utf8");
     const valor: unknown = JSON.parse(json);
     if (!valor || typeof valor !== "object") return null;
-    const sub = (valor as Record<string, unknown>).sub;
-    if (typeof sub !== "string") return null;
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)) return null;
-    return sub;
+    return (valor as Record<string, unknown>)[claim];
   } catch {
     return null;
   }
+}
+
+export function usuarioDoToken(accessToken: string): string | null {
+  const sub = claimDoToken(accessToken, "sub");
+  if (typeof sub !== "string") return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sub)) return null;
+  return sub;
+}
+
+export function usuarioComTokenValido(accessToken: string): string | null {
+  const exp = claimDoToken(accessToken, "exp");
+  if (typeof exp !== "number" || exp * 1000 <= Date.now() + 5_000) return null;
+  return usuarioDoToken(accessToken);
 }
 
 export function lerSessaoCookie(

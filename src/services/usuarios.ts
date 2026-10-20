@@ -1,7 +1,7 @@
 "use server";
 
-import { headers } from "next/headers";
-import { CABECALHO_USUARIO } from "@/lib/sessao-cookie";
+import { cookies, headers } from "next/headers";
+import { CABECALHO_USUARIO, chaveAuth, lerSessaoCookie, usuarioComTokenValido } from "@/lib/sessao-cookie";
 import { clienteServico } from "@/services/supabase-servidor";
 import { criarClienteSessao } from "@/services/supabase-sessao";
 import type { PapelUsuario, SessaoUsuario, UsuarioAcesso } from "@/types/usuario";
@@ -151,8 +151,14 @@ async function membroDoUsuario(userId: string): Promise<UsuarioAcesso | null> {
 export async function usuarioDaRequisicao(): Promise<string | null> {
   const cabecalhos = await headers();
   const valor = cabecalhos.get(CABECALHO_USUARIO) ?? "";
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(valor)) return null;
-  return valor;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(valor)) return valor;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return null;
+  const jar = await cookies();
+  const sessao = lerSessaoCookie(jar.getAll(), chaveAuth(url));
+  if (!sessao) return null;
+  return usuarioComTokenValido(sessao.access_token);
 }
 
 export async function sessaoAtual(): Promise<SessaoUsuario | null> {

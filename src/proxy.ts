@@ -1,98 +1,41 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE_LEMBRAR, opcoesConformeLembranca } from "@/lib/lembrar-cookie";
-import { CABECALHO_USUARIO, chaveAuth, lerSessaoCookie, usuarioDoToken } from "@/lib/sessao-cookie";
-import { renovarSessao } from "@/services/renovar-sessao";
+import { CABECALHO_USUARIO, chaveAuth, lerSessaoCookie, usuarioComTokenValido } from "@/lib/sessao-cookie";
 
-function copiarCookies(origem: NextResponse, destino: NextResponse) {
-  origem.headers.getSetCookie().forEach((cookie) => {
-    destino.headers.append("set-cookie", cookie);
-  });
-}
-
-function seguirComUsuario(request: NextRequest, origem: NextResponse, userId: string) {
+function seguirComUsuario(request: NextRequest, userId: string) {
   const headers = new Headers(request.headers);
   headers.delete(CABECALHO_USUARIO);
   headers.set(CABECALHO_USUARIO, userId);
-  const seguinte = NextResponse.next({ request: { headers } });
-  copiarCookies(origem, seguinte);
-  return seguinte;
+  return NextResponse.next({ request: { headers } });
 }
 
 export async function proxy(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const chave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !chave) return NextResponse.next();
+  const caminho = request.nextUrl.pathname;
+  if (caminho === "/sair" || caminho === "/acesso") return NextResponse.next();
 
-  let response = NextResponse.next({ request });
-  const https =
-    request.nextUrl.protocol === "https:" ||
-    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() === "https";
-  const supabase = createServerClient(url, chave, {
-    cookieOptions: {
-      path: "/",
-      sameSite: "lax",
-      secure: https,
-    },
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(lista) {
-        const lembrar = request.cookies.get(COOKIE_LEMBRAR)?.value !== "0";
-        lista.forEach(({ name, value }) => {
-          request.cookies.set(name, value);
-        });
-        response = NextResponse.next({ request });
-        lista.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, opcoesConformeLembranca(options, lembrar));
-        });
-      },
-    },
-  });
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return NextResponse.next();
 
   const sessao = lerSessaoCookie(request.cookies.getAll(), chaveAuth(url));
-  const tokenValido = Boolean(sessao && sessao.expires_at * 1000 > Date.now() + 5_000);
-  let userId: string | null = null;
-
-  if (tokenValido && sessao) {
-    const checado = await supabase.auth.getUser(sessao.access_token);
-    userId =
-      !checado.error && checado.data.user ? checado.data.user.id : usuarioDoToken(sessao.access_token);
-  } else if (sessao && request.headers.get("sec-fetch-dest") === "document") {
-    const novo = await renovarSessao(url, chave, sessao.refresh_token);
-    if (novo) {
-      const gravado = await supabase.auth.setSession({
-        access_token: novo.access_token,
-        refresh_token: novo.refresh_token,
-      });
-      if (!gravado.error && gravado.data.user) userId = gravado.data.user.id;
-    }
-  }
-
-  const caminho = request.nextUrl.pathname;
-
-  if (caminho === "/sair" || caminho === "/acesso") return response;
+  const userId = sessao ? usuarioComTokenValido(sessao.access_token) : null;
 
   if (!userId && caminho !== "/entrar") {
-    return redirecionar(request, response, "/entrar");
+    return redirecionar(request, "/entrar");
   }
 
   if (userId && caminho === "/entrar") {
-    return redirecionar(request, response, "/painel");
+    return redirecionar(request, "/painel");
   }
 
-  if (!userId) return response;
-  return seguirComUsuario(request, response, userId);
+  if (!userId) return NextResponse.next();
+  return seguirComUsuario(request, userId);
 }
 
-function redirecionar(request: NextRequest, response: NextResponse, caminho: string) {
+function redirecionar(request: NextRequest, caminho: string) {
   const destino = request.nextUrl.clone();
   destino.pathname = caminho;
   destino.search = "";
   const redirect = NextResponse.redirect(destino);
   redirect.headers.set("Cache-Control", "no-store");
-  copiarCookies(response, redirect);
   return redirect;
 }
 
