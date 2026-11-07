@@ -838,6 +838,75 @@ export function valorDoParceiro(expense: Expense, partnerId: string): number {
   );
 }
 
+export type FatiaAlocacao = {
+  partnerId: string;
+  amount: number;
+  share: number | null;
+};
+
+export type RaioXAlocacao = {
+  criterio: "solicitante" | "participacao" | "sem_dono";
+  regra: string;
+  cruzamento: string;
+  partes: FatiaAlocacao[];
+};
+
+/** Explica como a despesa foi cruzada e quanto cada sócio absorveu. */
+export function raioXAlocacao(expense: Expense): RaioXAlocacao {
+  const tarifa = parseTarifaPouso(expense.description);
+  const trip = expense.itineraryId ? getItinerary(expense.itineraryId) : undefined;
+  const leg = trip?.legs.find((item) => item.id === expense.legId);
+
+  if (expense.allocation === "solicitante" && expense.partnerId) {
+    const nome = partnerName(expense.partnerId);
+    let cruzamento = `100% para ${nome} (quem pediu o voo).`;
+    if (tarifa && leg) {
+      cruzamento = `Tarifa de pouso ${tarifa.pouso} casada com a etapa ${leg.fromIcao}→${leg.toIcao} em ${expense.date}; cobrada 100% de ${nome}.`;
+    } else if (leg) {
+      cruzamento = `Vinculada à etapa ${leg.fromIcao}→${leg.toIcao} (${leg.fromCity} → ${leg.toCity}); 100% de ${nome}.`;
+    } else if (trip) {
+      cruzamento = `Vinculada ao voo «${trip.title}»; 100% de ${nome}.`;
+    }
+    return {
+      criterio: "solicitante",
+      regra: "Quem pediu o voo",
+      cruzamento,
+      partes: [{ partnerId: expense.partnerId, amount: expense.amount, share: 1 }],
+    };
+  }
+
+  const craft = getAircraft(expense.aircraftId);
+  if (!craft || craft.ownership.length === 0) {
+    return {
+      criterio: "sem_dono",
+      regra: "Sem rateio",
+      cruzamento: tarifa
+        ? `Tarifa de pouso ${tarifa.pouso} sem etapa casada e aeronave sem participação cadastrada.`
+        : "Aeronave sem participação cadastrada — valor ainda não rateado.",
+      partes: [],
+    };
+  }
+
+  const partes = splitByShare(expense.amount, craft.ownership).map((item) => ({
+    partnerId: item.partnerId,
+    amount: item.amount,
+    share: craft.ownership.find((owner) => owner.partnerId === item.partnerId)?.share ?? null,
+  }));
+  const participacao = craft.ownership
+    .map((owner) => `${partnerShort(owner.partnerId)} ${Math.round(owner.share * 100)}%`)
+    .join(" · ");
+  const cruzamento = tarifa
+    ? `Tarifa de pouso ${tarifa.pouso} sem voo casado → participação em ${craft.registration} (${participacao}).`
+    : `Rateio pela participação em ${craft.registration}: ${participacao}.`;
+
+  return {
+    criterio: "participacao",
+    regra: "Pela participação na aeronave",
+    cruzamento,
+    partes,
+  };
+}
+
 export function custosDoSocio(
   months: MonthFilter,
   aircraftId: string,

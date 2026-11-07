@@ -26,6 +26,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { RaioXDespesas } from "@/components/despesas/raio-x-despesas";
 import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
@@ -41,8 +42,15 @@ import {
 } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
 import { useDados } from "@/hooks/use-dados";
-import { cn, formatBRL, formatDate, formatDateLista, formatDateShort } from "@/lib/format";
-import { CATEGORY_LABEL, categoryBarColor, POSTING_LABEL } from "@/lib/labels";
+import {
+  cn,
+  formatBRL,
+  formatDate,
+  formatDateLista,
+  formatDateShort,
+  formatPercent,
+} from "@/lib/format";
+import { CATEGORY_LABEL, categoryBarColor, corDoSocio, POSTING_LABEL } from "@/lib/labels";
 import {
   custosDoSocio,
   custosPorCategoria,
@@ -54,6 +62,7 @@ import {
   listNotasFiscais,
   monthsLabel,
   partnerName,
+  raioXAlocacao,
   valorDoParceiro,
 } from "@/services/operacao";
 import { relatorioDespesas } from "@/services/relatorios-operacao";
@@ -462,6 +471,13 @@ export function DespesasView() {
         ) : null}
       </section>
 
+      <RaioXDespesas
+        despesas={expensesIn(months, aircraftId)
+          .filter((item) => passaRecorte(item, recorte === "nf" ? "todas" : recorte))
+          .filter((item) => passaSocio(item, socioAtivo))}
+        socioId={socioEspecifico ? socioAtivo : null}
+      />
+
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[16px] font-bold">Lançamentos</h2>
         <Link
@@ -792,6 +808,7 @@ function DetalheDespesa({
   const tituloId = useId();
   const craft = getAircraft(expense.aircraftId);
   const trajeto = trajetoDaDespesa(expense);
+  const raio = raioXAlocacao(expense);
 
   useEffect(() => {
     function tecla(event: KeyboardEvent) {
@@ -857,8 +874,44 @@ function DetalheDespesa({
           <LinhaDetalhe rotulo="Aeronave" valor={craft?.registration ?? expense.aircraftId} />
           <LinhaDetalhe rotulo="Natureza" valor={CATEGORY_LABEL[expense.category]} />
           <LinhaDetalhe rotulo="Situação" valor={<StatusBadge value={expense.posting} />} />
+          <LinhaDetalhe rotulo="Critério" valor={raio.regra} />
           <LinhaDetalhe rotulo="Sócio" valor={rotuloSocio(expense)} />
         </dl>
+
+        <div className="mt-4 rounded-xl border border-[#EEF0F3] bg-tse-bg/40 px-3 py-3">
+          <p className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">
+            Cruzamento da alocação
+          </p>
+          <p className="mt-1 text-[13px] leading-5">{raio.cruzamento}</p>
+          {raio.partes.length > 0 ? (
+            <ul className="mt-3 space-y-1.5">
+              {raio.partes.map((parte) => (
+                <li
+                  key={parte.partnerId}
+                  className="flex items-center justify-between gap-3 text-[13px]"
+                >
+                  <span className="flex min-w-0 items-center gap-2 font-semibold">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: corDoSocio(parte.partnerId) }}
+                    />
+                    <span className="truncate">{partnerName(parte.partnerId)}</span>
+                    {parte.share !== null ? (
+                      <span className="text-[11px] font-bold text-tse-muted">
+                        {formatPercent(parte.share)}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 font-bold tabular-nums">{formatBRL(parte.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-[13px] font-semibold text-[#B91C1C]">
+              Ainda sem sócio responsável.
+            </p>
+          )}
+        </div>
 
         <div className="mt-2 divide-y divide-[#EEEEEE]">
           <Link
