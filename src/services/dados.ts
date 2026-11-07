@@ -1,13 +1,15 @@
-import { APORTES } from "@/data/aportes";
 import {
   AIRCRAFT,
+  APORTES,
   CREW,
+  EXTRAS,
   HANGARS,
   ITINERARIES,
   MAINTENANCE,
   PARTNERS,
+  ROTAS,
   SEGUROS,
-} from "@/data/mock";
+} from "@/data/caso-real";
 import { carregarOperacao, gravarOperacao } from "@/services/banco";
 import type {
   Aircraft,
@@ -43,31 +45,10 @@ export const INITIAL_BASE: BaseDados = {
   seguros: SEGUROS,
   itineraries: ITINERARIES,
   maintenance: MAINTENANCE,
-  extras: [],
+  extras: EXTRAS,
   aportes: APORTES,
-  rotas: rotasDaDemonstracao(),
+  rotas: ROTAS,
 };
-
-function rotasDaDemonstracao(): Rota[] {
-  const vistas = new Map<string, Rota>();
-  for (const voo of ITINERARIES) {
-    for (const perna of voo.legs) {
-      const id = `${perna.fromIcao}-${perna.toIcao}`.toLowerCase();
-      if (vistas.has(id)) continue;
-      vistas.set(id, {
-        id,
-        nome: `${perna.fromCity} → ${perna.toCity}`,
-        fromIcao: perna.fromIcao,
-        toIcao: perna.toIcao,
-        fromCity: perna.fromCity,
-        toCity: perna.toCity,
-        blockHours: perna.blockHours,
-        note: "",
-      });
-    }
-  }
-  return [...vistas.values()];
-}
 
 const STORAGE_KEY = "dynamics-aero-dados-v1";
 

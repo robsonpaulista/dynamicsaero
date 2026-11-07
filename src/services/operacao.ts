@@ -1,4 +1,5 @@
 import { HOJE, MONTHS, VIEWER_ID } from "@/data/calendario";
+import { NOTAS_FISCAIS } from "@/data/caso-real";
 import { getBase } from "@/services/dados";
 import { daysUntil, formatDate, formatMil } from "@/lib/format";
 import { METODO_LABEL, POSTING_LABEL, ROLE_LABEL } from "@/lib/labels";
@@ -19,6 +20,7 @@ import type {
   LancamentoConta,
   Leg,
   MaintenanceItem,
+  NotaFiscal,
   Partner,
   Posting,
   Rota,
@@ -57,6 +59,19 @@ export function partnerName(id: string): string {
 
 export function partnerShort(id: string): string {
   return getPartner(id)?.shortName ?? id;
+}
+
+/** Cotista da sessão só quando o papel é Sócio e o nome bate com o cadastro. */
+export function partnerIdDaSessao(nome: string, papel?: string): string | null {
+  if (papel !== "socio") return null;
+  const alvo = nome.trim().toLocaleLowerCase("pt-BR");
+  if (!alvo) return null;
+  const hit = listPartners().find((item) => {
+    const completo = item.name.trim().toLocaleLowerCase("pt-BR");
+    const curto = item.shortName.trim().toLocaleLowerCase("pt-BR");
+    return alvo === completo || alvo === curto || alvo.startsWith(`${curto} `);
+  });
+  return hit?.id ?? null;
 }
 
 export function listCrew(): CrewMember[] {
@@ -104,7 +119,8 @@ export function getItinerary(id: string): Itinerary | undefined {
 }
 
 export function getDespesaManual(id: string): Expense | undefined {
-  return getBase().extras.find((item) => item.id === id);
+  const extra = getBase().extras.find((item) => item.id === id);
+  return extra ? resolverRateioDespesa(extra) : undefined;
 }
 
 export function seguroDe(aircraftId: string): Insurance | undefined {
@@ -140,6 +156,39 @@ export function monthLabel(month: string): string {
 
 export function monthShort(month: string): string {
   return rotuloMes(month, true);
+}
+
+export type MonthFilter = string[];
+
+/** `null` = todos os meses. */
+export function monthsAtivos(filter: MonthFilter): string[] | null {
+  if (filter.length === 0 || filter.includes("todos")) return null;
+  return filter;
+}
+
+export function matchesMonth(competencia: string, filter: MonthFilter): boolean {
+  const ativos = monthsAtivos(filter);
+  if (!ativos) return true;
+  return ativos.includes(competencia);
+}
+
+export function monthsLabel(filter: MonthFilter): string {
+  const ativos = monthsAtivos(filter);
+  if (!ativos) return "Todos os meses";
+  if (ativos.length === 1) return monthLabel(ativos[0] ?? "");
+  if (ativos.length === 2) {
+    return `${monthShort(ativos[0] ?? "")} e ${monthShort(ativos[1] ?? "")}`;
+  }
+  return `${ativos.length} meses`;
+}
+
+export function mesDeReferencia(filter: MonthFilter): string {
+  const ativos = monthsAtivos(filter);
+  if (!ativos) {
+    const lista = listMonths();
+    return lista[lista.length - 1]?.id ?? HOJE.slice(0, 7);
+  }
+  return [...ativos].sort().at(-1) ?? HOJE.slice(0, 7);
 }
 
 export function listMonths(): { id: string; label: string; short: string }[] {
@@ -183,13 +232,21 @@ export function itineraryRoute(trip: Itinerary): string {
   return codes.join(" → ");
 }
 
+export function aerodromoLabel(city: string, icao: string): string {
+  const nome = city.trim() || icao;
+  return `${nome} (${icao})`;
+}
+
 export function itineraryCities(trip: Itinerary): string {
   const first = trip.legs[0];
   if (!first) return "";
-  const cities = [first.fromCity, ...trip.legs.map((leg) => leg.toCity)];
+  const trechos = [
+    aerodromoLabel(first.fromCity, first.fromIcao),
+    ...trip.legs.map((leg) => aerodromoLabel(leg.toCity, leg.toIcao)),
+  ];
   const compact: string[] = [];
-  for (const city of cities) {
-    if (compact[compact.length - 1] !== city) compact.push(city);
+  for (const trecho of trechos) {
+    if (compact[compact.length - 1] !== trecho) compact.push(trecho);
   }
   if (compact.length >= 3 && compact[0] === compact[compact.length - 1]) {
     return `${compact[0]} ↔ ${compact.slice(1, -1).join(" → ")}`;
@@ -282,9 +339,11 @@ function buildExpenses(): Expense[] {
     }
 
     for (const person of getBase().crew) {
+      if (person.monthlyCost <= 0) continue;
       const parts = splitEqual(person.monthlyCost, person.aircraftIds.length);
       person.aircraftIds.forEach((aircraftId, index) => {
         const amount = parts[index] ?? 0;
+        if (amount <= 0) return;
         expenses.push({
           id: `${month.id}-crew-${person.id}-${aircraftId}`,
           aircraftId,
@@ -307,6 +366,8 @@ function buildExpenses(): Expense[] {
     for (const leg of trip.legs) {
       const posting = legPosting(leg, trip);
       const month = leg.date.slice(0, 7);
+      const origem = aerodromoLabel(leg.fromCity, leg.fromIcao);
+      const destino = aerodromoLabel(leg.toCity, leg.toIcao);
       const items: Array<{
         category: ExpenseCategory;
         amount: number;
@@ -315,22 +376,22 @@ function buildExpenses(): Expense[] {
         {
           category: "combustivel",
           amount: leg.fuel,
-          description: `Combustível · ${leg.fromIcao} → ${leg.toIcao}`,
+          description: `Combustível · ${origem} → ${destino}`,
         },
         {
           category: "taxas",
           amount: leg.fees,
-          description: `Taxas · ${leg.toCity}`,
+          description: `Taxas · ${destino}`,
         },
         {
           category: "handling",
           amount: leg.handling,
-          description: `Pátio · ${leg.toCity}`,
+          description: `Pátio · ${destino}`,
         },
         {
           category: "catering",
           amount: leg.catering,
-          description: `Catering · ${leg.fromCity} → ${leg.toCity}`,
+          description: `Catering · ${origem} → ${destino}`,
         },
       ];
 
@@ -345,6 +406,10 @@ function buildExpenses(): Expense[] {
         ) {
           continue;
         }
+        const descricao =
+          item.category === "combustivel" && posting === "provisionado"
+            ? `${item.description} · estimativa por distância · sem despesa de gasolina faturada no período`
+            : item.description;
         expenses.push({
           id: `${leg.id}-${item.category}`,
           aircraftId: trip.aircraftId,
@@ -353,7 +418,7 @@ function buildExpenses(): Expense[] {
           month,
           date: leg.date,
           category: item.category,
-          description: item.description,
+          description: descricao,
           vendor: VENDORS[vendorKey],
           amount: item.amount,
           allocation: "solicitante",
@@ -384,13 +449,87 @@ function buildExpenses(): Expense[] {
   return expenses;
 }
 
-export function listExpenses(): Expense[] {
-  return [...buildExpenses(), ...getBase().extras];
+type TarifaPouso = { pouso: string; from: string; to: string };
+
+function parseTarifaPouso(description: string): TarifaPouso | null {
+  const match = description.match(
+    /^Tarifa de pouso ([A-Z0-9]{4})\s*·\s*([A-Z0-9]{4})→([A-Z0-9]{4})/i,
+  );
+  if (!match) return null;
+  const pouso = match[1];
+  const from = match[2];
+  const to = match[3];
+  if (!pouso || !from || !to) return null;
+  return {
+    pouso: pouso.toUpperCase(),
+    from: from.toUpperCase(),
+    to: to.toUpperCase(),
+  };
 }
 
-export function expensesIn(month: string, aircraftId: string): Expense[] {
+function casarTarifaComEtapa(
+  expense: Expense,
+): { trip: Itinerary; leg: Leg } | null {
+  const tarifa = parseTarifaPouso(expense.description);
+  if (!tarifa) return null;
+
+  const candidatos: Array<{ trip: Itinerary; leg: Leg; score: number }> = [];
+  for (const trip of getBase().itineraries) {
+    if (trip.aircraftId !== expense.aircraftId) continue;
+    if (trip.status === "cancelado") continue;
+    for (const leg of trip.legs) {
+      if (leg.date !== expense.date) continue;
+      let score = 0;
+      if (leg.toIcao === tarifa.pouso) score += 4;
+      if (leg.fromIcao === tarifa.pouso) score += 2;
+      if (leg.fromIcao === tarifa.from && leg.toIcao === tarifa.to) score += 3;
+      if (leg.fromIcao === tarifa.from || leg.toIcao === tarifa.to) score += 1;
+      if (score <= 0) continue;
+      candidatos.push({ trip, leg, score });
+    }
+  }
+  if (candidatos.length === 0) return null;
+  candidatos.sort(
+    (left, right) =>
+      right.score - left.score || left.leg.id.localeCompare(right.leg.id),
+  );
+  const melhor = candidatos[0];
+  return melhor ? { trip: melhor.trip, leg: melhor.leg } : null;
+}
+
+/** Tarifa de pouso com voo casado → solicitante; sem voo → participação. */
+export function resolverRateioDespesa(expense: Expense): Expense {
+  if (expense.category !== "taxas") return expense;
+  if (!parseTarifaPouso(expense.description)) return expense;
+
+  const casado = casarTarifaComEtapa(expense);
+  if (!casado) {
+    if (expense.allocation === "participacao" && !expense.partnerId) return expense;
+    return {
+      ...expense,
+      allocation: "participacao",
+      partnerId: undefined,
+      itineraryId: undefined,
+      legId: undefined,
+    };
+  }
+
+  return {
+    ...expense,
+    allocation: "solicitante",
+    partnerId: casado.trip.requestedBy,
+    itineraryId: casado.trip.id,
+    legId: casado.leg.id,
+  };
+}
+
+export function listExpenses(): Expense[] {
+  return [...buildExpenses(), ...getBase().extras.map(resolverRateioDespesa)];
+}
+
+export function expensesIn(months: MonthFilter, aircraftId: string): Expense[] {
   return listExpenses().filter(
-    (item) => item.month === month && matchesAircraft(item.aircraftId, aircraftId),
+    (item) => matchesMonth(item.month, months) && matchesAircraft(item.aircraftId, aircraftId),
   );
 }
 
@@ -398,10 +537,16 @@ export function expensesOfItinerary(itineraryId: string): Expense[] {
   return listExpenses().filter((item) => item.itineraryId === itineraryId);
 }
 
-export function itinerariesIn(month: string, aircraftId: string): Itinerary[] {
+export function listNotasFiscais(months: MonthFilter, aircraftId: string): NotaFiscal[] {
+  return NOTAS_FISCAIS.filter(
+    (item) => matchesMonth(item.month, months) && matchesAircraft(item.aircraftId, aircraftId),
+  ).sort((left, right) => right.date.localeCompare(left.date) || right.numero.localeCompare(left.numero));
+}
+
+export function itinerariesIn(months: MonthFilter, aircraftId: string): Itinerary[] {
   return getBase().itineraries.filter((trip) => {
     if (!matchesAircraft(trip.aircraftId, aircraftId)) return false;
-    return trip.legs.some((leg) => leg.date.startsWith(month));
+    return trip.legs.some((leg) => matchesMonth(leg.date.slice(0, 7), months));
   });
 }
 
@@ -423,8 +568,8 @@ export function sortAgenda(trips: Itinerary[]): Itinerary[] {
   });
 }
 
-function hoursIn(month: string, aircraftId: string): { voadas: number; previstas: number } {
-  return itinerariesIn(month, aircraftId).reduce(
+function hoursIn(months: MonthFilter, aircraftId: string): { voadas: number; previstas: number } {
+  return itinerariesIn(months, aircraftId).reduce(
     (total, trip) => {
       const hours = tripHours(trip);
       total.voadas += hours.voadas;
@@ -435,13 +580,13 @@ function hoursIn(month: string, aircraftId: string): { voadas: number; previstas
   );
 }
 
-export function aircraftMonth(aircraftId: string, month: string): {
+export function aircraftMonth(aircraftId: string, months: MonthFilter): {
   voadas: number;
   previstas: number;
   custo: number;
 } {
-  const hours = hoursIn(month, aircraftId);
-  const custo = expensesIn(month, aircraftId).reduce((sum, item) => sum + item.amount, 0);
+  const hours = hoursIn(months, aircraftId);
+  const custo = expensesIn(months, aircraftId).reduce((sum, item) => sum + item.amount, 0);
   return { voadas: hours.voadas, previstas: hours.previstas, custo };
 }
 
@@ -449,9 +594,9 @@ function centavos(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function listAportes(month?: string): Aporte[] {
+export function listAportes(months?: MonthFilter): Aporte[] {
   return getBase()
-    .aportes.filter((item) => !month || item.month === month)
+    .aportes.filter((item) => !months || matchesMonth(item.month, months))
     .sort((left, right) => left.date.localeCompare(right.date) || left.id.localeCompare(right.id));
 }
 
@@ -500,9 +645,9 @@ function variation(current: number, previous: number | null): string | null {
   return `${sign}${percent}% vs mês anterior`;
 }
 
-export function custosPorCategoria(month: string, aircraftId: string): CategoryTotal[] {
+export function custosPorCategoria(months: MonthFilter, aircraftId: string): CategoryTotal[] {
   const totals = new Map<ExpenseCategory, number>();
-  for (const expense of expensesIn(month, aircraftId)) {
+  for (const expense of expensesIn(months, aircraftId)) {
     totals.set(expense.category, (totals.get(expense.category) ?? 0) + expense.amount);
   }
   return [...totals.entries()]
@@ -510,12 +655,12 @@ export function custosPorCategoria(month: string, aircraftId: string): CategoryT
     .sort((left, right) => right.amount - left.amount);
 }
 
-function contaDoMes(month: string, aircraftId: string): Map<string, number> {
+function contaDoMes(months: MonthFilter, aircraftId: string): Map<string, number> {
   const totais = new Map<string, number>();
   const somar = (partnerId: string, amount: number) => {
     totais.set(partnerId, (totais.get(partnerId) ?? 0) + amount);
   };
-  for (const expense of expensesIn(month, aircraftId)) {
+  for (const expense of expensesIn(months, aircraftId)) {
     if (expense.allocation === "solicitante" && expense.partnerId) {
       somar(expense.partnerId, expense.amount);
       continue;
@@ -529,8 +674,8 @@ function contaDoMes(month: string, aircraftId: string): Map<string, number> {
   return totais;
 }
 
-export function getRateio(month: string, aircraftId: string): Rateio {
-  const expenses = expensesIn(month, aircraftId);
+export function getRateio(months: MonthFilter, aircraftId: string): Rateio {
+  const expenses = expensesIn(months, aircraftId);
   const relevantAircraft = getBase().aircraft.filter((item) =>
     matchesAircraft(item.id, aircraftId),
   );
@@ -597,7 +742,7 @@ export function getRateio(month: string, aircraftId: string): Rateio {
   }
 
   const hoursByPartner = new Map<string, Map<string, number>>();
-  for (const trip of itinerariesIn(month, aircraftId)) {
+  for (const trip of itinerariesIn(months, aircraftId)) {
     if (trip.status === "cancelado") continue;
     const hours = tripHours(trip);
     const totalHours = hours.voadas + hours.previstas;
@@ -606,7 +751,7 @@ export function getRateio(month: string, aircraftId: string): Rateio {
     hoursByPartner.set(trip.requestedBy, map);
   }
 
-  const totaisGerais = aircraftId === "todas" ? null : contaDoMes(month, "todas");
+  const totaisGerais = aircraftId === "todas" ? null : contaDoMes(months, "todas");
 
   const partners: RateioPartner[] = [...partnerIds].map((partnerId) => {
     const row = bucket.get(partnerId);
@@ -615,7 +760,9 @@ export function getRateio(month: string, aircraftId: string): Rateio {
     const total = participacao + voos;
     const geralTotal = totaisGerais?.get(partnerId) ?? total;
     const aplicado = aplicarAportes(
-      getBase().aportes.filter((item) => item.partnerId === partnerId && item.month === month),
+      getBase().aportes.filter(
+        (item) => item.partnerId === partnerId && matchesMonth(item.month, months),
+      ),
       aircraftId,
       total,
       aircraftId === "todas" ? total : geralTotal,
@@ -678,7 +825,8 @@ export function getRateio(month: string, aircraftId: string): Rateio {
   };
 }
 
-function valorDoParceiro(expense: Expense, partnerId: string): number {
+/** Parte do sócio em um lançamento (voo integral ou fatia da participação). */
+export function valorDoParceiro(expense: Expense, partnerId: string): number {
   if (expense.allocation === "solicitante") {
     return expense.partnerId === partnerId ? expense.amount : 0;
   }
@@ -688,6 +836,27 @@ function valorDoParceiro(expense: Expense, partnerId: string): number {
     splitByShare(expense.amount, craft.ownership).find((item) => item.partnerId === partnerId)
       ?.amount ?? 0
   );
+}
+
+export function custosDoSocio(
+  months: MonthFilter,
+  aircraftId: string,
+  partnerId: string,
+): { total: number; realizado: number; categorias: CategoryTotal[] } {
+  const totais = new Map<ExpenseCategory, number>();
+  let total = 0;
+  let realizado = 0;
+  for (const expense of expensesIn(months, aircraftId)) {
+    const parte = valorDoParceiro(expense, partnerId);
+    if (parte <= 0) continue;
+    total += parte;
+    if (expense.posting === "realizado") realizado += parte;
+    totais.set(expense.category, (totais.get(expense.category) ?? 0) + parte);
+  }
+  const categorias = [...totais.entries()]
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((left, right) => right.amount - left.amount);
+  return { total, realizado, categorias };
 }
 
 function historicoDebito(expense: Expense): string {
@@ -708,19 +877,27 @@ function historicoCredito(id: string, note: string): string {
   return `Aporte ${forma}${referencia}${aeronave}${nota}`;
 }
 
-export function contaCorrente(partnerId: string, month: string, aircraftId: string): ContaCorrente {
+export function contaCorrente(
+  partnerId: string,
+  months: MonthFilter,
+  aircraftId: string,
+): ContaCorrente {
+  const ativos = monthsAtivos(months);
+  const primeiro = ativos ? [...ativos].sort()[0] : null;
   const anterior = centavos(
-    listMonths()
-      .filter((item) => item.id < month)
-      .reduce((soma, item) => {
-        const partner = getRateio(item.id, aircraftId).partners.find(
-          (row) => row.partnerId === partnerId,
-        );
-        return soma + (partner?.saldo ?? 0);
-      }, 0),
+    primeiro
+      ? listMonths()
+          .filter((item) => item.id < primeiro)
+          .reduce((soma, item) => {
+            const partner = getRateio([item.id], aircraftId).partners.find(
+              (row) => row.partnerId === partnerId,
+            );
+            return soma + (partner?.saldo ?? 0);
+          }, 0)
+      : 0,
   );
 
-  const debitos = expensesIn(month, aircraftId).flatMap((expense) => {
+  const debitos = expensesIn(months, aircraftId).flatMap((expense) => {
     const valor = valorDoParceiro(expense, partnerId);
     if (valor <= 0) return [];
     return [
@@ -734,7 +911,7 @@ export function contaCorrente(partnerId: string, month: string, aircraftId: stri
     ];
   });
 
-  const creditos = (getRateio(month, aircraftId).partners.find((item) => item.partnerId === partnerId)
+  const creditos = (getRateio(months, aircraftId).partners.find((item) => item.partnerId === partnerId)
     ?.aportes ?? [])
     .filter((item) => item.aplicado > 0)
     .map((item) => ({
@@ -768,9 +945,9 @@ export function contaCorrente(partnerId: string, month: string, aircraftId: stri
   };
 }
 
-export function getKpis(month: string, aircraftId: string): Kpis {
-  const hours = hoursIn(month, aircraftId);
-  const expenses = expensesIn(month, aircraftId);
+export function getKpis(months: MonthFilter, aircraftId: string): Kpis {
+  const hours = hoursIn(months, aircraftId);
+  const expenses = expensesIn(months, aircraftId);
   const custoComprometido = expenses.reduce((sum, item) => sum + item.amount, 0);
   const custoRealizado = expenses
     .filter((item) => item.posting === "realizado")
@@ -789,11 +966,12 @@ export function getKpis(month: string, aircraftId: string): Kpis {
   const retidas = fleet
     .filter((item) => item.status === "manutencao")
     .map((item) => item.registration);
-  const rateio = getRateio(month, aircraftId);
-  const previous = previousMonth(month);
-  const previousHours = previous ? hoursIn(previous, aircraftId).voadas : null;
+  const rateio = getRateio(months, aircraftId);
+  const ativos = monthsAtivos(months);
+  const previous = ativos?.length === 1 ? previousMonth(ativos[0] ?? "") : null;
+  const previousHours = previous ? hoursIn([previous], aircraftId).voadas : null;
   const previousCost = previous
-    ? expensesIn(previous, aircraftId).reduce((sum, item) => sum + item.amount, 0)
+    ? expensesIn([previous], aircraftId).reduce((sum, item) => sum + item.amount, 0)
     : null;
 
   return {
@@ -811,7 +989,7 @@ export function getKpis(month: string, aircraftId: string): Kpis {
   };
 }
 
-export function getAlertas(month: string, aircraftId: string): Alerta[] {
+export function getAlertas(months: MonthFilter, aircraftId: string): Alerta[] {
   const alertas: Alerta[] = [];
   const fleet = getBase().aircraft.filter((item) => matchesAircraft(item.id, aircraftId));
   const fleetIds = new Set(fleet.map((item) => item.id));
@@ -824,7 +1002,7 @@ export function getAlertas(month: string, aircraftId: string): Alerta[] {
       alertas.push({
         id: `alert-${item.id}`,
         tone: "critico",
-        title: `${registration} retido`,
+        title: `Manutenção necessária · ${registration}`,
         detail: `${item.title}. ${item.dueLabel}.`,
         href: `/manutencao/${item.id}`,
       });
@@ -904,7 +1082,7 @@ export function getAlertas(month: string, aircraftId: string): Alerta[] {
     }
   }
 
-  const rateio = getRateio(month, aircraftId);
+  const rateio = getRateio(months, aircraftId);
   if (rateio.saldo > 1) {
     const abertos = rateio.partners
       .filter((item) => item.saldo > 1)
@@ -912,7 +1090,7 @@ export function getAlertas(month: string, aircraftId: string): Alerta[] {
     alertas.push({
       id: "alert-rateio",
       tone: "atencao",
-      title: "Rateio do mês em aberto",
+      title: "Rateio em aberto",
       detail: `${abertos.join(" e ")} ainda ${abertos.length > 1 ? "têm" : "tem"} saldo a aportar.`,
       href: "/rateio",
     });
@@ -939,6 +1117,10 @@ export type PosicaoPainel = {
 
 function nomeFalado(aircraft: Aircraft): string {
   if (aircraft.category === "helicoptero") return "o helicóptero";
+  if (aircraft.category === "turbohelice") {
+    const partes = aircraft.model.split(" ").filter((parte) => !/\d/.test(parte));
+    return `o ${partes.join(" ") || "turboélice"}`;
+  }
   const partes = aircraft.model.split(" ");
   const primeira = partes[0] ?? aircraft.registration;
   if (/\d/.test(primeira)) {
@@ -958,8 +1140,8 @@ function comInicial(texto: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-function voosAdiante(aircraftId: string, month: string): Itinerary[] {
-  return itinerariesIn(month, aircraftId)
+function voosAdiante(aircraftId: string, months: MonthFilter): Itinerary[] {
+  return itinerariesIn(months, aircraftId)
     .filter((trip) => trip.status !== "cancelado" && trip.status !== "concluido")
     .filter((trip) => (trip.legs[0]?.date ?? "") >= HOJE)
     .sort((left, right) => {
@@ -980,7 +1162,7 @@ function retencaoDe(aircraftId: string): MaintenanceItem | undefined {
   );
 }
 
-function fatoDaAeronave(aircraft: Aircraft, month: string): string {
+function fatoDaAeronave(aircraft: Aircraft, months: MonthFilter): string {
   if (aircraft.status === "em_voo") {
     const voo = getBase().itineraries.find(
       (trip) => trip.aircraftId === aircraft.id && trip.status === "em_voo",
@@ -994,9 +1176,9 @@ function fatoDaAeronave(aircraft: Aircraft, month: string): string {
     if (retencao?.dueAt) return `Liberação prevista dia ${diaDoMes(retencao.dueAt)}`;
     return retencao?.dueLabel ?? "Em manutenção";
   }
-  const proximo = voosAdiante(aircraft.id, month)[0];
+  const proximo = voosAdiante(aircraft.id, months)[0];
   const perna = proximo?.legs[0];
-  if (!proximo || !perna) return "Sem voo à frente neste mês";
+  if (!proximo || !perna) return "Sem voo à frente no período";
   return `${perna.toCity}, dia ${diaDoMes(perna.date)}, ${perna.depart}`;
 }
 
@@ -1017,7 +1199,11 @@ function fraseLivres(quantidade: number): string {
   return nomes[quantidade] ?? `${quantidade} aeronaves livres.`;
 }
 
-export function posicaoDoPainel(month: string, aircraftId: string): PosicaoPainel {
+export function posicaoDoPainel(
+  months: MonthFilter,
+  aircraftId: string,
+  partnerId: string | null = null,
+): PosicaoPainel {
   const frota = getBase().aircraft.filter((item) => matchesAircraft(item.id, aircraftId));
   const ordem: Record<Aircraft["status"], number> = {
     em_voo: 0,
@@ -1037,14 +1223,14 @@ export function posicaoDoPainel(month: string, aircraftId: string): PosicaoPaine
       category: aircraft.category,
       status: aircraft.status,
       retida: aircraft.status === "manutencao" && Boolean(retencaoDe(aircraft.id)),
-      fato: fatoDaAeronave(aircraft, month),
+      fato: fatoDaAeronave(aircraft, months),
     }));
 
   const partes = [fraseLivres(frota.filter((item) => item.status !== "manutencao").length)];
 
   const proximoLivre = frota
     .filter((item) => item.status === "disponivel")
-    .map((aircraft) => ({ aircraft, trip: voosAdiante(aircraft.id, month)[0] }))
+    .map((aircraft) => ({ aircraft, trip: voosAdiante(aircraft.id, months)[0] }))
     .filter((item): item is { aircraft: Aircraft; trip: Itinerary } => Boolean(item.trip))
     .sort((left, right) =>
       (left.trip.legs[0]?.date ?? "").localeCompare(right.trip.legs[0]?.date ?? ""),
@@ -1063,13 +1249,14 @@ export function posicaoDoPainel(month: string, aircraftId: string): PosicaoPaine
           (trip) => trip.aircraftId === noAr.id && trip.status === "em_voo",
         )
       : undefined;
-    const noMes = voo?.legs.some((leg) => leg.date.startsWith(month)) ?? false;
-    if (noAr && noMes) partes.push(comInicial(`${nomeFalado(noAr)} está no ar.`));
+    const noPeriodo =
+      voo?.legs.some((leg) => matchesMonth(leg.date.slice(0, 7), months)) ?? false;
+    if (noAr && noPeriodo) partes.push(comInicial(`${nomeFalado(noAr)} está no ar.`));
   }
 
   const volta = frota
     .filter((item) => item.status === "manutencao")
-    .map((aircraft) => ({ aircraft, trip: voosAdiante(aircraft.id, month)[0] }))
+    .map((aircraft) => ({ aircraft, trip: voosAdiante(aircraft.id, months)[0] }))
     .filter((item): item is { aircraft: Aircraft; trip: Itinerary } => Boolean(item.trip))
     .sort((left, right) =>
       (left.trip.legs[0]?.date ?? "").localeCompare(right.trip.legs[0]?.date ?? ""),
@@ -1082,16 +1269,25 @@ export function posicaoDoPainel(month: string, aircraftId: string): PosicaoPaine
     );
   }
 
-  const kpis = getKpis(month, aircraftId);
-  const rateio = getRateio(month, aircraftId);
-  const eu = rateio.partners.find((item) => item.partnerId === VIEWER_ID);
-  const custo = `O mês está em ${formatMil(kpis.custoComprometido)}`;
-  if (!eu) partes.push(`${custo}.`);
-  else if (eu.saldo <= 1) partes.push(`${custo} e o seu aporte está em dia.`);
-  else partes.push(`${custo} e você ainda aporta ${formatMil(eu.saldo)}.`);
+  const kpis = getKpis(months, aircraftId);
+  const rateio = getRateio(months, aircraftId);
+  const eu = partnerId
+    ? rateio.partners.find((item) => item.partnerId === partnerId)
+    : undefined;
+  const ativosPainel = monthsAtivos(months);
+  const periodo = !ativosPainel || ativosPainel.length > 1 ? "O período" : "O mês";
+  const custo = `${periodo} está em ${formatMil(kpis.custoComprometido)}`;
+  if (eu) {
+    if (eu.saldo <= 1) partes.push(`${custo} e o seu aporte está em dia.`);
+    else partes.push(`${custo} e você ainda aporta ${formatMil(eu.saldo)}.`);
+  } else if (rateio.saldo <= 1) {
+    partes.push(`${custo} e o rateio dos sócios está em dia.`);
+  } else {
+    partes.push(`${custo} e ainda faltam ${formatMil(rateio.saldo)} no rateio.`);
+  }
 
   return {
-    frase: `${monthShort(month)}. ${partes.join(" ")}`,
+    frase: `${monthsLabel(months)}. ${partes.join(" ")}`,
     faixas,
   };
 }

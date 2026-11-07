@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { Card, tableClass, tdClass, thClass } from "@/components/ui/tse";
 import { formatBRL, formatDate } from "@/lib/format";
-import { contaCorrente, partnerName, VIEWER_ID } from "@/services/operacao";
+import { contaCorrente, partnerName, VIEWER_ID, type MonthFilter } from "@/services/operacao";
 import type { RateioPartner } from "@/types/operacao";
 
 export function ContaCorrentePainel({
-  month,
+  months,
   aircraftId,
   partners,
 }: {
-  month: string;
+  months: MonthFilter;
   aircraftId: string;
   partners: RateioPartner[];
 }) {
@@ -21,7 +21,7 @@ export function ContaCorrentePainel({
     : (partners[0]?.partnerId ?? "");
   if (!cotista) return null;
 
-  const conta = contaCorrente(cotista, month, aircraftId);
+  const conta = contaCorrente(cotista, months, aircraftId);
   const situacao = conta.saldo > 1 ? "Em aberto" : conta.saldo < -1 ? "Crédito" : "Em dia";
 
   return (

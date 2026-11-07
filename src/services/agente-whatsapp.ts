@@ -165,7 +165,7 @@ function blocoAgenda(titulo: string, voos: Itinerary[], vazio: string, comStatus
 }
 
 function textoAgenda(month: string): string {
-  const voos = itinerariesIn(month, "todas").slice().sort(porData);
+  const voos = itinerariesIn([month], "todas").slice().sort(porData);
   if (voos.length === 0) {
     return `Agenda de ${monthLabel(month).toLowerCase()}\n\nNenhum voo nesta competência.`;
   }
@@ -189,7 +189,7 @@ function textoAgenda(month: string): string {
 }
 
 function textoExtrato(partnerId: string, month: string): string {
-  const conta = contaCorrente(partnerId, month, "todas");
+  const conta = contaCorrente(partnerId, [month], "todas");
   const nome = listPartners().find((item) => item.id === partnerId)?.name ?? "Cotista";
   return [
     `Extrato de ${monthLabel(month).toLowerCase()}`,
@@ -267,7 +267,7 @@ function continuarAgendamento(
   texto: string,
 ): RespostaAgente {
   const partnerId = identidade.partnerId;
-  if (!partnerId) return saudacao(identidade, "2026-10");
+  if (!partnerId) return saudacao(identidade, "2026-05");
   if (rascunho.etapa === "aeronave") return escolherAeronave(partnerId, texto);
   if (rascunho.etapa === "dados") return receberDestino(partnerId, rascunho, texto);
   if (rascunho.etapa === "pouso") return escolherPouso(partnerId, rascunho, texto);
@@ -456,7 +456,7 @@ function confirmar(identidade: IdentidadeAgente, rascunho: RascunhoVoo, texto: s
   const pedido = normalizar(texto);
   const partnerId = identidade.partnerId;
   const aircraftId = rascunho.aircraftId;
-  if (!partnerId || !aircraftId) return saudacao(identidade, "2026-10");
+  if (!partnerId || !aircraftId) return saudacao(identidade, "2026-05");
   if (!["confirmar", "confirmar agendamento", "sim"].includes(pedido)) {
     return responder(
       "Confirme o agendamento ou cancele o pedido.",

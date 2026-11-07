@@ -1,461 +1,450 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
-import { ChevronDown, Clock3, Gauge, PieChart, Route, Users, type LucideIcon } from "lucide-react";
-import { MarcaAeronave } from "@/components/painel/marca-aeronave";
+import {
+  CheckCircle2,
+  ChevronRight,
+  CircleDollarSign,
+  Clock3,
+  FileText,
+  Plane,
+  type LucideIcon,
+} from "lucide-react";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import { PageStack, StatusBadge } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
 import { useDados } from "@/hooks/use-dados";
-import { formatBRL, formatHours, formatMil, cn, formatDateShort } from "@/lib/format";
-import { CATEGORY_LABEL, STATUS_CLASS, categoryBarColor, corDoSocio } from "@/lib/labels";
+import { cn, formatBRL, formatHours, formatMil } from "@/lib/format";
+import { corDoSocio } from "@/lib/labels";
 import {
-  custosPorCategoria,
+  expensesIn,
+  getAircraft,
   getAlertas,
+  getItinerary,
   getKpis,
   getRateio,
-  itineraryCities,
-  itinerarySpan,
   itinerariesIn,
-  monthShort,
+  listAircraft,
   partnerShort,
-  posicaoDoPainel,
-  sortAgenda,
-  tripHours,
-  HOJE,
-  VIEWER_ID,
+  type MonthFilter,
 } from "@/services/operacao";
-import type { Alerta } from "@/types/operacao";
-
-const TONE_BAR: Record<string, string> = {
-  critico: "bg-[#EF4444]",
-  atencao: "bg-[#38BDF8]",
-  info: "bg-tse-olive",
-};
+import type { RateioPartner } from "@/types/operacao";
 
 export function PainelView() {
   useDados();
-  const { aircraftId, month } = useOperacao();
-  const [abertos, setAbertos] = useState<string[]>([]);
-  const [maisDecisoes, setMaisDecisoes] = useState<boolean>(false);
-
-  const posicao = posicaoDoPainel(month, aircraftId);
-  const kpis = getKpis(month, aircraftId);
-  const rateio = getRateio(month, aircraftId);
-  const categorias = custosPorCategoria(month, aircraftId);
-  const maiorCategoria = categorias[0]?.amount ?? 1;
-  const alertas = getAlertas(month, aircraftId);
-  const criticos = alertas.filter((item) => item.tone === "critico");
-  const demais = alertas.filter((item) => item.tone !== "critico");
-  const eu = rateio.partners.find((item) => item.partnerId === VIEWER_ID);
-  const saldoOutros = rateio.partners
-    .filter((item) => item.partnerId !== VIEWER_ID)
-    .reduce((soma, item) => soma + Math.max(0, item.saldo), 0);
-
-  const voos = itinerariesIn(month, aircraftId).filter((trip) => trip.status !== "cancelado");
-  const agenda = sortAgenda(voos);
-  const seguinte = agenda.find(
-    (trip) =>
-      trip.status !== "concluido" &&
-      trip.status !== "em_voo" &&
-      (trip.legs[0]?.date ?? "") >= HOJE,
+  const { aircraftId, months, partnerId } = useOperacao();
+  const kpis = getKpis(months, aircraftId);
+  const rateio = getRateio(months, aircraftId);
+  const eu = partnerId
+    ? rateio.partners.find((item) => item.partnerId === partnerId)
+    : undefined;
+  const craft =
+    aircraftId !== "todas"
+      ? getAircraft(aircraftId)
+      : listAircraft()[0];
+  const voos = itinerariesIn(months, aircraftId).filter((trip) => trip.status !== "cancelado");
+  const semSocio = despesasSemIdentificacao(months, aircraftId);
+  const semRateioValor = valorSemIdentificacao(months, aircraftId);
+  const faltaReceberSocios = rateio.partners.reduce(
+    (soma, item) => soma + Math.max(0, item.saldo),
+    0,
   );
-  const noAr = agenda.find((trip) => trip.status === "em_voo");
-  const pernaSeguinte = seguinte?.legs[0];
-  const resumoAgenda = pernaSeguinte
-    ? `${voos.length} ${voos.length === 1 ? "voo" : "voos"} · próximo ${pernaSeguinte.toCity} dia ${Number(pernaSeguinte.date.slice(8, 10))}`
-    : noAr
-      ? `${voos.length} ${voos.length === 1 ? "voo" : "voos"} · ${noAr.title} no ar`
-      : `${voos.length} ${voos.length === 1 ? "voo" : "voos"} no mês`;
-
-  const resumoHoras = kpis.variacaoHoras
-    ? `${formatHours(kpis.horasVoadas)} · ${kpis.variacaoHoras}`
-    : formatHours(kpis.horasVoadas);
-
-  const tresMaiores = categorias
-    .slice(0, 3)
-    .map((item, index) => {
-      const nome = CATEGORY_LABEL[item.category];
-      return index === 0 ? nome : nome.toLocaleLowerCase("pt-BR");
-    });
-  const resumoCusto =
-    tresMaiores.length === 0
-      ? "Sem custo neste mês"
-      : tresMaiores.length === 1
-        ? tresMaiores[0]
-        : `${tresMaiores.slice(0, -1).join(", ")} e ${tresMaiores[tresMaiores.length - 1]}`;
-
-  const resumoRateio = rateio.partners
-    .filter((item) => item.partnerId !== VIEWER_ID)
-    .map((item) =>
-      item.saldo <= 1
-        ? `${partnerShort(item.partnerId)} em dia`
-        : `${partnerShort(item.partnerId)} ${formatMil(item.saldo)}`,
-    )
-    .join(" · ");
-
-  function alternar(id: string) {
-    setAbertos((atual) =>
-      atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id],
-    );
-  }
+  const alertas = getAlertas(months, aircraftId);
+  const pagamentosConferir = alertas.filter((item) => item.tone === "atencao" || item.tone === "critico");
 
   return (
     <PageStack>
-      <FiltrosOperacao />
+      <FiltrosOperacao legenda="O período altera o resumo da operação e a minha conta." />
 
-      <section className="rounded-2xl bg-white px-5 py-5 shadow-sm">
-        <p className="max-w-4xl text-[18px] leading-7 font-medium text-tse-text sm:text-[20px] sm:leading-8">
-          {posicao.frase}
-        </p>
-      </section>
+      {/* Sócio: o seletor já diz a frota — evita repetir "Toda a operação". */}
+      {!eu && craft ? (
+        <section className="flex flex-wrap items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm sm:px-5">
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-[18px] tracking-wide">
+              {aircraftId === "todas" ? "Toda a operação" : craft.registration}
+            </p>
+            <p className="text-[13px] text-tse-muted">
+              {aircraftId === "todas"
+                ? `${listAircraft().length} aeronave(s)`
+                : `${craft.manufacturer} ${craft.model}`}
+            </p>
+          </div>
+          {aircraftId !== "todas" ? <StatusBadge value={craft.status} /> : null}
+        </section>
+      ) : null}
 
-      <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
-        <ul className="divide-y divide-[#EEEEEE]">
-          {posicao.faixas.map((faixa) => (
-            <li key={faixa.id}>
-              <Link
-                href={`/frota/${faixa.id}`}
-                className="flex items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5"
-              >
-                <MarcaAeronave
-                  category={faixa.category}
-                  tom={
-                    faixa.retida || faixa.status === "manutencao"
-                      ? "retida"
-                      : faixa.status === "em_voo"
-                        ? "em_voo"
-                        : "disponivel"
-                  }
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-display text-[16px] tracking-wide">
-                      {faixa.registration}
-                    </span>
-                    {faixa.retida ? (
-                      <span
-                        className={cn(
-                          "rounded-md px-2 py-0.5 text-[11px] font-bold tracking-wide uppercase",
-                          STATUS_CLASS.manutencao,
-                        )}
-                      >
-                        Retida
-                      </span>
-                    ) : (
-                      <StatusBadge value={faixa.status} />
-                    )}
-                  </span>
-                  <span className="mt-0.5 block text-[13px] text-tse-muted">{faixa.model}</span>
-                </span>
-                <span className="max-w-[48%] text-right text-[14px] leading-5 font-semibold">
-                  {faixa.fato}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Numero
-          href="/despesas"
-          label="Custo do mês"
-          value={formatMil(kpis.custoComprometido)}
-          hint="Tudo que o mês compromete"
+      {eu ? (
+        <PainelSocio
+          eu={eu}
+          despesasPeriodo={rateio.total}
+          faltaReceberSocios={faltaReceberSocios}
+          semRateio={semRateioValor}
+          voos={voos.length}
+          horas={kpis.horasVoadas}
+          custoHora={kpis.custoHora}
         />
-        <Numero
-          href="/rateio"
-          label="Seu saldo"
-          value={eu && eu.saldo > 1 ? formatMil(eu.saldo) : "Em dia"}
-          hint={eu && eu.saldo > 1 ? "O que ainda cabe a você" : "Nada em aberto"}
+      ) : (
+        <PainelAdmin
+          despesas={rateio.total}
+          pago={rateio.pago}
+          emAberto={faltaReceberSocios}
+          partners={rateio.partners}
+          semSocio={semSocio}
+          pagamentosConferir={pagamentosConferir.length}
         />
-        <Numero
-          href="/rateio"
-          label="Sócios em aberto"
-          value={saldoOutros > 1 ? formatMil(saldoOutros) : "Em dia"}
-          hint={saldoOutros > 1 ? "O que os outros ainda devem" : "Ninguém deve"}
-        />
-      </div>
-
-      <section className="rounded-2xl bg-white px-5 py-4 shadow-sm">
-        <h2 className="text-[15px] font-bold">
-          {criticos.length === 0
-            ? "Nenhuma decisão pendente"
-            : criticos.length === 1
-              ? "Uma decisão pendente"
-              : `${criticos.length} decisões pendentes`}
-        </h2>
-        <p className="mt-1 text-[13px] leading-5 text-tse-muted">
-          {criticos.length === 0
-            ? "A operação segue sem nada que dependa de você."
-            : "Isto trava ou muda a frota. O restante são avisos."}
-        </p>
-        {criticos.length > 0 || maisDecisoes ? (
-          <ul className="mt-3 space-y-3">
-            {(maisDecisoes ? alertas : criticos).map((alerta) => (
-              <Decisao key={alerta.id} alerta={alerta} />
-            ))}
-          </ul>
-        ) : null}
-        {demais.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setMaisDecisoes((atual) => !atual)}
-            aria-expanded={maisDecisoes}
-            className="mt-3 text-[13px] font-bold text-tse-olive"
-          >
-            {maisDecisoes
-              ? "Ocultar avisos"
-              : criticos.length > 0
-                ? `Ver os outros ${demais.length} avisos`
-                : `Ver ${demais.length} avisos`}
-          </button>
-        ) : null}
-      </section>
-
-      <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
-        <Indicador
-          icone={Route}
-          titulo="Voos do mês"
-          resumo={resumoAgenda}
-          aberto={abertos.includes("agenda")}
-          onToggle={() => alternar("agenda")}
-        >
-          {agenda.length === 0 ? (
-            <p className="text-[13px] text-tse-muted">Nenhum itinerário neste recorte.</p>
-          ) : (
-            <ul className="divide-y divide-[#EEEEEE]">
-              {agenda.map((trip) => {
-                const span = itinerarySpan(trip);
-                const hours = tripHours(trip);
-                return (
-                  <li key={trip.id}>
-                    <Link
-                      href={`/itinerarios/${trip.id}`}
-                      className="grid gap-2 py-3 sm:grid-cols-[72px_1fr_auto] sm:items-center"
-                    >
-                      <span className="text-[13px] font-semibold text-tse-muted">
-                        {span ? formatDateShort(span.first) : ""}
-                      </span>
-                      <span>
-                        <span className="block text-[14px] font-bold">{trip.title}</span>
-                        <span className="block text-[12px] text-tse-muted">
-                          {itineraryCities(trip)}
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2 sm:justify-end">
-                        <span className="text-[12px] text-tse-muted">
-                          {formatHours(hours.voadas + hours.previstas)}
-                        </span>
-                        <StatusBadge value={trip.status} />
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <Link
-            href="/itinerarios"
-            className="mt-2 inline-block text-[12px] font-bold tracking-wide text-tse-olive uppercase"
-          >
-            Ver tudo
-          </Link>
-        </Indicador>
-        <Indicador
-          icone={Clock3}
-          titulo="Horas voadas"
-          resumo={resumoHoras}
-          aberto={abertos.includes("horas")}
-          onToggle={() => alternar("horas")}
-        >
-          <p className="text-[14px]">
-            {formatHours(kpis.horasVoadas)} já voadas
-            {kpis.horasPrevistas > 0
-              ? ` e ${formatHours(kpis.horasPrevistas)} ainda previstas`
-              : ""}
-            .
-          </p>
-          <Link
-            href="/itinerarios"
-            className="mt-2 inline-block text-[12px] font-bold tracking-wide text-tse-olive uppercase"
-          >
-            Ver itinerários
-          </Link>
-        </Indicador>
-        <Indicador
-          icone={Gauge}
-          titulo="Custo por hora voada"
-          resumo={kpis.custoHora === null ? "Ainda sem hora realizada" : formatBRL(kpis.custoHora)}
-          aberto={abertos.includes("hora")}
-          onToggle={() => alternar("hora")}
-        >
-          <p className="text-[14px]">
-            Combustível, taxas, pátio e catering dos voos já realizados
-            {kpis.custoHora === null ? "." : `, ${formatBRL(kpis.custoHora)} por hora.`}
-          </p>
-          <Link
-            href="/despesas"
-            className="mt-2 inline-block text-[12px] font-bold tracking-wide text-tse-olive uppercase"
-          >
-            Ver despesas
-          </Link>
-        </Indicador>
-        <Indicador
-          icone={PieChart}
-          titulo="Onde foi o dinheiro"
-          resumo={resumoCusto ?? "Sem custo neste mês"}
-          aberto={abertos.includes("composicao")}
-          onToggle={() => alternar("composicao")}
-        >
-          {categorias.length === 0 ? (
-            <p className="text-[13px] text-tse-muted">Nenhum custo neste recorte.</p>
-          ) : (
-            <ul className="space-y-3">
-              {categorias.map((item) => (
-                <li key={item.category}>
-                  <div className="mb-1 flex items-baseline justify-between gap-3 text-[13px]">
-                    <span>{CATEGORY_LABEL[item.category]}</span>
-                    <span className="font-bold">{formatBRL(item.amount)}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-tse-bg">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.max(4, (item.amount / maiorCategoria) * 100)}%`,
-                        background: categoryBarColor(item.category),
-                      }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Indicador>
-        <Indicador
-          icone={Users}
-          titulo="Conta de cada sócio"
-          resumo={resumoRateio || "Sem outros sócios neste recorte"}
-          aberto={abertos.includes("rateio")}
-          onToggle={() => alternar("rateio")}
-        >
-          <ul className="space-y-4">
-            {rateio.partners.map((item) => {
-              const width = item.total > 0 ? Math.min(100, (item.pago / item.total) * 100) : 0;
-              return (
-                <li key={item.partnerId}>
-                  <div className="mb-1 flex items-baseline justify-between gap-3">
-                    <span className="text-[14px] font-bold">
-                      <span
-                        className="mr-2 inline-block size-2.5 rounded-full"
-                        style={{ background: corDoSocio(item.partnerId) }}
-                      />
-                      {partnerShort(item.partnerId)}
-                      {item.partnerId === VIEWER_ID ? (
-                        <span className="ml-2 text-[11px] font-bold tracking-wide text-tse-gold uppercase">
-                          Você
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="text-[13px] font-bold">
-                      {item.saldo <= 1 ? "Em dia" : `${formatBRL(item.saldo)} em aberto`}
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-tse-bg">
-                    <div className="h-full rounded-full bg-tse-olive" style={{ width: `${width}%` }} />
-                  </div>
-                  <p className="mt-1 text-[12px] text-tse-muted">
-                    {formatBRL(item.pago)} de {formatBRL(item.total)} · {formatHours(item.hours)}{" "}
-                    pedidas
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-          <Link
-            href="/rateio"
-            className="mt-3 inline-block text-[12px] font-bold tracking-wide text-tse-olive uppercase"
-          >
-            Abrir rateio
-          </Link>
-        </Indicador>
-      </section>
+      )}
     </PageStack>
   );
 }
 
-function Decisao({ alerta }: { alerta: Alerta }) {
+function PainelSocio({
+  eu,
+  despesasPeriodo,
+  faltaReceberSocios,
+  semRateio,
+  voos,
+  horas,
+  custoHora,
+}: {
+  eu: RateioPartner;
+  despesasPeriodo: number;
+  faltaReceberSocios: number;
+  semRateio: number;
+  voos: number;
+  horas: number;
+  custoHora: number | null;
+}) {
+  const falta = Math.max(0, eu.saldo);
+  return (
+    <>
+      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
+        <p className="text-[13px] font-semibold text-tse-muted">Resumo da operação</p>
+
+        <div className="mt-3">
+          <p className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">
+            Financeiro
+          </p>
+          <dl
+            className={cn(
+              "mt-2 grid gap-x-4 gap-y-3",
+              semRateio > 1 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2",
+            )}
+          >
+            <div>
+              <dt className="text-[12px] text-tse-muted">Despesas do período</dt>
+              <dd className="mt-0.5 text-[24px] font-bold tracking-tight tabular-nums sm:text-[28px]">
+                {formatMil(despesasPeriodo)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[12px] text-tse-muted">Falta receber dos sócios</dt>
+              <dd className="mt-0.5 text-[24px] font-bold tracking-tight tabular-nums sm:text-[28px]">
+                {faltaReceberSocios > 1 ? formatMil(faltaReceberSocios) : "Em dia"}
+              </dd>
+            </div>
+            {semRateio > 1 ? (
+              <div className="col-span-2 sm:col-span-1">
+                <dt className="text-[12px] text-tse-muted">Ainda sem rateio</dt>
+                <dd className="mt-0.5 text-[24px] font-bold tracking-tight text-[#EA580C] tabular-nums sm:text-[28px]">
+                  {formatMil(semRateio)}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        </div>
+
+        <div className="mt-4 border-t border-[#EEEEEE] pt-3">
+          <p className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">
+            Operação da aeronave
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <MetricaIcone icone={Plane} label="Voos" value={String(voos)} />
+            <MetricaIcone icone={Clock3} label="Horas" value={formatHours(horas)} />
+            <MetricaIcone
+              icone={CircleDollarSign}
+              label="Custo/hora"
+              value={custoHora === null ? "—" : formatBRL(Math.round(custoHora))}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <LinkAcao href="/rateio">Ver situação de todos os sócios</LinkAcao>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
+        <p className="text-[13px] font-semibold text-tse-muted">Minha conta</p>
+        <p className="mt-3 text-[15px] text-tse-text">
+          {falta > 1 ? "Falta pagar neste período" : "Seu aporte está em dia"}
+        </p>
+        <p className="mt-1 text-[34px] leading-none font-bold tracking-tight tabular-nums">
+          {falta > 1 ? formatBRL(falta) : formatBRL(0)}
+        </p>
+        <dl className="mt-4 space-y-2.5 text-[14px]">
+          <LinhaConta icone={CircleDollarSign} rotulo="Sua parte no período" valor={formatBRL(eu.total)} />
+          <LinhaConta
+            icone={CheckCircle2}
+            rotulo="Você já pagou no período"
+            valor={formatBRL(eu.pago)}
+            destaque
+          />
+        </dl>
+        <div className="mt-4 flex flex-col gap-2.5">
+          <LinkAcao href="/despesas" icone={FileText}>
+            Ver minhas despesas
+          </LinkAcao>
+          <LinkAcao href="/itinerarios" icone={Plane}>
+            Ver meus voos
+          </LinkAcao>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function PainelAdmin({
+  despesas,
+  pago,
+  emAberto,
+  partners,
+  semSocio,
+  pagamentosConferir,
+}: {
+  despesas: number;
+  pago: number;
+  emAberto: number;
+  partners: RateioPartner[];
+  semSocio: number;
+  pagamentosConferir: number;
+}) {
+  const base = Math.max(despesas, pago + emAberto, 1);
+  const pctPago = Math.min(100, (pago / base) * 100);
+  const pctAberto = Math.min(100 - pctPago, (emAberto / base) * 100);
+  const pendencias = semSocio + pagamentosConferir;
+
+  return (
+    <>
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <p className="text-[13px] font-semibold text-tse-muted">Resumo dos sócios</p>
+        <p className="mt-4 text-[12px] font-bold tracking-wide text-tse-muted uppercase">
+          Despesas do período
+        </p>
+        <p className="mt-1 text-[36px] leading-none font-bold tracking-tight">
+          {formatMil(despesas)}
+        </p>
+        <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
+          <span className="bg-[#16A34A]" style={{ width: `${pctPago}%` }} />
+          <span className="bg-[#EA580C]" style={{ width: `${pctAberto}%` }} />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
+          <span className="inline-flex items-center gap-2">
+            <span className="size-2 rounded-full bg-[#16A34A]" />
+            Já pago {formatMil(pago)}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="size-2 rounded-full bg-[#EA580C]" />
+            Falta receber dos sócios {formatMil(emAberto)}
+          </span>
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <p className="text-[13px] font-semibold text-tse-muted">Situação dos sócios</p>
+        <ul className="mt-3 divide-y divide-[#EEEEEE]">
+          {partners.map((item) => {
+            const width = item.total > 0 ? Math.min(100, (item.pago / item.total) * 100) : 0;
+            const aPagar = Math.max(0, item.saldo);
+            return (
+              <li key={item.partnerId}>
+                <Link
+                  href="/despesas"
+                  className="flex items-center gap-3 py-3.5"
+                >
+                  <span
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white"
+                    style={{ background: corDoSocio(item.partnerId) }}
+                  >
+                    {iniciais(partnerShort(item.partnerId))}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="font-bold">{partnerShort(item.partnerId)}</span>
+                      <span className="text-[14px] font-bold">
+                        {aPagar > 1 ? `${formatMil(aPagar)} a pagar` : "Em dia"}
+                      </span>
+                    </span>
+                    <span className="mt-0.5 block text-[12px] text-tse-muted">
+                      De {formatMil(item.total)} · pago {formatMil(item.pago)}
+                    </span>
+                    <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-tse-bg">
+                      <span
+                        className="block h-full rounded-full bg-[#16A34A]"
+                        style={{ width: `${width}%` }}
+                      />
+                    </span>
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-tse-muted" aria-hidden />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="mt-5">
+          <LinkAcao href="/rateio">Ver financeiro completo</LinkAcao>
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[13px] font-semibold text-tse-muted">Pendências de gestão</p>
+          {pendencias > 0 ? (
+            <span className="rounded-full bg-[#EA580C] px-2 py-0.5 text-[11px] font-bold text-white">
+              {pendencias}
+            </span>
+          ) : null}
+        </div>
+        <ul className="mt-3 divide-y divide-[#EEEEEE]">
+          <Pendencia
+            href="/despesas"
+            titulo="Despesas aguardando rateio"
+            valor={semSocio}
+          />
+          <Pendencia
+            href="/rateio"
+            titulo="Pagamentos para conferir"
+            valor={pagamentosConferir}
+          />
+        </ul>
+      </section>
+    </>
+  );
+}
+
+function Metrica({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[12px] text-tse-muted">{label}</p>
+      <p className="mt-1 text-[20px] font-bold tracking-tight tabular-nums sm:text-[22px]">{value}</p>
+    </div>
+  );
+}
+
+function MetricaIcone({
+  icone: Icone,
+  label,
+  value,
+}: {
+  icone: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="flex items-center gap-1 text-[11px] text-tse-muted">
+        <Icone className="size-3.5 shrink-0 text-tse-olive" aria-hidden />
+        {label}
+      </p>
+      <p className="mt-1 truncate text-[18px] font-bold tracking-tight tabular-nums sm:text-[20px]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function LinhaConta({
+  icone: Icone,
+  rotulo,
+  valor,
+  destaque = false,
+}: {
+  icone: LucideIcon;
+  rotulo: string;
+  valor: string;
+  destaque?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <dt className="flex min-w-0 items-center gap-2 text-tse-muted">
+        <Icone
+          className={cn("size-4 shrink-0", destaque ? "text-[#16A34A]" : "text-tse-olive")}
+          aria-hidden
+        />
+        <span className="truncate">{rotulo}</span>
+      </dt>
+      <dd className={cn("shrink-0 font-bold tabular-nums", destaque && "text-[#16A34A]")}>
+        {valor}
+      </dd>
+    </div>
+  );
+}
+
+function LinkAcao({
+  href,
+  children,
+  icone: Icone,
+}: {
+  href: string;
+  children: string;
+  icone?: LucideIcon;
+}) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5 text-[13px] font-bold text-tse-olive"
+    >
+      {Icone ? <Icone className="size-4 shrink-0" aria-hidden /> : null}
+      {children}
+      <ChevronRight className="size-4" aria-hidden />
+    </Link>
+  );
+}
+
+function Pendencia({
+  href,
+  titulo,
+  valor,
+}: {
+  href: string;
+  titulo: string;
+  valor: number;
+}) {
   return (
     <li>
-      <Link href={alerta.href} className="flex gap-3">
-        <span className={`mt-1 h-8 w-1 shrink-0 rounded-full ${TONE_BAR[alerta.tone]}`} />
-        <span>
-          <span className="block text-[14px] font-bold">{alerta.title}</span>
-          <span className="block text-[12px] leading-5 text-tse-muted">{alerta.detail}</span>
+      <Link href={href} className="flex items-center justify-between gap-3 py-3">
+        <span className="text-[14px] font-semibold">{titulo}</span>
+        <span className="flex items-center gap-2">
+          <span className={cn("text-[16px] font-bold", valor > 0 ? "text-[#EA580C]" : "text-tse-muted")}>
+            {valor}
+          </span>
+          <ChevronRight className="size-4 text-tse-muted" aria-hidden />
         </span>
       </Link>
     </li>
   );
 }
 
-function Numero({
-  href,
-  label,
-  value,
-  hint,
-}: {
-  href: string;
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <Link href={href} className="rounded-2xl bg-white px-4 py-4 shadow-sm">
-      <p className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">{label}</p>
-      <p className="mt-2 text-[26px] leading-none font-bold tracking-tight">{value}</p>
-      <p className="mt-2 text-[12px] leading-5 text-tse-muted">{hint}</p>
-    </Link>
-  );
+function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  return (partes[0]?.[0] ?? "•").toUpperCase();
 }
 
-function Indicador({
-  icone: Icone,
-  titulo,
-  resumo,
-  aberto,
-  onToggle,
-  children,
-}: {
-  icone: LucideIcon;
-  titulo: string;
-  resumo: string;
-  aberto: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className="border-b border-[#EEEEEE] last:border-b-0">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={aberto}
-        className="flex w-full items-center gap-3 px-4 py-3.5 text-left sm:px-5"
-      >
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#F1F5F9] text-[#1E293B]">
-          <Icone className="size-4" aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-bold">{titulo}</span>
-          <span className="block truncate text-[13px] text-tse-muted">{resumo}</span>
-        </span>
-        <ChevronDown
-          className={cn("size-4 shrink-0 text-tse-muted transition-transform", aberto && "rotate-180")}
-          aria-hidden
-        />
-      </button>
-      {aberto ? <div className="px-5 pb-4">{children}</div> : null}
-    </div>
-  );
+function despesaSemIdentificacao(expense: ReturnType<typeof expensesIn>[number]): boolean {
+  if (expense.partnerId) return false;
+  if (expense.itineraryId) {
+    const trip = getItinerary(expense.itineraryId);
+    if (trip?.requestedBy) return false;
+  }
+  if (expense.allocation === "participacao" && !expense.manual) return false;
+  return true;
+}
+
+function despesasSemIdentificacao(months: MonthFilter, aircraftId: string): number {
+  return expensesIn(months, aircraftId).filter(despesaSemIdentificacao).length;
+}
+
+function valorSemIdentificacao(months: MonthFilter, aircraftId: string): number {
+  return expensesIn(months, aircraftId)
+    .filter(despesaSemIdentificacao)
+    .reduce((soma, item) => soma + item.amount, 0);
 }

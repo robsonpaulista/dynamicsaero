@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { PageStack } from "@/components/ui/tse";
 import { excluirUsuario, obterUsuario, salvarUsuario } from "@/services/usuarios";
-import { PAPEL_USUARIO, type PapelUsuario } from "@/types/usuario";
-
-const PAPEIS: PapelUsuario[] = ["controlador", "operacao", "leitura"];
+import { PAPEL_USUARIO, PAPEIS_USUARIO, type PapelUsuario } from "@/types/usuario";
 
 function papelDe(valor: string): PapelUsuario {
-  if (valor === "controlador" || valor === "operacao" || valor === "leitura") return valor;
+  if (valor === "controlador" || valor === "operacao" || valor === "leitura" || valor === "socio") {
+    return valor;
+  }
   return "leitura";
 }
 
@@ -145,12 +145,15 @@ export function UsuarioForm({ id, podeControlar }: { id: string | null; podeCont
                 onChange={(event) => setPapel(papelDe(event.target.value))}
                 className="h-9 w-full rounded-md border border-tse-border bg-white px-2.5 text-[13px] outline-none focus:border-tse-yellow disabled:bg-tse-soft"
               >
-                {PAPEIS.map((item) => (
+                {PAPEIS_USUARIO.map((item) => (
                   <option key={item} value={item}>
                     {PAPEL_USUARIO[item]}
                   </option>
                 ))}
               </select>
+              <span className="mt-1 block text-[12px] text-tse-muted">
+                Sócio: use o mesmo nome do cotista em Pessoal para filtrar painel, rateio e despesas.
+              </span>
             </label>
 
             {erro ? (

@@ -295,7 +295,7 @@ function RodapeCadastro() {
           onClick={() => setConfirmar(true)}
           className="mt-2 text-left text-[12px] font-bold text-tse-olive"
         >
-          Restaurar demonstração
+          Recarregar dados importados
         </button>
       )}
     </div>
@@ -310,7 +310,7 @@ export function AppShell({
   sessao: SessaoUsuario;
 }) {
   return (
-    <OperacaoProvider>
+    <OperacaoProvider sessao={sessao}>
       <HidratarDados />
       <ManterSessao />
       <AtivarBiometria />

@@ -9,7 +9,7 @@ export type ItineraryStatus =
 
 export type AircraftStatus = "disponivel" | "em_voo" | "manutencao";
 
-export type AircraftCategory = "jato" | "helicoptero";
+export type AircraftCategory = "jato" | "helicoptero" | "turbohelice";
 
 export type Posting = "realizado" | "previsto" | "provisionado";
 
@@ -192,6 +192,20 @@ export type Expense = {
   allocation: Allocation;
   partnerId?: string;
   posting: Posting;
+};
+
+export type NotaFiscal = {
+  id: string;
+  numero: string;
+  fornecedor: string;
+  date: string;
+  month: string;
+  amount: number;
+  descricao: string;
+  aircraftId: string;
+  anexoUrl?: string;
+  anexoNome?: string;
+  origem: "tarifa-pouso" | "vibra";
 };
 
 export type Alerta = {

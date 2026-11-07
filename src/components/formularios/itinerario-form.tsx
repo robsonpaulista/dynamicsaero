@@ -38,14 +38,14 @@ type PernaCampo = {
 function pernaVazia(): PernaCampo {
   return {
     id: criarId("perna"),
-    date: "2026-10-20",
+    date: "2026-11-06",
     depart: "08:00",
     arrive: "10:00",
-    fromIcao: "SBGR",
-    toIcao: "SBRJ",
-    fromCity: "Guarulhos",
-    toCity: "Santos Dumont",
-    blockHours: "2",
+    fromIcao: "SBTE",
+    toIcao: "SBFZ",
+    fromCity: "Teresina",
+    toCity: "Fortaleza",
+    blockHours: "1.2",
     fuel: "0",
     fees: "0",
     handling: "0",
@@ -320,7 +320,7 @@ function ItinerarioCampos({ id }: { id?: string }) {
           ))}
         </div>
         <p className="mt-3 text-[12px] text-tse-muted">
-          Combustível, taxas, handling e catering ficam com quem pediu o voo. Comandante e copiloto saem da tripulação já escalada nessa aeronave.
+          Combustível, taxas, handling e catering entram no rateio de quem pediu o voo.
         </p>
         {erro ? <ErroForm>{erro}</ErroForm> : null}
         <AcoesForm

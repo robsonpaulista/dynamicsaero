@@ -7,7 +7,11 @@ import {
   listAportes,
   listMonths,
   monthLabel,
+  monthsAtivos,
+  monthsLabel,
+  mesDeReferencia,
   partnerName,
+  type MonthFilter,
 } from "@/services/operacao";
 import type { Aporte } from "@/types/operacao";
 
@@ -48,22 +52,29 @@ function nomeAba(nome: string): string {
   return nome.replace(/[\\/?*[\]:]/g, " ").slice(0, 31);
 }
 
-function aportesDoRecorte(month: string, aircraftId: string): Aporte[] {
-  return listAportes(month).filter(
+function aportesDoRecorte(months: MonthFilter, aircraftId: string): Aporte[] {
+  return listAportes(months).filter(
     (item) => aircraftId === "todas" || item.aircraftId === null || item.aircraftId === aircraftId,
   );
 }
 
-function cabecalho(month: string, aircraftId: string): string[] {
-  return [`Competência: ${monthLabel(month)}`, `Recorte: ${escopo(aircraftId)}`, "Ventura Aviação"];
+function arquivoMes(months: MonthFilter): string {
+  const ativos = monthsAtivos(months);
+  if (!ativos) return "todos";
+  if (ativos.length === 1) return ativos[0] ?? mesDeReferencia(months);
+  return `${ativos[0]}_${ativos[ativos.length - 1]}`;
 }
 
-export function relatorioPendencias(month: string, aircraftId: string): Relatorio {
-  const rateio = getRateio(month, aircraftId);
+function cabecalho(months: MonthFilter, aircraftId: string): string[] {
+  return [`Competência: ${monthsLabel(months)}`, `Recorte: ${escopo(aircraftId)}`, "JSA Aviação"];
+}
+
+export function relatorioPendencias(months: MonthFilter, aircraftId: string): Relatorio {
+  const rateio = getRateio(months, aircraftId);
   const posicao: Planilha = {
     nome: "Posição",
     titulo: "Posição por cotista",
-    notas: cabecalho(month, aircraftId),
+    notas: cabecalho(months, aircraftId),
     colunas: ["Cotista", "Comprometido", "Já pago", "Saldo", "Situação"],
     linhas: rateio.partners.map((item) => [
       partnerName(item.partnerId),
@@ -79,7 +90,7 @@ export function relatorioPendencias(month: string, aircraftId: string): Relatori
   const pendencias: Planilha = {
     nome: "Pendências",
     titulo: "Pendências do mês",
-    notas: cabecalho(month, aircraftId),
+    notas: cabecalho(months, aircraftId),
     colunas: ["Cotista", "Empresa", "Saldo em aberto"],
     linhas: abertos.map((item) => [
       partnerName(item.partnerId),
@@ -92,7 +103,7 @@ export function relatorioPendencias(month: string, aircraftId: string): Relatori
   const porAeronave: Planilha = {
     nome: "Por aeronave",
     titulo: "Conta por aeronave",
-    notas: cabecalho(month, aircraftId),
+    notas: cabecalho(months, aircraftId),
     colunas: ["Aeronave", ...rateio.partners.map((item) => partnerName(item.partnerId)), "Total"],
     linhas: aeronaves.map((id) => {
       const fatias = rateio.partners.map(
@@ -111,7 +122,7 @@ export function relatorioPendencias(month: string, aircraftId: string): Relatori
     linhas: [],
   };
   for (const item of listMonths()) {
-    const leitura = getRateio(item.id, aircraftId);
+    const leitura = getRateio([item.id], aircraftId);
     for (const partner of leitura.partners) {
       if (partner.saldo <= 1 && partner.pago <= 0 && partner.total <= 0) continue;
       historico.linhas.push([
@@ -127,18 +138,18 @@ export function relatorioPendencias(month: string, aircraftId: string): Relatori
 
   return {
     titulo: "Pendências por cotista",
-    arquivo: `pendencias-${month}`,
-    subtitulo: `${monthLabel(month)} · ${escopo(aircraftId)}`,
+    arquivo: `pendencias-${arquivoMes(months)}`,
+    subtitulo: `${monthsLabel(months)} · ${escopo(aircraftId)}`,
     planilhas: [pendencias, posicao, porAeronave, historico],
   };
 }
 
-export function relatorioPagamentos(month: string, aircraftId: string): Relatorio {
-  const doMes = aportesDoRecorte(month, aircraftId);
+export function relatorioPagamentos(months: MonthFilter, aircraftId: string): Relatorio {
+  const doMes = aportesDoRecorte(months, aircraftId);
   const mes: Planilha = {
     nome: "Pagamentos",
     titulo: "Pagamentos realizados",
-    notas: cabecalho(month, aircraftId),
+    notas: cabecalho(months, aircraftId),
     colunas: ["Data", "Cotista", "Forma", "Referência", "Escopo", "Valor", "Nota"],
     linhas: doMes.map((item) => [
       item.date,
@@ -174,14 +185,14 @@ export function relatorioPagamentos(month: string, aircraftId: string): Relatori
 
   return {
     titulo: "Pagamentos realizados",
-    arquivo: `pagamentos-${month}`,
-    subtitulo: `${monthLabel(month)} · ${escopo(aircraftId)}`,
+    arquivo: `pagamentos-${arquivoMes(months)}`,
+    subtitulo: `${monthsLabel(months)} · ${escopo(aircraftId)}`,
     planilhas: [mes, historico],
   };
 }
 
-function extratoDe(partnerId: string, month: string, aircraftId: string): Planilha {
-  const conta = contaCorrente(partnerId, month, aircraftId);
+function extratoDe(partnerId: string, months: MonthFilter, aircraftId: string): Planilha {
+  const conta = contaCorrente(partnerId, months, aircraftId);
   const nome = partnerName(partnerId);
   const empresa = getPartner(partnerId)?.company ?? "";
   const linhas: Celula[][] = [["", "Saldo anterior", null, null, conta.saldoAnterior]];
@@ -203,7 +214,7 @@ function extratoDe(partnerId: string, month: string, aircraftId: string): Planil
     nome: nomeAba(nome),
     titulo: `Conta corrente · ${nome}`,
     notas: [
-      ...cabecalho(month, aircraftId),
+      ...cabecalho(months, aircraftId),
       empresa,
       "Débito é despesa lançada na conta. Crédito é aporte. Saldo positivo é o que ainda falta pagar.",
       `Situação: ${situacao(conta.saldo)}`,
@@ -217,22 +228,22 @@ function extratoDe(partnerId: string, month: string, aircraftId: string): Planil
   };
 }
 
-export function relatorioExtrato(partnerId: string, month: string, aircraftId: string): Relatorio {
+export function relatorioExtrato(partnerId: string, months: MonthFilter, aircraftId: string): Relatorio {
   const nome = partnerName(partnerId).toLowerCase().replace(/\s+/g, "-");
   return {
     titulo: `Conta corrente de ${partnerName(partnerId)}`,
-    arquivo: `conta-${nome}-${month}`,
-    subtitulo: `${monthLabel(month)} · ${escopo(aircraftId)}`,
-    planilhas: [extratoDe(partnerId, month, aircraftId)],
+    arquivo: `conta-${nome}-${arquivoMes(months)}`,
+    subtitulo: `${monthsLabel(months)} · ${escopo(aircraftId)}`,
+    planilhas: [extratoDe(partnerId, months, aircraftId)],
   };
 }
 
-export function relatorioExtratos(month: string, aircraftId: string): Relatorio {
-  const rateio = getRateio(month, aircraftId);
+export function relatorioExtratos(months: MonthFilter, aircraftId: string): Relatorio {
+  const rateio = getRateio(months, aircraftId);
   return {
     titulo: "Contas correntes dos cotistas",
-    arquivo: `contas-${month}`,
-    subtitulo: `${monthLabel(month)} · ${escopo(aircraftId)}`,
-    planilhas: rateio.partners.map((item) => extratoDe(item.partnerId, month, aircraftId)),
+    arquivo: `contas-${arquivoMes(months)}`,
+    subtitulo: `${monthsLabel(months)} · ${escopo(aircraftId)}`,
+    planilhas: rateio.partners.map((item) => extratoDe(item.partnerId, months, aircraftId)),
   };
 }

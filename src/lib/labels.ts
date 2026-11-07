@@ -124,6 +124,7 @@ export const ITINERARY_LABEL: Record<ItineraryStatus, string> = {
 export const CATEGORY_TONE: Record<AircraftCategory, string> = {
   jato: "Jato",
   helicoptero: "Helicóptero",
+  turbohelice: "Turboélice",
 };
 
 export function categoryBarColor(category: ExpenseCategory): string {

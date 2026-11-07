@@ -182,6 +182,7 @@ function AeronaveCampos({ id }: { id?: string }) {
           <CampoSelect label="Categoria" value={category} onChange={(value) => setCategory(value as AircraftCategory)}>
             <option value="jato">Jato</option>
             <option value="helicoptero">Helicóptero</option>
+            <option value="turbohelice">Turboélice</option>
           </CampoSelect>
           <Campo label="Ano" value={year} onChange={setYear} type="number" />
           <Campo label="Lugares" value={seats} onChange={setSeats} type="number" />

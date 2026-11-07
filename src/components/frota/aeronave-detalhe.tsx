@@ -17,7 +17,7 @@ import {
   itinerariesIn,
   itineraryCities,
   maintenanceOf,
-  monthLabel,
+  monthsLabel,
   partnerName,
 } from "@/services/operacao";
 
@@ -26,7 +26,7 @@ export function AeronaveDetalhe() {
   const params = useParams<{ id: string }>();
   const id = typeof params.id === "string" ? params.id : "";
   const aircraft = getAircraft(id);
-  const { month } = useOperacao();
+  const { months } = useOperacao();
 
   if (!aircraft) {
     return (
@@ -39,11 +39,11 @@ export function AeronaveDetalhe() {
     );
   }
 
-  const uso = aircraftMonth(aircraft.id, month);
+  const uso = aircraftMonth(aircraft.id, months);
   const hangar = hangarOf(aircraft.id);
   const crew = crewOnAircraft(aircraft.id);
   const maintenance = maintenanceOf(aircraft.id);
-  const trips = itinerariesIn(month, aircraft.id);
+  const trips = itinerariesIn(months, aircraft.id);
 
   return (
     <PageStack>
@@ -71,7 +71,7 @@ export function AeronaveDetalhe() {
           <Ficha rotulo="Lugares" valor={String(aircraft.seats)} />
           <Ficha rotulo="Célula" valor={formatHours(aircraft.totalHours)} />
           <Ficha rotulo="Ciclos" valor={aircraft.cycles.toLocaleString("pt-BR")} />
-          <Ficha rotulo={`Horas em ${monthLabel(month)}`} valor={formatHours(uso.voadas + uso.previstas)} />
+          <Ficha rotulo={`Horas em ${monthsLabel(months)}`} valor={formatHours(uso.voadas + uso.previstas)} />
           <Ficha rotulo="Custo do mês" valor={formatBRL(uso.custo)} />
         </dl>
       </section>
@@ -133,7 +133,7 @@ export function AeronaveDetalhe() {
         </Card>
       </div>
 
-      <Card title={`Itinerários de ${monthLabel(month)}`}>
+      <Card title={`Itinerários de ${monthsLabel(months)}`}>
         {trips.length === 0 ? (
           <p className="text-[13px] text-tse-muted">Nenhum itinerário neste mês.</p>
         ) : (

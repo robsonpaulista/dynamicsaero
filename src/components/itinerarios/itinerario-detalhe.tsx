@@ -7,6 +7,7 @@ import { useDados } from "@/hooks/use-dados";
 import { formatBRL, formatDate, formatHours } from "@/lib/format";
 import { CATEGORY_LABEL, PURPOSE_LABEL, ROLE_LABEL } from "@/lib/labels";
 import {
+  aerodromoLabel,
   expensesOfItinerary,
   getAircraft,
   getCrew,
@@ -84,16 +85,18 @@ export function ItinerarioDetalhe() {
             <Card key={leg.id} title={`Trecho ${index + 1}`}>
               <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
                 <div>
-                  <p className="font-display text-[28px] tracking-wide">{leg.fromIcao}</p>
-                  <p className="text-[13px] text-tse-muted">{leg.fromCity}</p>
+                  <p className="font-display text-[22px] leading-tight tracking-wide sm:text-[26px]">
+                    {aerodromoLabel(leg.fromCity, leg.fromIcao)}
+                  </p>
                   <p className="mt-1 text-[13px] font-semibold">{leg.depart}</p>
                 </div>
                 <p className="text-center text-[13px] font-bold text-tse-gold">
                   {formatHours(leg.blockHours)}
                 </p>
                 <div className="sm:text-right">
-                  <p className="font-display text-[28px] tracking-wide">{leg.toIcao}</p>
-                  <p className="text-[13px] text-tse-muted">{leg.toCity}</p>
+                  <p className="font-display text-[22px] leading-tight tracking-wide sm:text-[26px]">
+                    {aerodromoLabel(leg.toCity, leg.toIcao)}
+                  </p>
                   <p className="mt-1 text-[13px] font-semibold">{leg.arrive}</p>
                 </div>
               </div>

@@ -1,18 +1,26 @@
-export const HOJE = "2026-10-18";
+export const HOJE = "2026-11-06";
 
-export const VIEWER_ID = "eduardo";
+export const VIEWER_ID = "jadyel";
 
 export const OPERACAO = {
-  name: "Ventura Aviação",
-  viewerName: "Eduardo Ventura",
-  viewerRole: "Sócio controlador",
-  viewerInitials: "EV",
+  name: "JSA Aviação",
+  viewerName: "Jadyel Alencar",
+  viewerRole: "Sócio",
+  viewerInitials: "JA",
 };
 
 export const MONTHS = [
+  { id: "2026-01", label: "Janeiro 2026", short: "Janeiro" },
+  { id: "2026-02", label: "Fevereiro 2026", short: "Fevereiro" },
+  { id: "2026-03", label: "Março 2026", short: "Março" },
+  { id: "2026-04", label: "Abril 2026", short: "Abril" },
+  { id: "2026-05", label: "Maio 2026", short: "Maio" },
+  { id: "2026-06", label: "Junho 2026", short: "Junho" },
+  { id: "2026-07", label: "Julho 2026", short: "Julho" },
   { id: "2026-08", label: "Agosto 2026", short: "Agosto" },
   { id: "2026-09", label: "Setembro 2026", short: "Setembro" },
   { id: "2026-10", label: "Outubro 2026", short: "Outubro" },
+  { id: "2026-11", label: "Novembro 2026", short: "Novembro" },
 ] as const;
 
 export type MonthId = (typeof MONTHS)[number]["id"];
@@ -31,4 +39,41 @@ export const AERODROMOS: Record<string, string> = {
   SBVT: "Vitória",
   SBFZ: "Fortaleza",
   SBCY: "Cuiabá",
+  SBTE: "Teresina",
+  SD7E: "Teresina",
+  SBSL: "São Luís",
+  SBIZ: "Imperatriz",
+  SBPB: "Parnaíba",
+  SNPC: "Picos",
+  SI8W: "Cajueiro da Praia",
+  SWAY: "Piripiri",
+  SBNV: "Goiânia",
+  SBBE: "Belém",
+  SBJE: "Cruz",
+  SBPJ: "Palmas",
+  SSKE: "Cocal",
+  SD9C: "São João do Piauí",
+  SJ4E: "Barras",
+  SJOJ: "Açailândia",
+  SSRS: "Barreirinhas",
+  SNK7: "Jaicós",
+  SNAB: "Araripina",
+  SJI3: "Uruçuí",
+  SDZS: "Uruçuí",
+  SIME: "Davinópolis",
+  SJKG: "Regeneração",
+  SWUV: "Sebastião Leal",
+  SSIA: "Baixa Grande do Ribeiro",
+  SDXB: "Piracuruca",
+  SBKG: "Campina Grande",
+  SNOE: "Oeiras",
+  SDYW: "Luzilândia",
+  SSPF: "Altos",
+  SDKE: "Valença do Piauí",
+  SDX4: "Canto do Buriti",
+  SS9P: "Canto do Buriti",
+  SJXE: "Buriti dos Lopes",
+  SJ4Z: "Paes Landim",
+  SNOZ: "Paço do Lumiar",
+  SIXE: "Eldorado do Sul",
 };

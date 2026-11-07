@@ -37,7 +37,7 @@ function DespesaCampos({ id }: { id?: string }) {
   const [description, setDescription] = useState<string>(atual?.description ?? "");
   const [aircraftId, setAircraftId] = useState<string>(atual?.aircraftId ?? base.aircraft[0]?.id ?? "");
   const [category, setCategory] = useState<ExpenseCategory>(atual?.category ?? "administrativo");
-  const [date, setDate] = useState<string>(atual?.date ?? "2026-10-18");
+  const [date, setDate] = useState<string>(atual?.date ?? "2026-11-06");
   const [vendor, setVendor] = useState<string>(atual?.vendor ?? "");
   const [amount, setAmount] = useState<string>(atual ? String(atual.amount) : "");
   const [allocation, setAllocation] = useState<Allocation>(atual?.allocation ?? "participacao");

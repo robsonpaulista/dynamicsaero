@@ -7,22 +7,47 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { mesDeReferencia, partnerIdDaSessao, type MonthFilter } from "@/services/operacao";
+import type { SessaoUsuario } from "@/types/usuario";
 
 type OperacaoContextValue = {
   aircraftId: string;
   setAircraftId: (aircraftId: string) => void;
+  months: MonthFilter;
+  setMonths: (months: MonthFilter) => void;
+  /** Competência única para formulários (último mês do recorte). */
   month: string;
-  setMonth: (month: string) => void;
+  sessao: SessaoUsuario;
+  /** Cotista da sessão, se houver; null = visão operacional agregada. */
+  partnerId: string | null;
 };
 
 const OperacaoContext = createContext<OperacaoContextValue | null>(null);
 
-export function OperacaoProvider({ children }: { children: ReactNode }) {
+export function OperacaoProvider({
+  children,
+  sessao,
+}: {
+  children: ReactNode;
+  sessao: SessaoUsuario;
+}) {
   const [aircraftId, setAircraftId] = useState<string>("todas");
-  const [month, setMonth] = useState<string>("2026-10");
+  const [months, setMonths] = useState<MonthFilter>(["2026-05"]);
+  const partnerId = useMemo(
+    () => partnerIdDaSessao(sessao.nome, sessao.papel),
+    [sessao.nome, sessao.papel],
+  );
   const value = useMemo(
-    () => ({ aircraftId, setAircraftId, month, setMonth }),
-    [aircraftId, month],
+    () => ({
+      aircraftId,
+      setAircraftId,
+      months,
+      setMonths,
+      month: mesDeReferencia(months),
+      sessao,
+      partnerId,
+    }),
+    [aircraftId, months, partnerId, sessao],
   );
 
   return (

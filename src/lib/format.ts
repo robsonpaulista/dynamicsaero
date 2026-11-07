@@ -32,6 +32,31 @@ export function formatDateShort(iso: string): string {
   return `${day}/${month}`;
 }
 
+const MES_CURTO_PT = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+] as const;
+
+/** Data curta em lista: 31 mai */
+export function formatDateLista(iso: string): string {
+  const [, month, day] = iso.slice(0, 10).split("-");
+  if (!month || !day) return iso;
+  const indice = Number(month) - 1;
+  const mes = MES_CURTO_PT[indice];
+  if (!mes) return `${day}/${month}`;
+  return `${Number(day)} ${mes}`;
+}
+
 export function formatPercent(share: number): string {
   return `${new Intl.NumberFormat("pt-BR", {
     maximumFractionDigits: 0,

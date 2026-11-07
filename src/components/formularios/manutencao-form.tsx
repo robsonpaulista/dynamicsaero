@@ -39,7 +39,7 @@ function ManutencaoCampos({ id }: { id?: string }) {
   const [kind, setKind] = useState<MxKind>(atual?.kind ?? "preventiva");
   const [status, setStatus] = useState<MxStatus>(atual?.status ?? "proxima");
   const [system, setSystem] = useState<string>(atual?.system ?? "");
-  const [openedAt, setOpenedAt] = useState<string>(atual?.openedAt ?? "2026-10-18");
+  const [openedAt, setOpenedAt] = useState<string>(atual?.openedAt ?? "2026-11-06");
   const [dueAt, setDueAt] = useState<string>(atual?.dueAt ?? "");
   const [dueLabel, setDueLabel] = useState<string>(atual?.dueLabel ?? "");
   const [remainingHours, setRemainingHours] = useState<string>(

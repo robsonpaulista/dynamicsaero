@@ -4,9 +4,7 @@ import { cookies, headers } from "next/headers";
 import { CABECALHO_USUARIO, chaveAuth, lerSessaoCookie, usuarioComTokenValido } from "@/lib/sessao-cookie";
 import { clienteServico } from "@/services/supabase-servidor";
 import { criarClienteSessao } from "@/services/supabase-sessao";
-import type { PapelUsuario, SessaoUsuario, UsuarioAcesso } from "@/types/usuario";
-
-const PAPEIS: PapelUsuario[] = ["controlador", "operacao", "leitura"];
+import { PAPEIS_USUARIO, type PapelUsuario, type SessaoUsuario, type UsuarioAcesso } from "@/types/usuario";
 
 export type ListaUsuarios = {
   usuarios: UsuarioAcesso[];
@@ -16,7 +14,7 @@ export type ListaUsuarios = {
 };
 
 function papelValido(valor: string): valor is PapelUsuario {
-  return PAPEIS.some((papel) => papel === valor);
+  return PAPEIS_USUARIO.some((papel) => papel === valor);
 }
 
 function ehUsuario(valor: unknown): valor is UsuarioAcesso {
