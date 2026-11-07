@@ -119,13 +119,46 @@ ${relatorio.planilhas.map(planilhaXml).join("")}
   );
 }
 
+function quebrarCelula(
+  doc: { getTextWidth: (texto: string) => number; splitTextToSize: (texto: string, largura: number) => string[] },
+  texto: string,
+  larguraUtil: number,
+  maxLinhas = 3,
+): string[] {
+  const limpo = textoPdf(texto).trim();
+  if (!limpo) return [""];
+  const largura = Math.max(larguraUtil, 6);
+  const quebrado = doc.splitTextToSize(limpo, largura);
+  const linhas = (Array.isArray(quebrado) ? quebrado : [String(quebrado)]) as string[];
+  if (linhas.length <= maxLinhas) {
+    return linhas.map((linha) => truncarNaLargura(doc, linha, largura));
+  }
+  const visiveis = linhas.slice(0, maxLinhas);
+  const ultima = truncarNaLargura(doc, `${visiveis[maxLinhas - 1] ?? ""}…`, largura);
+  return [...visiveis.slice(0, maxLinhas - 1), ultima];
+}
+
+function truncarNaLargura(
+  doc: { getTextWidth: (texto: string) => number },
+  texto: string,
+  largura: number,
+): string {
+  if (!texto || doc.getTextWidth(texto) <= largura) return texto;
+  let atual = texto;
+  while (atual.length > 1 && doc.getTextWidth(`${atual}…`) > largura) {
+    atual = atual.slice(0, -1);
+  }
+  return `${atual}…`;
+}
+
 export async function baixarPdf(relatorio: Relatorio): Promise<void> {
   const { jsPDF } = await import("jspdf");
-  const largo = relatorio.planilhas.some((item) => item.colunas.length > 6);
+  const largo = relatorio.planilhas.some((item) => item.colunas.length > 5);
   const doc = new jsPDF({ orientation: largo ? "landscape" : "portrait", unit: "mm", format: "a4" });
   const largura = doc.internal.pageSize.getWidth();
   const altura = doc.internal.pageSize.getHeight();
-  const margem = 12;
+  const margem = 10;
+  const alturaLinha = 3.4;
 
   const novaPagina = (continuacao: boolean) => {
     doc.setFillColor(235, 180, 2);
@@ -180,20 +213,23 @@ export async function baixarPdf(relatorio: Relatorio): Promise<void> {
         ? planilha.larguras
         : planilha.colunas.map(() => 1);
     const somaPesos = pesos.reduce((total, peso) => total + peso, 0) || 1;
-    const largurasColuna = pesos.map((peso) => ((largura - margem * 2) * peso) / somaPesos);
+    const util = largura - margem * 2;
+    const largurasColuna = pesos.map((peso) => (util * peso) / somaPesos);
     const alinhamento = planilha.colunas.map(
       (_, index) => planilha.alinhamento?.[index] ?? "inicio",
     );
+    const maxLinhasCelula = planilha.colunas.length >= 6 ? 2 : 3;
 
     const escreverLinha = (valores: string[], negrito: boolean, fundo: "cabeca" | "destaque" | false) => {
+      doc.setFont("helvetica", negrito || fundo === "cabeca" ? "bold" : "normal");
+      doc.setFontSize(fundo === "cabeca" ? 7.5 : 8);
+
       const blocos = valores.map((valor, index) => {
-        const texto = textoPdf(valor);
-        if (!texto) return [""];
-        const quebrado = doc.splitTextToSize(texto, Math.max((largurasColuna[index] ?? 8) - 2, 8));
-        return (Array.isArray(quebrado) ? quebrado : [String(quebrado)]) as string[];
+        const larguraColuna = Math.max((largurasColuna[index] ?? 8) - 2.2, 5);
+        return quebrarCelula(doc, valor, larguraColuna, fundo === "cabeca" ? 1 : maxLinhasCelula);
       });
       const quantidade = Math.max(1, ...blocos.map((item) => item.length));
-      const alturaCaixa = quantidade * 3.5 + 2.2;
+      const alturaCaixa = quantidade * alturaLinha + 2;
       if (y + alturaCaixa > altura - 12) {
         doc.addPage();
         novaPagina(true);
@@ -202,13 +238,14 @@ export async function baixarPdf(relatorio: Relatorio): Promise<void> {
       }
       if (fundo === "cabeca") {
         doc.setFillColor(255, 248, 214);
-        doc.rect(margem, y - 3.6, largura - margem * 2, alturaCaixa, "F");
+        doc.rect(margem, y - 3.4, util, alturaCaixa, "F");
       } else if (fundo === "destaque") {
         doc.setFillColor(244, 244, 242);
-        doc.rect(margem, y - 3.6, largura - margem * 2, alturaCaixa, "F");
+        doc.rect(margem, y - 3.4, util, alturaCaixa, "F");
       }
+
       doc.setFont("helvetica", negrito || fundo === "cabeca" ? "bold" : "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(fundo === "cabeca" ? 7.5 : 8);
       blocos.forEach((linhasTexto, index) => {
         const cor = planilha.cores?.[index];
         const rgb = linhasTexto.some((linha) => linha.trim()) ? (cor ? hexRgb(cor) : null) : null;
@@ -216,11 +253,12 @@ export async function baixarPdf(relatorio: Relatorio): Promise<void> {
         const x = margem + largurasColuna.slice(0, index).reduce((total, item) => total + item, 0);
         const larguraColuna = largurasColuna[index] ?? 0;
         linhasTexto.forEach((linhaTexto, linhaIndex) => {
-          const posicaoY = y + linhaIndex * 3.5;
+          const posicaoY = y + linhaIndex * alturaLinha;
+          const seguro = truncarNaLargura(doc, linhaTexto, Math.max(larguraColuna - 2.2, 5));
           if (alinhamento[index] === "fim") {
-            doc.text(linhaTexto, x + larguraColuna - 1, posicaoY, { align: "right" });
+            doc.text(seguro, x + larguraColuna - 1.2, posicaoY, { align: "right" });
           } else {
-            doc.text(linhaTexto, x + 1, posicaoY);
+            doc.text(seguro, x + 1.1, posicaoY);
           }
         });
       });

@@ -13,6 +13,7 @@ import {
   Search,
 } from "lucide-react";
 import { BotaoNovo, LinkEditar } from "@/components/formularios/campos";
+import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   EmptyState,
@@ -42,6 +43,7 @@ import {
   partnerShort,
   tripHours,
 } from "@/services/operacao";
+import { relatorioVoos } from "@/services/relatorios-operacao";
 import type { Itinerary, ItineraryStatus, Purpose } from "@/types/operacao";
 
 const FINALIDADES: { id: "todas" | Purpose; label: string }[] = [
@@ -293,6 +295,16 @@ export function ItinerariosView() {
           </div>
         </>
       )}
+
+      <AcoesRelatorio
+        titulo={partnerId ? "Relatório dos meus voos" : "Relatório de voos"}
+        texto={
+          partnerId
+            ? "Baixa o resumo e a lista dos seus voos neste período em PDF ou Excel."
+            : "Baixa o resumo e a lista de voos do recorte atual em PDF ou Excel."
+        }
+        gerar={() => relatorioVoos(months, aircraftId, partnerId)}
+      />
     </PageStack>
   );
 }

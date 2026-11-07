@@ -10,6 +10,7 @@ import {
   Plane,
   type LucideIcon,
 } from "lucide-react";
+import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import { PageStack, StatusBadge } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
@@ -28,6 +29,7 @@ import {
   partnerShort,
   type MonthFilter,
 } from "@/services/operacao";
+import { relatorioPainel } from "@/services/relatorios-operacao";
 import type { RateioPartner } from "@/types/operacao";
 
 export function PainelView() {
@@ -93,6 +95,16 @@ export function PainelView() {
           pagamentosConferir={pagamentosConferir.length}
         />
       )}
+
+      <AcoesRelatorio
+        titulo="Relatório do painel"
+        texto={
+          eu
+            ? "Baixa o resumo da operação e a sua conta neste período em PDF ou Excel."
+            : "Baixa o resumo do período e a situação de cada sócio em PDF ou Excel."
+        }
+        gerar={() => relatorioPainel(months, aircraftId, partnerId)}
+      />
     </PageStack>
   );
 }

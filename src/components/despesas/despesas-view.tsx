@@ -26,6 +26,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   EmptyState,
@@ -55,6 +56,7 @@ import {
   partnerName,
   valorDoParceiro,
 } from "@/services/operacao";
+import { relatorioDespesas } from "@/services/relatorios-operacao";
 import type { Expense, ExpenseCategory, NotaFiscal } from "@/types/operacao";
 
 const ICONE_CATEGORIA: Record<ExpenseCategory, LucideIcon> = {
@@ -634,6 +636,16 @@ export function DespesasView() {
           </div>
         </>
       )}
+
+      <AcoesRelatorio
+        titulo="Relatório de despesas"
+        texto={
+          socioEspecifico
+            ? "Baixa a sua parte, a natureza e os lançamentos deste período em PDF ou Excel."
+            : "Baixa totais, natureza, lançamentos e NFs do recorte atual em PDF ou Excel."
+        }
+        gerar={() => relatorioDespesas(months, aircraftId, socioAtivo)}
+      />
 
       {detalhe ? (
         <DetalheDespesa
