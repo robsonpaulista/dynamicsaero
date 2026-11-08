@@ -32,7 +32,6 @@ import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   EmptyState,
   PageStack,
-  StatusBadge,
   tableClass,
   TableWrap,
   tdClass,
@@ -52,21 +51,19 @@ import {
 } from "@/lib/format";
 import { CATEGORY_LABEL, categoryBarColor, corDoSocio, POSTING_LABEL } from "@/lib/labels";
 import {
-  custosDoSocio,
-  custosPorCategoria,
   expensesIn,
   getAircraft,
   getItinerary,
-  getKpis,
   hrefOrigem,
   listNotasFiscais,
   monthsLabel,
   partnerName,
+  posicaoDespesas,
   raioXAlocacao,
   valorDoParceiro,
 } from "@/services/operacao";
 import { relatorioDespesas } from "@/services/relatorios-operacao";
-import type { Expense, ExpenseCategory, NotaFiscal } from "@/types/operacao";
+import type { Expense, ExpenseCategory, NotaFiscal, Posting } from "@/types/operacao";
 
 const ICONE_CATEGORIA: Record<ExpenseCategory, LucideIcon> = {
   combustivel: Fuel,
@@ -97,6 +94,8 @@ type Ordenacao<T extends string> = { coluna: T; ordem: Ordem };
 
 type Recorte = "todas" | "voo" | "estrutura" | "manutencao" | "nf";
 
+type FiltroPosicao = "todas" | Posting;
+
 const ABAS: { id: Recorte; label: string }[] = [
   { id: "todas", label: "Tudo" },
   { id: "voo", label: "Voos" },
@@ -104,6 +103,19 @@ const ABAS: { id: Recorte; label: string }[] = [
   { id: "manutencao", label: "Manutenção" },
   { id: "nf", label: "NF" },
 ];
+
+const ABAS_POSICAO: { id: FiltroPosicao; label: string }[] = [
+  { id: "todas", label: "Todas" },
+  { id: "realizado", label: "Faturado" },
+  { id: "provisionado", label: "Provisionado" },
+  { id: "previsto", label: "Previsto" },
+];
+
+const POSICAO_TOM: Record<Posting, string> = {
+  realizado: "bg-[#DCFCE7] text-[#166534]",
+  previsto: "bg-[#DBEAFE] text-[#1D4ED8]",
+  provisionado: "bg-[#FFEDD5] text-[#C2410C]",
+};
 
 function passaRecorte(expense: Expense, recorte: Recorte): boolean {
   if (recorte === "todas" || recorte === "nf") return true;
@@ -255,6 +267,19 @@ function ordenarNotas(itens: NotaFiscal[], ordenacao: Ordenacao<ColunaNf>): Nota
   });
 }
 
+function BadgePosicao({ posting }: { posting: Posting }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold tracking-wide uppercase",
+        POSICAO_TOM[posting],
+      )}
+    >
+      {POSTING_LABEL[posting]}
+    </span>
+  );
+}
+
 function CabecalhoOrdenavel<T extends string>({
   coluna,
   atual,
@@ -289,6 +314,7 @@ export function DespesasView() {
   useDados();
   const { aircraftId, months, partnerId } = useOperacao();
   const [recorte, setRecorte] = useState<Recorte>("todas");
+  const [filtroPosicao, setFiltroPosicao] = useState<FiltroPosicao>("todas");
   const [naturezaAberta, setNaturezaAberta] = useState<boolean>(true);
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const [filtroSocio, setFiltroSocio] = useState<string>(partnerId ?? "todos");
@@ -302,18 +328,24 @@ export function DespesasView() {
   });
   const socioAtivo = partnerId ?? filtroSocio;
   const socioEspecifico = socioAtivo !== "todos" && socioAtivo !== "sem";
-  const kpisGerais = getKpis(months, aircraftId);
-  const fatiaSocio = socioEspecifico ? custosDoSocio(months, aircraftId, socioAtivo) : null;
-  const totalDespesas = fatiaSocio?.total ?? kpisGerais.custoComprometido;
-  const totalFaturado = fatiaSocio?.realizado ?? kpisGerais.custoRealizado;
-  const categorias = fatiaSocio?.categorias ?? custosPorCategoria(months, aircraftId);
+  const posicao = posicaoDespesas(
+    months,
+    aircraftId,
+    socioEspecifico ? socioAtivo : null,
+  );
+  const totalDespesas = posicao.total;
+  const totalFaturado = posicao.realizado;
+  const totalPrevisto = posicao.previsto;
+  const totalProvisionado = posicao.provisionado;
+  const categorias = posicao.categorias;
   const maior = categorias[0]?.amount ?? 1;
   const notas = listNotasFiscais(months, aircraftId);
-  const faltaFaturar = Math.max(0, totalDespesas - totalFaturado);
+  const totalNfs = notas.reduce((soma, item) => soma + item.amount, 0);
   const rows = ordenarDespesas(
     expensesIn(months, aircraftId)
       .filter((item) => passaRecorte(item, recorte))
-      .filter((item) => passaSocio(item, socioAtivo)),
+      .filter((item) => passaSocio(item, socioAtivo))
+      .filter((item) => filtroPosicao === "todas" || item.posting === filtroPosicao),
     ordenacao,
     socioAtivo,
   );
@@ -397,22 +429,68 @@ export function DespesasView() {
         <p className="mt-1 text-[32px] leading-none font-bold tracking-tight tabular-nums sm:text-[36px]">
           {formatBRL(totalDespesas)}
         </p>
-        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-[#EEEEEE] pt-4 text-[13px]">
+        <p className="mt-1 text-[12px] text-tse-muted">
+          Soma do faturado, do previsto e do provisionado — sem contar NF de novo.
+        </p>
+
+        {totalDespesas > 0 ? (
+          <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
+            {totalFaturado > 0 ? (
+              <span
+                className="bg-[#16A34A]"
+                style={{ width: `${(totalFaturado / totalDespesas) * 100}%` }}
+                title="Faturado"
+              />
+            ) : null}
+            {totalPrevisto > 0 ? (
+              <span
+                className="bg-[#2563EB]"
+                style={{ width: `${(totalPrevisto / totalDespesas) * 100}%` }}
+                title="Previsto"
+              />
+            ) : null}
+            {totalProvisionado > 0 ? (
+              <span
+                className="bg-[#EA580C]"
+                style={{ width: `${(totalProvisionado / totalDespesas) * 100}%` }}
+                title="Provisionado"
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-[#EEEEEE] pt-4 text-[13px] sm:grid-cols-3">
           <div className="flex items-start gap-2">
             <BadgeCheck className="mt-0.5 size-4 shrink-0 text-[#16A34A]" aria-hidden />
             <div>
-              <dt className="text-tse-muted">Faturadas</dt>
+              <dt className="text-tse-muted">Faturado</dt>
               <dd className="mt-0.5 text-[18px] font-bold tabular-nums">{formatBRL(totalFaturado)}</dd>
+              <p className="mt-0.5 text-[11px] text-tse-muted">
+                Com NF / lançamento realizado
+                {totalNfs > 0 ? ` · NFs ${formatBRL(totalNfs)}` : ""}
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <Clock3 className="mt-0.5 size-4 shrink-0 text-tse-olive" aria-hidden />
+            <Clock3 className="mt-0.5 size-4 shrink-0 text-[#2563EB]" aria-hidden />
             <div>
-              <dt className="text-tse-muted">A faturar</dt>
-              <dd className="mt-0.5 text-[18px] font-bold tabular-nums">{formatBRL(faltaFaturar)}</dd>
+              <dt className="text-tse-muted">Previsto</dt>
+              <dd className="mt-0.5 text-[18px] font-bold tabular-nums">{formatBRL(totalPrevisto)}</dd>
+              <p className="mt-0.5 text-[11px] text-tse-muted">Voos e custos ainda por vir</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Clock3 className="mt-0.5 size-4 shrink-0 text-[#EA580C]" aria-hidden />
+            <div>
+              <dt className="text-tse-muted">Provisionado</dt>
+              <dd className="mt-0.5 text-[18px] font-bold tabular-nums">{formatBRL(totalProvisionado)}</dd>
+              <p className="mt-0.5 text-[11px] text-tse-muted">
+                Estimativa sem fatura (ex.: combustível jan–mar)
+              </p>
             </div>
           </div>
         </dl>
+
         {!abaNf ? (
           <div className="mt-3 border-t border-[#EEEEEE] pt-2">
             <button
@@ -497,13 +575,16 @@ export function DespesasView() {
       </div>
 
       <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-        <div className="flex w-max gap-2 pb-3">
+        <div className="flex w-max gap-2 pb-2">
           {ABAS.map((aba) => (
             <button
               key={aba.id}
               type="button"
               aria-pressed={recorte === aba.id}
-              onClick={() => setRecorte(aba.id)}
+              onClick={() => {
+                setRecorte(aba.id);
+                if (aba.id === "nf") setFiltroPosicao("todas");
+              }}
               className={cn(
                 "rounded-full px-3.5 py-1.5 text-[13px] font-bold whitespace-nowrap",
                 recorte === aba.id
@@ -515,6 +596,26 @@ export function DespesasView() {
             </button>
           ))}
         </div>
+        {!abaNf ? (
+          <div className="flex w-max gap-2 pb-3">
+            {ABAS_POSICAO.map((aba) => (
+              <button
+                key={aba.id}
+                type="button"
+                aria-pressed={filtroPosicao === aba.id}
+                onClick={() => setFiltroPosicao(aba.id)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-[12px] font-bold whitespace-nowrap",
+                  filtroPosicao === aba.id
+                    ? "bg-tse-olive text-white"
+                    : "border border-[#EEF0F3] bg-white text-tse-muted",
+                )}
+              >
+                {aba.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {abaNf ? (
@@ -571,7 +672,10 @@ export function DespesasView() {
                           {formatDateLista(item.date)}
                           {trajeto ? ` · ${trajeto}` : ""}
                         </span>
-                        <span className="block text-[12px] text-tse-muted">{item.vendor}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-2">
+                          <BadgePosicao posting={item.posting} />
+                          <span className="text-[12px] text-tse-muted">{item.vendor}</span>
+                        </span>
                       </span>
                       <ChevronRight className="mt-1 size-4 shrink-0 text-tse-muted" aria-hidden />
                     </button>
@@ -603,7 +707,7 @@ export function DespesasView() {
                       Sócio
                     </CabecalhoOrdenavel>
                     <CabecalhoOrdenavel coluna="situacao" atual={ordenacao} onOrdenar={alternarOrdenacao}>
-                      Situação
+                      Posição
                     </CabecalhoOrdenavel>
                     <CabecalhoOrdenavel coluna="valor" atual={ordenacao} onOrdenar={alternarOrdenacao}>
                       Valor
@@ -629,7 +733,7 @@ export function DespesasView() {
                         <td className={tdClass}>{CATEGORY_LABEL[item.category]}</td>
                         <td className={tdClass}>{rotuloSocio(item)}</td>
                         <td className={tdClass}>
-                          <StatusBadge value={item.posting} />
+                          <BadgePosicao posting={item.posting} />
                         </td>
                         <td className={`${tdClass} font-bold`}>
                           {formatBRL(valorExibido(item, socioAtivo))}
@@ -657,8 +761,8 @@ export function DespesasView() {
         titulo="Relatório de despesas"
         texto={
           socioEspecifico
-            ? "Baixa a sua parte, a natureza e os lançamentos deste período em PDF ou Excel."
-            : "Baixa totais, natureza, lançamentos e NFs do recorte atual em PDF ou Excel."
+            ? "Baixa faturado, previsto, provisionado e os seus lançamentos em PDF ou Excel."
+            : "Baixa faturado / previsto / provisionado, lançamentos e NFs (comprovantes) em PDF ou Excel."
         }
         gerar={() => relatorioDespesas(months, aircraftId, socioAtivo)}
       />
@@ -691,9 +795,10 @@ function BibliotecaNf({
   return (
     <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
       <div className="border-b border-[#EEEEEE] px-4 py-3">
-        <p className="text-[14px] font-bold">Comprovantes</p>
+        <p className="text-[14px] font-bold">Comprovantes (NFs)</p>
         <p className="text-[12px] text-tse-muted">
-          Biblioteca de NF e demonstrativos vinculados às despesas.
+          Prova do que já foi faturado. Não somam de novo no total — o valor já está nos
+          lançamentos realizados (ex.: combustível Vibra = JSA.htm / planilha WhatsApp).
         </p>
       </div>
       {notas.length === 0 ? (
@@ -873,7 +978,7 @@ function DetalheDespesa({
           <LinhaDetalhe rotulo="Fornecedor" valor={expense.vendor} />
           <LinhaDetalhe rotulo="Aeronave" valor={craft?.registration ?? expense.aircraftId} />
           <LinhaDetalhe rotulo="Natureza" valor={CATEGORY_LABEL[expense.category]} />
-          <LinhaDetalhe rotulo="Situação" valor={<StatusBadge value={expense.posting} />} />
+          <LinhaDetalhe rotulo="Posição" valor={<BadgePosicao posting={expense.posting} />} />
           <LinhaDetalhe rotulo="Critério" valor={raio.regra} />
           <LinhaDetalhe rotulo="Sócio" valor={rotuloSocio(expense)} />
         </dl>

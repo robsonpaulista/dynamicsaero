@@ -126,8 +126,8 @@ function DespesaCampos({ id }: { id?: string }) {
               ))}
             </CampoSelect>
           ) : null}
-          <CampoSelect label="Situação" value={posting} onChange={(value) => setPosting(value as Posting)}>
-            <option value="realizado">Realizado</option>
+          <CampoSelect label="Posição" value={posting} onChange={(value) => setPosting(value as Posting)}>
+            <option value="realizado">Faturado</option>
             <option value="previsto">Previsto</option>
             <option value="provisionado">Provisionado</option>
           </CampoSelect>

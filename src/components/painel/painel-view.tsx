@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  BadgeCheck,
   CheckCircle2,
   ChevronRight,
   CircleDollarSign,
@@ -27,7 +28,9 @@ import {
   itinerariesIn,
   listAircraft,
   partnerShort,
+  posicaoDespesas,
   type MonthFilter,
+  type PosicaoDespesas,
 } from "@/services/operacao";
 import { relatorioPainel } from "@/services/relatorios-operacao";
 import type { RateioPartner } from "@/types/operacao";
@@ -46,13 +49,17 @@ export function PainelView() {
       : listAircraft()[0];
   const voos = itinerariesIn(months, aircraftId).filter((trip) => trip.status !== "cancelado");
   const semSocio = despesasSemIdentificacao(months, aircraftId);
-  const semRateioValor = valorSemIdentificacao(months, aircraftId);
   const faltaReceberSocios = rateio.partners.reduce(
     (soma, item) => soma + Math.max(0, item.saldo),
     0,
   );
   const alertas = getAlertas(months, aircraftId);
   const pagamentosConferir = alertas.filter((item) => item.tone === "atencao" || item.tone === "critico");
+  // Frota = posicaoOperacao; fatia do sócio = posicaoEu / Minha conta.
+  const posicaoOperacao = posicaoDespesas(months, aircraftId, null);
+  const posicaoEu = partnerId
+    ? posicaoDespesas(months, aircraftId, partnerId)
+    : posicaoOperacao;
 
   return (
     <PageStack>
@@ -78,16 +85,16 @@ export function PainelView() {
       {eu ? (
         <PainelSocio
           eu={eu}
-          despesasPeriodo={rateio.total}
-          faltaReceberSocios={faltaReceberSocios}
-          semRateio={semRateioValor}
+          posicaoOperacao={posicaoOperacao}
+          posicaoEu={posicaoEu}
           voos={voos.length}
           horas={kpis.horasVoadas}
           custoHora={kpis.custoHora}
         />
       ) : (
         <PainelAdmin
-          despesas={rateio.total}
+          posicao={posicaoOperacao}
+          despesasRateadas={rateio.total}
           pago={rateio.pago}
           emAberto={faltaReceberSocios}
           partners={rateio.partners}
@@ -100,8 +107,8 @@ export function PainelView() {
         titulo="Relatório do painel"
         texto={
           eu
-            ? "Baixa o resumo da operação e a sua conta neste período em PDF ou Excel."
-            : "Baixa o resumo do período e a situação de cada sócio em PDF ou Excel."
+            ? "Baixa faturado / previsto / provisionado e a sua conta neste período em PDF ou Excel."
+            : "Baixa faturado / previsto / provisionado e a situação de cada sócio em PDF ou Excel."
         }
         gerar={() => relatorioPainel(months, aircraftId, partnerId)}
       />
@@ -111,17 +118,15 @@ export function PainelView() {
 
 function PainelSocio({
   eu,
-  despesasPeriodo,
-  faltaReceberSocios,
-  semRateio,
+  posicaoOperacao,
+  posicaoEu,
   voos,
   horas,
   custoHora,
 }: {
   eu: RateioPartner;
-  despesasPeriodo: number;
-  faltaReceberSocios: number;
-  semRateio: number;
+  posicaoOperacao: PosicaoDespesas;
+  posicaoEu: PosicaoDespesas;
   voos: number;
   horas: number;
   custoHora: number | null;
@@ -129,62 +134,6 @@ function PainelSocio({
   const falta = Math.max(0, eu.saldo);
   return (
     <>
-      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
-        <p className="text-[13px] font-semibold text-tse-muted">Resumo da operação</p>
-
-        <div className="mt-3">
-          <p className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">
-            Financeiro
-          </p>
-          <dl
-            className={cn(
-              "mt-2 grid gap-x-4 gap-y-3",
-              semRateio > 1 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2",
-            )}
-          >
-            <div>
-              <dt className="text-[12px] text-tse-muted">Despesas do período</dt>
-              <dd className="mt-0.5 text-[24px] font-bold tracking-tight tabular-nums sm:text-[28px]">
-                {formatMil(despesasPeriodo)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[12px] text-tse-muted">Falta receber dos sócios</dt>
-              <dd className="mt-0.5 text-[24px] font-bold tracking-tight tabular-nums sm:text-[28px]">
-                {faltaReceberSocios > 1 ? formatMil(faltaReceberSocios) : "Em dia"}
-              </dd>
-            </div>
-            {semRateio > 1 ? (
-              <div className="col-span-2 sm:col-span-1">
-                <dt className="text-[12px] text-tse-muted">Ainda sem rateio</dt>
-                <dd className="mt-0.5 text-[24px] font-bold tracking-tight text-[#EA580C] tabular-nums sm:text-[28px]">
-                  {formatMil(semRateio)}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-        </div>
-
-        <div className="mt-4 border-t border-[#EEEEEE] pt-3">
-          <p className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">
-            Operação da aeronave
-          </p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            <MetricaIcone icone={Plane} label="Voos" value={String(voos)} />
-            <MetricaIcone icone={Clock3} label="Horas" value={formatHours(horas)} />
-            <MetricaIcone
-              icone={CircleDollarSign}
-              label="Custo/hora"
-              value={custoHora === null ? "—" : formatBRL(Math.round(custoHora))}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <LinkAcao href="/rateio">Ver situação de todos os sócios</LinkAcao>
-        </div>
-      </section>
-
       <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
         <p className="text-[13px] font-semibold text-tse-muted">Minha conta</p>
         <p className="mt-3 text-[15px] text-tse-text">
@@ -194,10 +143,24 @@ function PainelSocio({
           {falta > 1 ? formatBRL(falta) : formatBRL(0)}
         </p>
         <dl className="mt-4 space-y-2.5 text-[14px]">
-          <LinhaConta icone={CircleDollarSign} rotulo="Sua parte no período" valor={formatBRL(eu.total)} />
+          <LinhaConta
+            icone={CircleDollarSign}
+            rotulo="Sua parte"
+            valor={formatBRL(eu.total)}
+          />
+          <LinhaConta
+            icone={BadgeCheck}
+            rotulo="Já faturado"
+            valor={formatBRL(posicaoEu.realizado)}
+          />
+          <LinhaConta
+            icone={Clock3}
+            rotulo="Ainda sem fatura"
+            valor={formatBRL(posicaoEu.provisionado + posicaoEu.previsto)}
+          />
           <LinhaConta
             icone={CheckCircle2}
-            rotulo="Você já pagou no período"
+            rotulo="Você já pagou"
             valor={formatBRL(eu.pago)}
             destaque
           />
@@ -211,53 +174,128 @@ function PainelSocio({
           </LinkAcao>
         </div>
       </section>
+
+      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
+        <p className="text-[13px] font-semibold text-tse-muted">Custo da frota</p>
+        <p className="mt-1 text-[28px] leading-none font-bold tracking-tight tabular-nums sm:text-[32px]">
+          {formatMil(posicaoOperacao.total)}
+        </p>
+        <p className="mt-1 text-[12px] text-tse-muted">
+          Toda a operação no período — sua parte está em Minha conta.
+        </p>
+        <BarraSituacao posicao={posicaoOperacao} />
+        <dl className="mt-3 grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-3">
+          <SituacaoDespesa
+            icone={BadgeCheck}
+            tom="faturado"
+            rotulo="Faturado"
+            valor={posicaoOperacao.realizado}
+            detalhe="Com NF / lançado"
+          />
+          <SituacaoDespesa
+            icone={Clock3}
+            tom="previsto"
+            rotulo="Previsto"
+            valor={posicaoOperacao.previsto}
+            detalhe="Ainda por vir"
+          />
+          <SituacaoDespesa
+            icone={Clock3}
+            tom="provisionado"
+            rotulo="Provisionado"
+            valor={posicaoOperacao.provisionado}
+            detalhe="Sem fatura ainda"
+          />
+        </dl>
+        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#EEEEEE] pt-3">
+          <MetricaIcone icone={Plane} label="Voos" value={String(voos)} />
+          <MetricaIcone icone={Clock3} label="Horas" value={formatHours(horas)} />
+          <MetricaIcone
+            icone={CircleDollarSign}
+            label="Custo/hora"
+            value={custoHora === null ? "—" : formatBRL(Math.round(custoHora))}
+          />
+        </div>
+        <div className="mt-4">
+          <LinkAcao href="/rateio">Ver rateio entre sócios</LinkAcao>
+        </div>
+      </section>
     </>
   );
 }
 
 function PainelAdmin({
-  despesas,
+  posicao,
+  despesasRateadas,
   pago,
   emAberto,
   partners,
   semSocio,
   pagamentosConferir,
 }: {
-  despesas: number;
+  posicao: PosicaoDespesas;
+  despesasRateadas: number;
   pago: number;
   emAberto: number;
   partners: RateioPartner[];
   semSocio: number;
   pagamentosConferir: number;
 }) {
-  const base = Math.max(despesas, pago + emAberto, 1);
-  const pctPago = Math.min(100, (pago / base) * 100);
-  const pctAberto = Math.min(100 - pctPago, (emAberto / base) * 100);
+  const baseAportes = Math.max(despesasRateadas, pago + emAberto, 1);
+  const pctPago = Math.min(100, (pago / baseAportes) * 100);
+  const pctAberto = Math.min(100 - pctPago, (emAberto / baseAportes) * 100);
   const pendencias = semSocio + pagamentosConferir;
 
   return (
     <>
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
-        <p className="text-[13px] font-semibold text-tse-muted">Resumo dos sócios</p>
-        <p className="mt-4 text-[12px] font-bold tracking-wide text-tse-muted uppercase">
-          Despesas do período
+      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
+        <p className="text-[13px] font-semibold text-tse-muted">Despesas do período</p>
+        <p className="mt-1 text-[36px] leading-none font-bold tracking-tight tabular-nums">
+          {formatMil(posicao.total)}
         </p>
-        <p className="mt-1 text-[36px] leading-none font-bold tracking-tight">
-          {formatMil(despesas)}
-        </p>
-        <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
-          <span className="bg-[#16A34A]" style={{ width: `${pctPago}%` }} />
-          <span className="bg-[#EA580C]" style={{ width: `${pctAberto}%` }} />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
-          <span className="inline-flex items-center gap-2">
-            <span className="size-2 rounded-full bg-[#16A34A]" />
-            Já pago {formatMil(pago)}
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="size-2 rounded-full bg-[#EA580C]" />
-            Falta receber dos sócios {formatMil(emAberto)}
-          </span>
+        <BarraSituacao posicao={posicao} />
+        <dl className="mt-4 grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-3">
+          <SituacaoDespesa
+            icone={BadgeCheck}
+            tom="faturado"
+            rotulo="Faturado"
+            valor={posicao.realizado}
+            detalhe="Com NF / lançado"
+          />
+          <SituacaoDespesa
+            icone={Clock3}
+            tom="previsto"
+            rotulo="Previsto"
+            valor={posicao.previsto}
+            detalhe="Ainda por vir"
+          />
+          <SituacaoDespesa
+            icone={Clock3}
+            tom="provisionado"
+            rotulo="Provisionado"
+            valor={posicao.provisionado}
+            detalhe="Sem fatura ainda"
+          />
+        </dl>
+
+        <div className="mt-5 border-t border-[#EEEEEE] pt-4">
+          <p className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">
+            Aportes dos sócios
+          </p>
+          <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
+            <span className="bg-[#16A34A]" style={{ width: `${pctPago}%` }} />
+            <span className="bg-[#EA580C]" style={{ width: `${pctAberto}%` }} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
+            <span className="inline-flex items-center gap-2">
+              <span className="size-2 rounded-full bg-[#16A34A]" />
+              Já pago {formatMil(pago)}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="size-2 rounded-full bg-[#EA580C]" />
+              Em aberto {formatMil(emAberto)}
+            </span>
+          </div>
         </div>
       </section>
 
@@ -333,11 +371,60 @@ function PainelAdmin({
   );
 }
 
-function Metrica({ label, value }: { label: string; value: string }) {
+function BarraSituacao({ posicao }: { posicao: PosicaoDespesas }) {
+  if (posicao.total <= 0) return null;
   return (
-    <div>
-      <p className="text-[12px] text-tse-muted">{label}</p>
-      <p className="mt-1 text-[20px] font-bold tracking-tight tabular-nums sm:text-[22px]">{value}</p>
+    <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
+      {posicao.realizado > 0 ? (
+        <span
+          className="bg-[#16A34A]"
+          style={{ width: `${(posicao.realizado / posicao.total) * 100}%` }}
+          title="Faturado"
+        />
+      ) : null}
+      {posicao.previsto > 0 ? (
+        <span
+          className="bg-[#2563EB]"
+          style={{ width: `${(posicao.previsto / posicao.total) * 100}%` }}
+          title="Previsto"
+        />
+      ) : null}
+      {posicao.provisionado > 0 ? (
+        <span
+          className="bg-[#EA580C]"
+          style={{ width: `${(posicao.provisionado / posicao.total) * 100}%` }}
+          title="Provisionado"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function SituacaoDespesa({
+  icone: Icone,
+  tom,
+  rotulo,
+  valor,
+  detalhe,
+}: {
+  icone: LucideIcon;
+  tom: "faturado" | "previsto" | "provisionado";
+  rotulo: string;
+  valor: number;
+  detalhe: string;
+}) {
+  const cor =
+    tom === "faturado" ? "text-[#16A34A]" : tom === "previsto" ? "text-[#2563EB]" : "text-[#EA580C]";
+  return (
+    <div className="flex items-start gap-2">
+      <Icone className={cn("mt-0.5 size-4 shrink-0", cor)} aria-hidden />
+      <div className="min-w-0">
+        <dt className="text-tse-muted">{rotulo}</dt>
+        <dd className="mt-0.5 text-[18px] font-bold tracking-tight tabular-nums">
+          {formatMil(valor)}
+        </dd>
+        <p className="mt-0.5 text-[11px] text-tse-muted">{detalhe}</p>
+      </div>
     </div>
   );
 }
@@ -455,8 +542,3 @@ function despesasSemIdentificacao(months: MonthFilter, aircraftId: string): numb
   return expensesIn(months, aircraftId).filter(despesaSemIdentificacao).length;
 }
 
-function valorSemIdentificacao(months: MonthFilter, aircraftId: string): number {
-  return expensesIn(months, aircraftId)
-    .filter(despesaSemIdentificacao)
-    .reduce((soma, item) => soma + item.amount, 0);
-}

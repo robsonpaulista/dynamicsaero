@@ -907,25 +907,49 @@ export function raioXAlocacao(expense: Expense): RaioXAlocacao {
   };
 }
 
+export type PosicaoDespesas = {
+  total: number;
+  realizado: number;
+  previsto: number;
+  provisionado: number;
+  categorias: CategoryTotal[];
+};
+
+/** Totais do recorte: faturado (realizado), previsto e provisionado. */
+export function posicaoDespesas(
+  months: MonthFilter,
+  aircraftId: string,
+  partnerId?: string | null,
+): PosicaoDespesas {
+  const totais = new Map<ExpenseCategory, number>();
+  let total = 0;
+  let realizado = 0;
+  let previsto = 0;
+  let provisionado = 0;
+
+  for (const expense of expensesIn(months, aircraftId)) {
+    const parte = partnerId ? valorDoParceiro(expense, partnerId) : expense.amount;
+    if (parte <= 0) continue;
+    total += parte;
+    if (expense.posting === "realizado") realizado += parte;
+    else if (expense.posting === "previsto") previsto += parte;
+    else provisionado += parte;
+    totais.set(expense.category, (totais.get(expense.category) ?? 0) + parte);
+  }
+
+  const categorias = [...totais.entries()]
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((left, right) => right.amount - left.amount);
+
+  return { total, realizado, previsto, provisionado, categorias };
+}
+
 export function custosDoSocio(
   months: MonthFilter,
   aircraftId: string,
   partnerId: string,
-): { total: number; realizado: number; categorias: CategoryTotal[] } {
-  const totais = new Map<ExpenseCategory, number>();
-  let total = 0;
-  let realizado = 0;
-  for (const expense of expensesIn(months, aircraftId)) {
-    const parte = valorDoParceiro(expense, partnerId);
-    if (parte <= 0) continue;
-    total += parte;
-    if (expense.posting === "realizado") realizado += parte;
-    totais.set(expense.category, (totais.get(expense.category) ?? 0) + parte);
-  }
-  const categorias = [...totais.entries()]
-    .map(([category, amount]) => ({ category, amount }))
-    .sort((left, right) => right.amount - left.amount);
-  return { total, realizado, categorias };
+): PosicaoDespesas {
+  return posicaoDespesas(months, aircraftId, partnerId);
 }
 
 function historicoDebito(expense: Expense): string {

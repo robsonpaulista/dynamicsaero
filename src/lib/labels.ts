@@ -41,7 +41,7 @@ export const STATUS_LABEL: Record<string, string> = {
   ativo: "Ativo",
   ferias: "Férias",
   treinamento: "Treinamento",
-  realizado: "Realizado",
+  realizado: "Faturado",
   provisionado: "Provisionado",
   critico: "Crítico",
   atencao: "Atenção",
@@ -91,7 +91,7 @@ export const PURPOSE_LABEL: Record<Purpose, string> = {
 };
 
 export const POSTING_LABEL: Record<Posting, string> = {
-  realizado: "Realizado",
+  realizado: "Faturado",
   previsto: "Previsto",
   provisionado: "Provisionado",
 };
@@ -156,9 +156,9 @@ export const STATUS_CLASS: Record<string, string> = {
   ativo: "bg-[#F1F5F9] text-[#334155]",
   ferias: "bg-[#F4F4F2] text-[#717171]",
   treinamento: "bg-[#E8EEF4] text-[#334155]",
-  realizado: "bg-[#F1F5F9] text-[#334155]",
-  previsto_posting: "bg-[#E0F2FE] text-[#0369A1]",
-  provisionado: "bg-[#E8EEF4] text-[#334155]",
+  realizado: "bg-[#DCFCE7] text-[#166534]",
+  previsto_posting: "bg-[#DBEAFE] text-[#1D4ED8]",
+  provisionado: "bg-[#FFEDD5] text-[#C2410C]",
   critico: "bg-[#FEF2F2] text-[#EF4444]",
   atencao: "bg-[#E0F2FE] text-[#0369A1]",
   info: "bg-[#F4F4F2] text-[#333333]",

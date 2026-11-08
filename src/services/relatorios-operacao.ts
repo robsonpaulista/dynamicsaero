@@ -1,7 +1,5 @@
 import { CATEGORY_LABEL, POSTING_LABEL, PURPOSE_LABEL, STATUS_LABEL } from "@/lib/labels";
 import {
-  custosDoSocio,
-  custosPorCategoria,
   expensesIn,
   expensesOfItinerary,
   getAircraft,
@@ -17,6 +15,7 @@ import {
   monthsLabel,
   mesDeReferencia,
   partnerName,
+  posicaoDespesas,
   tripHours,
   valorDoParceiro,
   type MonthFilter,
@@ -119,26 +118,59 @@ export function relatorioPainel(
 ): Relatorio {
   const rateio = getRateio(months, aircraftId);
   const kpis = getKpis(months, aircraftId);
+  const posicaoOperacao = posicaoDespesas(months, aircraftId, null);
+  const posicaoEu = partnerId
+    ? posicaoDespesas(months, aircraftId, partnerId)
+    : null;
+  const totalNfs = listNotasFiscais(months, aircraftId).reduce(
+    (soma, item) => soma + item.amount,
+    0,
+  );
   const voos = itinerariesIn(months, aircraftId).filter((trip) => trip.status !== "cancelado");
   const horas = voos.reduce((soma, trip) => {
     const hours = tripHours(trip);
     return soma + hours.voadas + hours.previstas;
   }, 0);
   const faltaReceber = rateio.partners.reduce((soma, item) => soma + Math.max(0, item.saldo), 0);
-  const notas = cabecalho(months, aircraftId, partnerId);
   const eu = partnerId
     ? rateio.partners.find((item) => item.partnerId === partnerId)
     : undefined;
 
+  const linhasMinhaConta: Array<[string, string | number]> =
+    eu && posicaoEu
+      ? [
+          ["Falta pagar (minha conta)", Math.max(0, eu.saldo)],
+          ["Sua parte", eu.total],
+          ["Já faturado (sua parte)", posicaoEu.realizado],
+          ["Ainda sem fatura (sua parte)", posicaoEu.provisionado + posicaoEu.previsto],
+          ["Você já pagou", eu.pago],
+          ["Situação", situacaoSaldo(eu.saldo)],
+        ]
+      : [];
+
   const resumo: Planilha = {
     nome: "Resumo",
-    titulo: partnerId ? "Resumo da operação e minha conta" : "Resumo do painel",
-    notas,
+    titulo: partnerId ? "Minha conta e custo da frota" : "Resumo do painel",
+    notas: [
+      ...cabecalho(months, aircraftId, partnerId),
+      partnerId
+        ? "Minha conta = sua fatia. Custo da frota = toda a operação no período."
+        : "Despesas = faturado + previsto + provisionado. Aportes = já pago + em aberto.",
+    ],
     colunas: ["Indicador", "Valor"],
     linhas: [
-      ["Despesas do período", rateio.total],
-      ["Já pago pelos sócios", rateio.pago],
-      ["Falta receber dos sócios", faltaReceber],
+      ...linhasMinhaConta,
+      ["Custo da frota", posicaoOperacao.total],
+      ["Faturado", posicaoOperacao.realizado],
+      ["Previsto", posicaoOperacao.previsto],
+      ["Provisionado", posicaoOperacao.provisionado],
+      ...(partnerId
+        ? []
+        : [
+            ["Já pago pelos sócios", rateio.pago] as [string, number],
+            ["Em aberto com os sócios", faltaReceber] as [string, number],
+            ["NFs do período (comprovantes)", totalNfs] as [string, number],
+          ]),
       ["Voos no período", voos.length],
       ["Horas no período", Number(horas.toFixed(1))],
       ["Custo por hora", kpis.custoHora === null ? "—" : Math.round(kpis.custoHora)],
@@ -147,19 +179,10 @@ export function relatorioPainel(
     larguras: [55, 30],
   };
 
-  if (eu) {
-    resumo.linhas.push(
-      ["Sua parte no período", eu.total],
-      ["Você já pagou", eu.pago],
-      ["Falta pagar", Math.max(0, eu.saldo)],
-      ["Situação", situacaoSaldo(eu.saldo)],
-    );
-  }
-
   const socios: Planilha = {
     nome: "Sócios",
     titulo: partnerId ? "Minha posição" : "Situação dos sócios",
-    notas,
+    notas: cabecalho(months, aircraftId, partnerId),
     colunas: ["Sócio", "Responsabilidade", "Pago", "Saldo", "Situação"],
     linhas: (eu ? [eu] : rateio.partners).map((item) => [
       partnerName(item.partnerId),
@@ -187,28 +210,37 @@ export function relatorioDespesas(
 ): Relatorio {
   const notasCab = cabecalho(months, aircraftId, socioFiltro);
   const socioEspecifico = socioFiltro !== "todos" && socioFiltro !== "sem";
-  const fatia = socioEspecifico ? custosDoSocio(months, aircraftId, socioFiltro) : null;
-  const kpis = getKpis(months, aircraftId);
-  const total = fatia?.total ?? kpis.custoComprometido;
-  const realizado = fatia?.realizado ?? kpis.custoRealizado;
-  const categorias = fatia?.categorias ?? custosPorCategoria(months, aircraftId);
+  const posicao = posicaoDespesas(
+    months,
+    aircraftId,
+    socioEspecifico ? socioFiltro : null,
+  );
+  const { total, realizado, previsto, provisionado, categorias } = posicao;
   const despesas = expensesIn(months, aircraftId)
     .filter((item) => passaSocio(item, socioFiltro))
     .sort((left, right) => right.date.localeCompare(left.date) || right.amount - left.amount);
+  const nfs = listNotasFiscais(months, aircraftId);
+  const totalNfs = nfs.reduce((soma, item) => soma + item.amount, 0);
 
   const resumo: Planilha = {
     nome: "Resumo",
     titulo: socioEspecifico ? "Minha parte nas despesas" : "Despesas do período",
-    notas: notasCab,
+    notas: [
+      ...notasCab,
+      "Faturado = realizado com NF. Previsto = ainda por vir. Provisionado = estimativa sem fatura.",
+      "As NFs são comprovantes do faturado — não somam de novo no total.",
+    ],
     colunas: ["Indicador", "Valor"],
     linhas: [
       ["Total no período", total],
-      ["Faturadas", realizado],
-      ["Ainda sem fatura", Math.max(0, total - realizado)],
+      ["Faturado", realizado],
+      ["Previsto", previsto],
+      ["Provisionado (sem fatura)", provisionado],
+      ["NFs do período (comprovantes)", totalNfs],
       ["Lançamentos", despesas.length],
     ],
     alinhamento: ["inicio", "fim"],
-    larguras: [50, 28],
+    larguras: [55, 28],
   };
 
   const porNatureza: Planilha = {
@@ -229,8 +261,8 @@ export function relatorioDespesas(
     titulo: "Lançamentos do período",
     notas: notasCab,
     colunas: comSocio
-      ? ["Data", "Lançamento", "Detalhe", "Aeronave", "Natureza", "Sócio", "Situação", "Valor"]
-      : ["Data", "Lançamento", "Detalhe", "Aeronave", "Natureza", "Situação", "Valor"],
+      ? ["Data", "Lançamento", "Detalhe", "Aeronave", "Natureza", "Sócio", "Posição", "Valor"]
+      : ["Data", "Lançamento", "Detalhe", "Aeronave", "Natureza", "Posição", "Valor"],
     linhas: despesas.map((item) => {
       const base: Array<string | number | null> = [
         item.date,
@@ -258,13 +290,15 @@ export function relatorioDespesas(
       : ["", "Total", "", "", "", "", totalLinhas],
   );
 
-  const nfs = listNotasFiscais(months, aircraftId);
   const planilhas = [resumo, porNatureza, lancamentos];
   if (nfs.length > 0) {
     planilhas.push({
       nome: "NF",
-      titulo: "Notas fiscais do período",
-      notas: notasCab,
+      titulo: "Comprovantes (NFs) — não somam no total",
+      notas: [
+        ...notasCab,
+        "Mesmas NFs da Vibra/JSA — comprovantes do combustível já lançado como faturado.",
+      ],
       colunas: ["Data", "NF", "Fornecedor", "Descrição", "Valor"],
       linhas: nfs.map((item) => [
         item.date,
