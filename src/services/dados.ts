@@ -24,6 +24,9 @@ import type {
   Rota,
 } from "@/types/operacao";
 
+/** Mesmo valor usado no rateio histórico de combustível (PS-JSA · 74 gal/h). */
+const CONSUMO_COMBUSTIVEL_PADRAO_GPH = 74;
+
 export type BaseDados = {
   aircraft: Aircraft[];
   partners: Partner[];
@@ -135,7 +138,7 @@ function lerBase(parsed: unknown): BaseDados | null {
     return null;
   }
   return {
-    aircraft,
+    aircraft: aircraft.map(normalizarAeronave),
     partners,
     crew,
     hangars,
@@ -146,6 +149,12 @@ function lerBase(parsed: unknown): BaseDados | null {
     aportes,
     rotas,
   };
+}
+
+function normalizarAeronave(item: Aircraft): Aircraft {
+  const consumo = item.fuelBurnGph;
+  if (typeof consumo === "number" && consumo > 0) return item;
+  return { ...item, fuelBurnGph: CONSUMO_COMBUSTIVEL_PADRAO_GPH };
 }
 
 export async function hidratarBanco(): Promise<void> {

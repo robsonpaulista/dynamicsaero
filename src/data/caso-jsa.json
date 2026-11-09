@@ -42,6 +42,7 @@
       "hangarId": "hangar-sbte",
       "totalHours": 189,
       "cycles": 206,
+      "fuelBurnGph": 74,
       "status": "disponivel",
       "ownership": [
         {

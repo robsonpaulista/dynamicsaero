@@ -59,6 +59,8 @@ export type Aircraft = {
   hangarId: string;
   totalHours: number;
   cycles: number;
+  /** Consumo médio em galões por hora — base do custo automático de combustível. */
+  fuelBurnGph: number;
   status: AircraftStatus;
   ownership: Ownership[];
 };

@@ -11,6 +11,7 @@ import { formatBRL, formatHours, formatPercent } from "@/lib/format";
 import { CATEGORY_TONE, ROLE_LABEL } from "@/lib/labels";
 import {
   aircraftMonth,
+  consumoMedioGph,
   crewOnAircraft,
   getAircraft,
   hangarOf,
@@ -71,6 +72,10 @@ export function AeronaveDetalhe() {
           <Ficha rotulo="Lugares" valor={String(aircraft.seats)} />
           <Ficha rotulo="Célula" valor={formatHours(aircraft.totalHours)} />
           <Ficha rotulo="Ciclos" valor={aircraft.cycles.toLocaleString("pt-BR")} />
+          <Ficha
+            rotulo="Consumo médio"
+            valor={`${consumoMedioGph(aircraft.id).toLocaleString("pt-BR")} gal/h`}
+          />
           <Ficha rotulo={`Horas em ${monthsLabel(months)}`} valor={formatHours(uso.voadas + uso.previstas)} />
           <Ficha rotulo="Custo do mês" valor={formatBRL(uso.custo)} />
         </dl>

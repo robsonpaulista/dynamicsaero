@@ -45,6 +45,14 @@ export function getAircraft(id: string): Aircraft | undefined {
   return getBase().aircraft.find((item) => item.id === id);
 }
 
+/** Consumo médio (gal/h) cadastrado na aeronave — base do custo automático de combustível. */
+export const CONSUMO_COMBUSTIVEL_PADRAO_GPH = 74;
+
+export function consumoMedioGph(aircraftId: string): number {
+  const valor = getAircraft(aircraftId)?.fuelBurnGph;
+  return typeof valor === "number" && valor > 0 ? valor : CONSUMO_COMBUSTIVEL_PADRAO_GPH;
+}
+
 export function listPartners(): Partner[] {
   return getBase().partners;
 }

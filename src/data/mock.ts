@@ -126,6 +126,7 @@ export const AIRCRAFT: Aircraft[] = [
     hangarId: "h-gru",
     totalHours: 1842.6,
     cycles: 1210,
+    fuelBurnGph: 170,
     status: "disponivel",
     ownership: [
       { partnerId: "eduardo", share: 0.6 },
@@ -148,6 +149,7 @@ export const AIRCRAFT: Aircraft[] = [
     hangarId: "h-jd",
     totalHours: 980.4,
     cycles: 2140,
+    fuelBurnGph: 75,
     status: "manutencao",
     ownership: [
       { partnerId: "eduardo", share: 0.5 },
@@ -171,6 +173,7 @@ export const AIRCRAFT: Aircraft[] = [
     hangarId: "h-cg",
     totalHours: 640.2,
     cycles: 508,
+    fuelBurnGph: 70,
     status: "em_voo",
     ownership: [{ partnerId: "eduardo", share: 1 }],
   },

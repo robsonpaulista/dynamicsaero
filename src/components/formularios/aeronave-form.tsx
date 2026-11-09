@@ -14,7 +14,7 @@ import {
 import { useDados, usePronto } from "@/hooks/use-dados";
 import { mascaraWhatsapp, whatsappCompleto } from "@/lib/telefone";
 import { criarId, excluirAeronave, salvarAeronave, salvarSocio } from "@/services/acoes";
-import { getAircraft, seguroDe } from "@/services/operacao";
+import { CONSUMO_COMBUSTIVEL_PADRAO_GPH, getAircraft, seguroDe } from "@/services/operacao";
 import type { AircraftCategory, AircraftStatus } from "@/types/operacao";
 
 export function AeronaveForm({ id }: { id?: string }) {
@@ -48,6 +48,9 @@ function AeronaveCampos({ id }: { id?: string }) {
   const [baseName, setBaseName] = useState<string>(atual?.baseName ?? "");
   const [totalHours, setTotalHours] = useState<string>(atual ? String(atual.totalHours) : "0");
   const [cycles, setCycles] = useState<string>(atual ? String(atual.cycles) : "0");
+  const [fuelBurnGph, setFuelBurnGph] = useState<string>(
+    atual ? String(atual.fuelBurnGph ?? CONSUMO_COMBUSTIVEL_PADRAO_GPH) : String(CONSUMO_COMBUSTIVEL_PADRAO_GPH),
+  );
   const [status, setStatus] = useState<AircraftStatus>(atual?.status ?? "disponivel");
   const [seguroValor, setSeguroValor] = useState<string>(seguro ? String(seguro.amount) : "0");
   const [seguroVendor, setSeguroVendor] = useState<string>(seguro?.vendor ?? "AIG Aviation");
@@ -84,9 +87,14 @@ function AeronaveCampos({ id }: { id?: string }) {
     const lugares = numeroCampo(seats);
     const horas = numeroCampo(totalHours);
     const ciclos = numeroCampo(cycles);
+    const consumo = numeroCampo(fuelBurnGph);
     const parcela = numeroCampo(seguroValor);
-    if ([ano, lugares, horas, ciclos, parcela].some((item) => Number.isNaN(item))) {
-      setErro("Use números válidos em ano, lugares, horas, ciclos e seguro.");
+    if ([ano, lugares, horas, ciclos, consumo, parcela].some((item) => Number.isNaN(item))) {
+      setErro("Use números válidos em ano, lugares, horas, ciclos, consumo e seguro.");
+      return;
+    }
+    if (consumo <= 0) {
+      setErro("Informe o consumo médio em galões por hora.");
       return;
     }
 
@@ -150,6 +158,7 @@ function AeronaveCampos({ id }: { id?: string }) {
         hangarId: atual?.hangarId ?? "",
         totalHours: horas,
         cycles: ciclos,
+        fuelBurnGph: consumo,
         status,
         ownership,
       },
@@ -193,9 +202,19 @@ function AeronaveCampos({ id }: { id?: string }) {
           <Campo label="Cidade base" value={baseName} onChange={setBaseName} />
           <Campo label="Horas de célula" value={totalHours} onChange={setTotalHours} type="number" />
           <Campo label="Ciclos" value={cycles} onChange={setCycles} type="number" />
+          <Campo
+            label="Consumo médio (gal/h)"
+            value={fuelBurnGph}
+            onChange={setFuelBurnGph}
+            type="number"
+          />
           <Campo label="Seguro mensal (R$)" value={seguroValor} onChange={setSeguroValor} type="number" />
           <Campo label="Seguradora" value={seguroVendor} onChange={setSeguroVendor} />
         </Grade>
+        <p className="mt-2 text-[12px] text-tse-muted">
+          O consumo médio entra no cálculo automático do combustível (horas × gal/h × preço).
+          No PS-JSA o rateio das NFs Vibra usou {CONSUMO_COMBUSTIVEL_PADRAO_GPH} gal/h.
+        </p>
         <h3 className="mt-5 text-[14px] font-bold">Participação</h3>
         <div className="mt-2 grid gap-2">
           {base.partners.map((partner) => (
