@@ -3,12 +3,8 @@
 import Link from "next/link";
 import {
   BadgeCheck,
-  CheckCircle2,
   ChevronRight,
-  CircleDollarSign,
   Clock3,
-  FileText,
-  Plane,
   type LucideIcon,
 } from "lucide-react";
 import { AgendaCalendario } from "@/components/itinerarios/agenda-calendario";
@@ -17,16 +13,15 @@ import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import { PageStack, StatusBadge } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
 import { useDados } from "@/hooks/use-dados";
-import { cn, formatBRL, formatHours, formatMil } from "@/lib/format";
-import { corDoSocio, CORES_AGENDA, fundoCalendarioSocio } from "@/lib/labels";
+import { cn, formatHours, formatMil, formatPercent } from "@/lib/format";
+import { corDoSocio } from "@/lib/labels";
 import {
+  consumoMedioGph,
   expensesIn,
   getAircraft,
   getAlertas,
   getItinerary,
-  getKpis,
   getRateio,
-  itinerariesIn,
   listAircraft,
   partnerShort,
   posicaoDespesas,
@@ -34,12 +29,13 @@ import {
   type PosicaoDespesas,
 } from "@/services/operacao";
 import { relatorioPainel } from "@/services/relatorios-operacao";
-import type { RateioPartner } from "@/types/operacao";
+import type { Aircraft, ExpenseCategory, RateioPartner } from "@/types/operacao";
+
+const GALAO_EM_LITROS = 3.785411784;
 
 export function PainelView() {
   useDados();
   const { aircraftId, months, partnerId } = useOperacao();
-  const kpis = getKpis(months, aircraftId);
   const rateio = getRateio(months, aircraftId);
   const eu = partnerId
     ? rateio.partners.find((item) => item.partnerId === partnerId)
@@ -48,7 +44,6 @@ export function PainelView() {
     aircraftId !== "todas"
       ? getAircraft(aircraftId)
       : listAircraft()[0];
-  const voos = itinerariesIn(months, aircraftId).filter((trip) => trip.status !== "cancelado");
   const semSocio = despesasSemIdentificacao(months, aircraftId);
   const faltaReceberSocios = rateio.partners.reduce(
     (soma, item) => soma + Math.max(0, item.saldo),
@@ -56,15 +51,11 @@ export function PainelView() {
   );
   const alertas = getAlertas(months, aircraftId);
   const pagamentosConferir = alertas.filter((item) => item.tone === "atencao" || item.tone === "critico");
-  // Frota = posicaoOperacao; fatia do sócio = posicaoEu / Minha conta.
   const posicaoOperacao = posicaoDespesas(months, aircraftId, null);
-  const posicaoEu = partnerId
-    ? posicaoDespesas(months, aircraftId, partnerId)
-    : posicaoOperacao;
 
   return (
     <PageStack>
-      <FiltrosOperacao legenda="O período altera o resumo da operação e a minha conta." />
+      <FiltrosOperacao legenda="O período altera o resumo da operação e o rateio." />
 
       {/* Sócio: o seletor já diz a frota — evita repetir "Toda a operação". */}
       {!eu && craft ? (
@@ -86,14 +77,7 @@ export function PainelView() {
       <AgendaCalendario compacto />
 
       {eu ? (
-        <PainelSocio
-          eu={eu}
-          posicaoOperacao={posicaoOperacao}
-          posicaoEu={posicaoEu}
-          voos={voos.length}
-          horas={kpis.horasVoadas}
-          custoHora={kpis.custoHora}
-        />
+        <PainelSocio eu={eu} partners={rateio.partners} craft={craft} />
       ) : (
         <PainelAdmin
           posicao={posicaoOperacao}
@@ -121,134 +105,247 @@ export function PainelView() {
 
 function PainelSocio({
   eu,
-  posicaoOperacao,
-  posicaoEu,
-  voos,
-  horas,
-  custoHora,
+  partners,
+  craft,
 }: {
   eu: RateioPartner;
-  posicaoOperacao: PosicaoDespesas;
-  posicaoEu: PosicaoDespesas;
-  voos: number;
-  horas: number;
-  custoHora: number | null;
+  partners: RateioPartner[];
+  craft: Aircraft | undefined;
 }) {
-  const falta = Math.max(0, eu.saldo);
-  const corEu = corDoSocio(eu.partnerId);
-  const fundoEu = fundoCalendarioSocio(eu.partnerId);
+  const ownership = craft?.ownership ?? [];
+  const gph = craft ? consumoMedioGph(craft.id) : CONSUMO_MEDIO_FALLBACK;
+  const horasTotais = partners.reduce((soma, item) => soma + item.hours, 0);
+  const linhasRateio = partners.map((item) => fatiaRateio(item, gph));
+  const totaisRateio = linhasRateio.reduce(
+    (acc, item) => ({
+      fixo: acc.fixo + item.fixo,
+      variavel: acc.variavel + item.variavel,
+      tarifas: acc.tarifas + item.tarifas,
+      litros: acc.litros + item.litros,
+      total: acc.total + item.total,
+    }),
+    { fixo: 0, variavel: 0, tarifas: 0, litros: 0, total: 0 },
+  );
+
   return (
     <>
-      <section
-        className="overflow-hidden rounded-2xl border border-[#E8E4F5] bg-white shadow-sm"
-        style={{ borderTopColor: corEu, borderTopWidth: 3 }}
-      >
-        <div className="px-3 py-2.5 sm:px-4" style={{ background: fundoEu }}>
-          <p className="text-[12px] font-bold tracking-wide uppercase" style={{ color: corEu }}>
-            Minha conta
-          </p>
-          <p className="mt-1 text-[13px] text-tse-text">
-            {falta > 1 ? "Falta pagar neste período" : "Seu aporte está em dia"}
-          </p>
-          <p
-            className="mt-0.5 text-[26px] leading-none font-bold tracking-tight tabular-nums sm:text-[28px]"
-            style={{ color: falta > 1 ? CORES_AGENDA.humberto : CORES_AGENDA.ruan }}
-          >
-            {falta > 1 ? formatBRL(falta) : formatBRL(0)}
-          </p>
-        </div>
-        <div className="p-3 sm:p-4">
-          <dl className="space-y-1.5 text-[13px]">
-            <LinhaConta
-              icone={CircleDollarSign}
-              rotulo="Sua parte"
-              valor={formatBRL(eu.total)}
-              tom="previsto"
-            />
-            <LinhaConta
-              icone={BadgeCheck}
-              rotulo="Já faturado"
-              valor={formatBRL(posicaoEu.realizado)}
-              tom="faturado"
-            />
-            <LinhaConta
-              icone={Clock3}
-              rotulo="Ainda sem fatura"
-              valor={formatBRL(posicaoEu.provisionado + posicaoEu.previsto)}
-              tom="provisionado"
-            />
-            <LinhaConta
-              icone={CheckCircle2}
-              rotulo="Você já pagou"
-              valor={formatBRL(eu.pago)}
-              tom="faturado"
-            />
-          </dl>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <LinkAcao href="/despesas" icone={FileText}>
-              Ver minhas despesas
-            </LinkAcao>
-            <LinkAcao href="/itinerarios" icone={Plane}>
-              Ver meus voos
-            </LinkAcao>
-          </div>
-        </div>
+      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="text-[15px] font-bold tracking-tight">Horas voadas × participação</h2>
+        <ul className="mt-4 space-y-3.5">
+          {partners.map((item) => {
+            const cota = ownership.find((owner) => owner.partnerId === item.partnerId)?.share ?? 0;
+            const pctHoras = horasTotais > 0 ? (item.hours / horasTotais) * 100 : 0;
+            const souEu = item.partnerId === eu.partnerId;
+            const cor = corDoSocio(item.partnerId);
+            return (
+              <li
+                key={item.partnerId}
+                className={cn(
+                  "rounded-xl px-2 py-2 sm:px-2.5",
+                  souEu && "bg-[#F7F5FB]",
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="w-20 shrink-0 truncate text-[13px] font-bold sm:w-24"
+                    style={{ color: cor }}
+                  >
+                    {partnerShort(item.partnerId)}
+                    {souEu ? " · você" : ""}
+                  </span>
+                  <div className="relative h-2.5 min-w-0 flex-1 rounded-full bg-[#EEF0F3]">
+                    <span
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{ width: `${Math.min(100, pctHoras)}%`, background: cor }}
+                    />
+                    {cota > 0 ? (
+                      <span
+                        className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-[#334155]/55"
+                        style={{ left: `${Math.min(100, cota * 100)}%` }}
+                        title={`Cota ${formatPercent(cota)}`}
+                      />
+                    ) : null}
+                  </div>
+                  <span className="w-[4.5rem] shrink-0 text-right sm:w-24">
+                    <span className="block text-[13px] font-bold tabular-nums">
+                      {formatHours(item.hours)}
+                    </span>
+                    <span className="block text-[10px] text-tse-muted sm:text-[11px]">
+                      {formatPercent(horasTotais > 0 ? item.hours / horasTotais : 0)} das horas
+                      {cota > 0 ? ` · cota ${formatPercent(cota)}` : ""}
+                    </span>
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-3 text-[11px] text-tse-muted">
+          A linha vertical marca a participação societária. Barra acima da linha indica uso acima da
+          cota.
+        </p>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[#E4F0E3] bg-white shadow-sm">
-        <div className="bg-pos-faturado-soft px-3 py-2.5 sm:px-4">
-          <p className="text-[12px] font-bold tracking-wide text-pos-faturado uppercase">
-            Custo da frota
-          </p>
-          <p className="mt-1 text-[24px] leading-none font-bold tracking-tight text-[#3F6B4A] tabular-nums sm:text-[28px]">
-            {formatMil(posicaoOperacao.total)}
-          </p>
-          <p className="mt-0.5 text-[11px] text-tse-muted">
-            Toda a operação no período — sua parte está em Minha conta.
-          </p>
-          <BarraSituacao posicao={posicaoOperacao} compacta />
+      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[15px] font-bold tracking-tight">Rateio de custos</h2>
+          <Link href="/rateio" className="text-[12px] font-bold text-[#6B5B95]">
+            Ver detalhe
+          </Link>
         </div>
-        <div className="p-3 sm:p-4">
-          <dl className="grid grid-cols-3 gap-2 text-[12px]">
-            <SituacaoDespesa
-              icone={BadgeCheck}
-              tom="faturado"
-              rotulo="Faturado"
-              valor={posicaoOperacao.realizado}
-              detalhe="Com NF / lançado"
-              compacta
-            />
-            <SituacaoDespesa
-              icone={Clock3}
-              tom="previsto"
-              rotulo="Previsto"
-              valor={posicaoOperacao.previsto}
-              detalhe="Ainda por vir"
-              compacta
-            />
-            <SituacaoDespesa
-              icone={Clock3}
-              tom="provisionado"
-              rotulo="Provisionado"
-              valor={posicaoOperacao.provisionado}
-              detalhe="Sem fatura ainda"
-              compacta
-            />
-          </dl>
-          <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#F6F3EE] p-2.5">
-            <MetricaIcone icone={Plane} label="Voos" value={String(voos)} compacta />
-            <MetricaIcone icone={Clock3} label="Horas" value={formatHours(horas)} compacta />
-            <MetricaIcone
-              icone={CircleDollarSign}
-              label="Custo/hora"
-              value={custoHora === null ? "—" : formatBRL(Math.round(custoHora))}
-              compacta
-            />
-          </div>
-          <div className="mt-3">
-            <LinkAcao href="/rateio">Ver rateio entre sócios</LinkAcao>
-          </div>
+
+        {/* Mobile: cards — sem scroll horizontal. */}
+        <ul className="mt-3 space-y-2 sm:hidden">
+          {linhasRateio.map((item) => {
+            const souEu = item.partnerId === eu.partnerId;
+            return (
+              <li
+                key={item.partnerId}
+                className={cn(
+                  "rounded-xl border border-[#EEF0F3] px-3 py-2.5",
+                  souEu && "border-[#E8E4F5] bg-[#F7F5FB]",
+                )}
+              >
+                <p className="flex items-center gap-2 text-[13px] font-bold">
+                  <span
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ background: corDoSocio(item.partnerId) }}
+                  />
+                  {partnerShort(item.partnerId)}
+                  {souEu ? (
+                    <span className="text-[10px] font-semibold text-tse-muted">você</span>
+                  ) : null}
+                </p>
+                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-tse-muted">Fixo (R$)</dt>
+                    <dd className="font-semibold tabular-nums">{formatNumero(item.fixo)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-tse-muted">Variável (R$)</dt>
+                    <dd className="font-semibold tabular-nums">{formatNumero(item.variavel)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-tse-muted">Tarifas (R$)</dt>
+                    <dd className="font-semibold tabular-nums">{formatNumero(item.tarifas)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-tse-muted">Litros</dt>
+                    <dd className="font-semibold tabular-nums">
+                      {item.litros > 0 ? formatInteiro(item.litros) : "—"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 flex justify-between gap-2 border-t border-[#EEEEEE] pt-1.5">
+                    <dt className="font-semibold text-tse-muted">Total (R$)</dt>
+                    <dd className="font-bold tabular-nums">{formatNumero(item.total)}</dd>
+                  </div>
+                </dl>
+              </li>
+            );
+          })}
+          <li className="rounded-xl bg-[#F6F3EE] px-3 py-2.5">
+            <p className="text-[13px] font-bold">Total</p>
+            <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
+              <div className="flex justify-between gap-2">
+                <dt className="text-tse-muted">Fixo (R$)</dt>
+                <dd className="font-bold tabular-nums">{formatNumero(totaisRateio.fixo)}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-tse-muted">Variável (R$)</dt>
+                <dd className="font-bold tabular-nums">{formatNumero(totaisRateio.variavel)}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-tse-muted">Tarifas (R$)</dt>
+                <dd className="font-bold tabular-nums">{formatNumero(totaisRateio.tarifas)}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-tse-muted">Litros</dt>
+                <dd className="font-bold tabular-nums">
+                  {totaisRateio.litros > 0 ? formatInteiro(totaisRateio.litros) : "—"}
+                </dd>
+              </div>
+              <div className="col-span-2 flex justify-between gap-2 border-t border-[#E5E0D8] pt-1.5">
+                <dt className="font-semibold text-tse-muted">Total (R$)</dt>
+                <dd className="font-bold tabular-nums">{formatNumero(totaisRateio.total)}</dd>
+              </div>
+            </dl>
+          </li>
+        </ul>
+
+        {/* Desktop: tabela compacta, R$ só no header. */}
+        <div className="mt-3 hidden sm:block">
+          <table className="w-full table-fixed border-collapse text-left text-[12px] lg:text-[13px]">
+            <thead>
+              <tr className="text-[10px] font-bold tracking-wide text-tse-muted uppercase lg:text-[11px]">
+                <th className="w-[22%] pb-2 font-bold">Sócio</th>
+                <th className="w-[15%] pb-2 text-right font-bold">Fixo (R$)</th>
+                <th className="w-[18%] pb-2 text-right font-bold">Variável (R$)</th>
+                <th className="w-[15%] pb-2 text-right font-bold">Tarifas (R$)</th>
+                <th className="w-[12%] pb-2 text-right font-bold">Litros</th>
+                <th className="w-[18%] pb-2 text-right font-bold">Total (R$)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linhasRateio.map((item) => {
+                const souEu = item.partnerId === eu.partnerId;
+                return (
+                  <tr
+                    key={item.partnerId}
+                    className={cn("border-t border-[#EEEEEE]", souEu && "bg-[#F7F5FB]")}
+                  >
+                    <td className="truncate py-2.5 pr-2 font-bold">
+                      <span className="inline-flex max-w-full items-center gap-1.5">
+                        <span
+                          className="size-2.5 shrink-0 rounded-full"
+                          style={{ background: corDoSocio(item.partnerId) }}
+                        />
+                        <span className="truncate">{partnerShort(item.partnerId)}</span>
+                        {souEu ? (
+                          <span className="shrink-0 text-[10px] font-semibold text-tse-muted">
+                            você
+                          </span>
+                        ) : null}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-right tabular-nums">{formatNumero(item.fixo)}</td>
+                    <td className="py-2.5 text-right tabular-nums">{formatNumero(item.variavel)}</td>
+                    <td className="py-2.5 text-right tabular-nums">{formatNumero(item.tarifas)}</td>
+                    <td className="py-2.5 text-right tabular-nums">
+                      {item.litros > 0 ? formatInteiro(item.litros) : "—"}
+                    </td>
+                    <td className="py-2.5 text-right font-bold tabular-nums">
+                      {formatNumero(item.total)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-[#D8D8D8] text-[12px] font-bold lg:text-[13px]">
+                <td className="pt-2.5">Total</td>
+                <td className="pt-2.5 text-right tabular-nums">
+                  {formatNumero(totaisRateio.fixo)}
+                </td>
+                <td className="pt-2.5 text-right tabular-nums">
+                  {formatNumero(totaisRateio.variavel)}
+                </td>
+                <td className="pt-2.5 text-right tabular-nums">
+                  {formatNumero(totaisRateio.tarifas)}
+                </td>
+                <td className="pt-2.5 text-right tabular-nums">
+                  {totaisRateio.litros > 0 ? formatInteiro(totaisRateio.litros) : "—"}
+                </td>
+                <td className="pt-2.5 text-right tabular-nums">
+                  {formatNumero(totaisRateio.total)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
+        <p className="mt-3 text-[11px] leading-relaxed text-tse-muted">
+          Custo fixo dividido pela participação; custo variável pelas horas voadas por cada sócio.
+          Tarifas DECEA e de aeroporto entram direto na conta de quem voou.
+        </p>
       </section>
     </>
   );
@@ -407,21 +504,10 @@ function PainelAdmin({
   );
 }
 
-function BarraSituacao({
-  posicao,
-  compacta = false,
-}: {
-  posicao: PosicaoDespesas;
-  compacta?: boolean;
-}) {
+function BarraSituacao({ posicao }: { posicao: PosicaoDespesas }) {
   if (posicao.total <= 0) return null;
   return (
-    <div
-      className={cn(
-        "flex overflow-hidden rounded-full bg-tse-bg",
-        compacta ? "mt-1.5 h-1.5" : "mt-3 h-2.5",
-      )}
-    >
+    <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
       {posicao.realizado > 0 ? (
         <span
           className="bg-pos-faturado"
@@ -453,14 +539,12 @@ function SituacaoDespesa({
   rotulo,
   valor,
   detalhe,
-  compacta = false,
 }: {
   icone: LucideIcon;
   tom: "faturado" | "previsto" | "provisionado";
   rotulo: string;
   valor: number;
   detalhe: string;
-  compacta?: boolean;
 }) {
   const fundo =
     tom === "faturado"
@@ -475,97 +559,17 @@ function SituacaoDespesa({
         ? "text-pos-previsto"
         : "text-pos-provisionado";
   return (
-    <div
-      className={cn(
-        "rounded-xl",
-        compacta ? "p-2" : "p-3",
-        fundo,
-      )}
-    >
-      <div className={cn("flex items-start", compacta ? "gap-1" : "gap-2")}>
-        <Icone
-          className={cn("shrink-0", compacta ? "mt-0.5 size-3.5" : "mt-0.5 size-4", cor)}
-          aria-hidden
-        />
+    <div className={cn("rounded-xl p-3", fundo)}>
+      <div className="flex items-start gap-2">
+        <Icone className={cn("mt-0.5 size-4 shrink-0", cor)} aria-hidden />
         <div className="min-w-0">
-          <dt className={cn(cor, compacta ? "text-[11px] font-semibold" : "text-tse-muted")}>
-            {rotulo}
-          </dt>
-          <dd
-            className={cn(
-              "font-bold tracking-tight tabular-nums",
-              cor,
-              compacta ? "mt-0 text-[14px]" : "mt-0.5 text-[18px]",
-            )}
-          >
+          <dt className="text-tse-muted">{rotulo}</dt>
+          <dd className={cn("mt-0.5 text-[18px] font-bold tracking-tight tabular-nums", cor)}>
             {formatMil(valor)}
           </dd>
-          {compacta ? null : <p className="mt-0.5 text-[11px] text-tse-muted">{detalhe}</p>}
+          <p className="mt-0.5 text-[11px] text-tse-muted">{detalhe}</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function MetricaIcone({
-  icone: Icone,
-  label,
-  value,
-  compacta = false,
-}: {
-  icone: LucideIcon;
-  label: string;
-  value: string;
-  compacta?: boolean;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className={cn("flex items-center gap-1 text-tse-muted", compacta ? "text-[10px]" : "text-[11px]")}>
-        <Icone className="size-3.5 shrink-0 text-[#6B5B95]" aria-hidden />
-        {label}
-      </p>
-      <p
-        className={cn(
-          "truncate font-bold tracking-tight text-[#4F4270] tabular-nums",
-          compacta ? "mt-0.5 text-[15px]" : "mt-1 text-[18px] sm:text-[20px]",
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function LinhaConta({
-  icone: Icone,
-  rotulo,
-  valor,
-  tom = "previsto",
-}: {
-  icone: LucideIcon;
-  rotulo: string;
-  valor: string;
-  tom?: "faturado" | "previsto" | "provisionado";
-}) {
-  const cor =
-    tom === "faturado"
-      ? "text-pos-faturado"
-      : tom === "provisionado"
-        ? "text-pos-provisionado"
-        : "text-pos-previsto";
-  const fundo =
-    tom === "faturado"
-      ? "bg-pos-faturado-soft"
-      : tom === "provisionado"
-        ? "bg-pos-provisionado-soft"
-        : "bg-pos-previsto-soft";
-  return (
-    <div className={cn("flex items-center justify-between gap-3 rounded-lg px-2 py-1.5", fundo)}>
-      <dt className={cn("flex min-w-0 items-center gap-2", cor)}>
-        <Icone className="size-4 shrink-0" aria-hidden />
-        <span className="truncate font-medium text-tse-text">{rotulo}</span>
-      </dt>
-      <dd className={cn("shrink-0 font-bold tabular-nums", cor)}>{valor}</dd>
     </div>
   );
 }
@@ -632,5 +636,35 @@ function despesaSemIdentificacao(expense: ReturnType<typeof expensesIn>[number])
 
 function despesasSemIdentificacao(months: MonthFilter, aircraftId: string): number {
   return expensesIn(months, aircraftId).filter(despesaSemIdentificacao).length;
+}
+
+const CONSUMO_MEDIO_FALLBACK = 74;
+
+function categoriaDoParceiro(partner: RateioPartner, category: ExpenseCategory): number {
+  return partner.byCategory.find((item) => item.category === category)?.amount ?? 0;
+}
+
+function fatiaRateio(partner: RateioPartner, gph: number) {
+  const tarifas = categoriaDoParceiro(partner, "taxas");
+  return {
+    partnerId: partner.partnerId,
+    fixo: partner.participacao,
+    variavel: Math.max(0, partner.voos - tarifas),
+    tarifas,
+    litros: partner.hours * gph * GALAO_EM_LITROS,
+    total: partner.total,
+  };
+}
+
+function formatInteiro(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Math.round(value));
+}
+
+function formatNumero(value: number): string {
+  if (Math.abs(value) < 0.5) return "0";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
