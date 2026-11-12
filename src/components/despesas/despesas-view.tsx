@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import {
   ArrowDown,
@@ -92,17 +93,31 @@ type Ordem = "asc" | "desc";
 
 type Ordenacao<T extends string> = { coluna: T; ordem: Ordem };
 
-type Recorte = "todas" | "voo" | "estrutura" | "manutencao" | "nf";
+type Recorte = "todas" | "voo" | "estrutura" | "manutencao" | "comuns" | "nf";
 
 type FiltroPosicao = "todas" | Posting;
 
-const ABAS: { id: Recorte; label: string }[] = [
+const ABAS: { id: Exclude<Recorte, "comuns">; label: string }[] = [
   { id: "todas", label: "Todos os tipos" },
   { id: "voo", label: "Voos" },
   { id: "estrutura", label: "Estrutura" },
   { id: "manutencao", label: "Manutenção" },
   { id: "nf", label: "Notas fiscais (NF)" },
 ];
+
+function recorteDaUrl(valor: string | null): Recorte {
+  if (
+    valor === "todas" ||
+    valor === "voo" ||
+    valor === "estrutura" ||
+    valor === "manutencao" ||
+    valor === "comuns" ||
+    valor === "nf"
+  ) {
+    return valor;
+  }
+  return "todas";
+}
 
 const ABAS_POSICAO: { id: FiltroPosicao; label: string }[] = [
   { id: "todas", label: "Todas as posições" },
@@ -121,6 +136,7 @@ function passaRecorte(expense: Expense, recorte: Recorte): boolean {
   if (recorte === "todas" || recorte === "nf") return true;
   if (recorte === "manutencao") return expense.category === "manutencao";
   if (recorte === "voo") return expense.allocation === "solicitante";
+  if (recorte === "comuns") return expense.allocation === "participacao";
   return expense.allocation === "participacao" && expense.category !== "manutencao";
 }
 
@@ -318,8 +334,11 @@ function CabecalhoOrdenavel<T extends string>({
 
 export function DespesasView() {
   useDados();
+  const searchParams = useSearchParams();
   const { aircraftId, months, partnerId } = useOperacao();
-  const [recorte, setRecorte] = useState<Recorte>("todas");
+  const [recorte, setRecorte] = useState<Recorte>(() =>
+    recorteDaUrl(searchParams.get("recorte")),
+  );
   const [filtroPosicao, setFiltroPosicao] = useState<FiltroPosicao>("todas");
   const [naturezaAberta, setNaturezaAberta] = useState<boolean>(true);
   const [detalheId, setDetalheId] = useState<string | null>(null);
@@ -332,6 +351,11 @@ export function DespesasView() {
     coluna: "data",
     ordem: "desc",
   });
+
+  useEffect(() => {
+    setRecorte(recorteDaUrl(searchParams.get("recorte")));
+  }, [searchParams]);
+
   const socioAtivo = partnerId ?? filtroSocio;
   const socioEspecifico = socioAtivo !== "todos" && socioAtivo !== "sem";
   const posicao = posicaoDespesas(
@@ -583,6 +607,9 @@ export function DespesasView() {
             if (proximo === "nf") setFiltroPosicao("todas");
           }}
         >
+          {recorte === "comuns" ? (
+            <option value="comuns">Despesas comuns</option>
+          ) : null}
           {ABAS.map((aba) => (
             <option key={aba.id} value={aba.id}>
               {aba.label}

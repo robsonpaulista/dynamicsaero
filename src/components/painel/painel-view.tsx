@@ -130,7 +130,12 @@ function PainelSocio({
   return (
     <>
       <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="text-[15px] font-bold tracking-tight">Horas voadas × participação</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[15px] font-bold tracking-tight">Horas voadas × participação</h2>
+          <Link href="/itinerarios" className="text-[12px] font-bold text-[#6B5B95]">
+            Ver detalhe
+          </Link>
+        </div>
         <ul className="mt-4 space-y-3.5">
           {partners.map((item) => {
             const cota = ownership.find((owner) => owner.partnerId === item.partnerId)?.share ?? 0;
@@ -189,7 +194,7 @@ function PainelSocio({
       <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-[15px] font-bold tracking-tight">Rateio de custos</h2>
-          <Link href="/rateio" className="text-[12px] font-bold text-[#6B5B95]">
+          <Link href="/despesas" className="text-[12px] font-bold text-[#6B5B95]">
             Ver detalhe
           </Link>
         </div>

@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
 import {
   ArrowLeft,
-  ChevronDown,
   ChevronRight,
   CircleDollarSign,
   FileText,
@@ -16,7 +14,7 @@ import { PageStack } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
 import { useDados } from "@/hooks/use-dados";
 import { cn, formatBRL, formatDateShort, formatMil } from "@/lib/format";
-import { CATEGORY_LABEL, corDoSocio } from "@/lib/labels";
+import { corDoSocio } from "@/lib/labels";
 import {
   contaCorrente,
   expensesIn,
@@ -128,7 +126,6 @@ function RateioSocio({
   months: MonthFilter;
   aircraftId: string;
 }) {
-  const [abertos, setAbertos] = useState<string[]>(["voos"]);
   const falta = Math.max(0, eu.saldo);
   const voosPedidos = itinerariesIn(months, aircraftId).filter(
     (trip) => trip.requestedBy === eu.partnerId && trip.status !== "cancelado",
@@ -143,12 +140,6 @@ function RateioSocio({
       item.partnerId === eu.partnerId &&
       (aircraftId === "todas" || item.aircraftId === null || item.aircraftId === aircraftId),
   );
-
-  function alternar(id: string) {
-    setAbertos((atual) =>
-      atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id],
-    );
-  }
 
   return (
     <>
@@ -205,53 +196,17 @@ function RateioSocio({
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <ResumoBloco
+            href="/despesas?recorte=voo"
             titulo="Meus voos"
             valor={formatBRL(eu.voos)}
             detalhe={`${voosPedidos.length} ${voosPedidos.length === 1 ? "voo" : "voos"}`}
           />
           <ResumoBloco
+            href="/despesas?recorte=comuns"
             titulo="Despesas comuns"
             valor={formatBRL(eu.participacao)}
             detalhe={`${comuns.length} ${comuns.length === 1 ? "despesa" : "despesas"}`}
           />
-        </div>
-
-        <div className="mt-4 divide-y divide-[#EEEEEE] border-t border-[#EEEEEE]">
-          <Acordeao
-            aberto={abertos.includes("voos")}
-            onToggle={() => alternar("voos")}
-            titulo="Meus voos"
-            subtitulo="Combustível, taxas e outros custos"
-          >
-            {eu.byCategory
-              .filter((item) =>
-                ["combustivel", "taxas", "handling", "catering"].includes(item.category),
-              )
-              .map((item) => (
-                <Linha key={item.category} rotulo={CATEGORY_LABEL[item.category]} valor={formatBRL(item.amount)} />
-              ))}
-            {eu.voos <= 0 ? (
-              <p className="text-[13px] text-tse-muted">Nenhum custo de voo neste recorte.</p>
-            ) : null}
-          </Acordeao>
-          <Acordeao
-            aberto={abertos.includes("comuns")}
-            onToggle={() => alternar("comuns")}
-            titulo="Despesas comuns"
-            subtitulo="Hangar, seguro, manutenção…"
-          >
-            {eu.byCategory
-              .filter(
-                (item) =>
-                  !["combustivel", "taxas", "handling", "catering"].includes(item.category),
-              )
-              .map((item) => (
-                <Linha key={item.category} rotulo={CATEGORY_LABEL[item.category]} valor={formatBRL(item.amount)} />
-              ))}
-            {eu.participacao <= 0 ? (
-              <p className="text-[13px] text-tse-muted">Nenhuma despesa comum neste recorte.</p>
-            ) : null}
-          </Acordeao>
         </div>
       </section>
 
@@ -478,64 +433,28 @@ function RateioAdmin({
 }
 
 function ResumoBloco({
+  href,
   titulo,
   valor,
   detalhe,
 }: {
+  href: string;
   titulo: string;
   valor: string;
   detalhe: string;
 }) {
   return (
-    <div className="rounded-xl border border-[#EEF0F3] bg-tse-bg px-4 py-3">
-      <p className="text-[13px] font-semibold text-tse-muted">{titulo}</p>
-      <p className="mt-1 text-[22px] font-bold tracking-tight tabular-nums">{valor}</p>
-      <p className="mt-0.5 text-[12px] text-tse-muted">{detalhe}</p>
-    </div>
-  );
-}
-
-function Acordeao({
-  aberto,
-  onToggle,
-  titulo,
-  subtitulo,
-  children,
-}: {
-  aberto: boolean;
-  onToggle: () => void;
-  titulo: string;
-  subtitulo: string;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={aberto}
-        className="flex w-full items-center gap-3 py-3 text-left"
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-bold">{titulo}</span>
-          <span className="block text-[12px] text-tse-muted">{subtitulo}</span>
-        </span>
-        <ChevronDown
-          className={cn("size-4 shrink-0 text-tse-muted transition-transform", aberto && "rotate-180")}
-          aria-hidden
-        />
-      </button>
-      {aberto ? <div className="space-y-2 pb-3">{children}</div> : null}
-    </div>
-  );
-}
-
-function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
-  return (
-    <div className="flex justify-between gap-3 text-[13px]">
-      <span className="text-tse-muted">{rotulo}</span>
-      <span className="font-semibold">{valor}</span>
-    </div>
+    <Link
+      href={href}
+      className="rounded-xl border border-[#EEF0F3] bg-tse-bg px-4 py-3 transition-colors hover:border-[#D8D4E8] hover:bg-[#F7F5FB]"
+    >
+      <span className="flex items-start justify-between gap-2">
+        <span className="text-[13px] font-semibold text-tse-muted">{titulo}</span>
+        <ChevronRight className="mt-0.5 size-4 shrink-0 text-[#6B5B95]" aria-hidden />
+      </span>
+      <span className="mt-1 block text-[22px] font-bold tracking-tight tabular-nums">{valor}</span>
+      <span className="mt-0.5 block text-[12px] text-tse-muted">{detalhe}</span>
+    </Link>
   );
 }
 
