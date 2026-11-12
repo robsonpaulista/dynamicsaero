@@ -22,7 +22,7 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/painel", title: "Painel", icon: LayoutDashboard },
   { href: "/frota", title: "Frota", icon: Plane },
-  { href: "/itinerarios", title: "Itinerários", icon: Route },
+  { href: "/itinerarios", title: "Voos", icon: Route },
   { href: "/rotas", title: "Rotas", icon: Signpost },
   { href: "/despesas", title: "Despesas", icon: Receipt },
   { href: "/hangar", title: "Hangar", icon: Warehouse },

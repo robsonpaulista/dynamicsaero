@@ -11,13 +11,14 @@ import {
   Plane,
   type LucideIcon,
 } from "lucide-react";
+import { AgendaCalendario } from "@/components/itinerarios/agenda-calendario";
 import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import { PageStack, StatusBadge } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
 import { useDados } from "@/hooks/use-dados";
 import { cn, formatBRL, formatHours, formatMil } from "@/lib/format";
-import { corDoSocio } from "@/lib/labels";
+import { corDoSocio, CORES_AGENDA, fundoCalendarioSocio } from "@/lib/labels";
 import {
   expensesIn,
   getAircraft,
@@ -82,6 +83,8 @@ export function PainelView() {
         </section>
       ) : null}
 
+      <AgendaCalendario compacto />
+
       {eu ? (
         <PainelSocio
           eu={eu}
@@ -132,92 +135,119 @@ function PainelSocio({
   custoHora: number | null;
 }) {
   const falta = Math.max(0, eu.saldo);
+  const corEu = corDoSocio(eu.partnerId);
+  const fundoEu = fundoCalendarioSocio(eu.partnerId);
   return (
     <>
-      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
-        <p className="text-[13px] font-semibold text-tse-muted">Minha conta</p>
-        <p className="mt-3 text-[15px] text-tse-text">
-          {falta > 1 ? "Falta pagar neste período" : "Seu aporte está em dia"}
-        </p>
-        <p className="mt-1 text-[34px] leading-none font-bold tracking-tight tabular-nums">
-          {falta > 1 ? formatBRL(falta) : formatBRL(0)}
-        </p>
-        <dl className="mt-4 space-y-2.5 text-[14px]">
-          <LinhaConta
-            icone={CircleDollarSign}
-            rotulo="Sua parte"
-            valor={formatBRL(eu.total)}
-          />
-          <LinhaConta
-            icone={BadgeCheck}
-            rotulo="Já faturado"
-            valor={formatBRL(posicaoEu.realizado)}
-          />
-          <LinhaConta
-            icone={Clock3}
-            rotulo="Ainda sem fatura"
-            valor={formatBRL(posicaoEu.provisionado + posicaoEu.previsto)}
-          />
-          <LinhaConta
-            icone={CheckCircle2}
-            rotulo="Você já pagou"
-            valor={formatBRL(eu.pago)}
-            destaque
-          />
-        </dl>
-        <div className="mt-4 flex flex-col gap-2.5">
-          <LinkAcao href="/despesas" icone={FileText}>
-            Ver minhas despesas
-          </LinkAcao>
-          <LinkAcao href="/itinerarios" icone={Plane}>
-            Ver meus voos
-          </LinkAcao>
+      <section
+        className="overflow-hidden rounded-2xl border border-[#E8E4F5] bg-white shadow-sm"
+        style={{ borderTopColor: corEu, borderTopWidth: 3 }}
+      >
+        <div className="px-3 py-2.5 sm:px-4" style={{ background: fundoEu }}>
+          <p className="text-[12px] font-bold tracking-wide uppercase" style={{ color: corEu }}>
+            Minha conta
+          </p>
+          <p className="mt-1 text-[13px] text-tse-text">
+            {falta > 1 ? "Falta pagar neste período" : "Seu aporte está em dia"}
+          </p>
+          <p
+            className="mt-0.5 text-[26px] leading-none font-bold tracking-tight tabular-nums sm:text-[28px]"
+            style={{ color: falta > 1 ? CORES_AGENDA.humberto : CORES_AGENDA.ruan }}
+          >
+            {falta > 1 ? formatBRL(falta) : formatBRL(0)}
+          </p>
+        </div>
+        <div className="p-3 sm:p-4">
+          <dl className="space-y-1.5 text-[13px]">
+            <LinhaConta
+              icone={CircleDollarSign}
+              rotulo="Sua parte"
+              valor={formatBRL(eu.total)}
+              tom="previsto"
+            />
+            <LinhaConta
+              icone={BadgeCheck}
+              rotulo="Já faturado"
+              valor={formatBRL(posicaoEu.realizado)}
+              tom="faturado"
+            />
+            <LinhaConta
+              icone={Clock3}
+              rotulo="Ainda sem fatura"
+              valor={formatBRL(posicaoEu.provisionado + posicaoEu.previsto)}
+              tom="provisionado"
+            />
+            <LinhaConta
+              icone={CheckCircle2}
+              rotulo="Você já pagou"
+              valor={formatBRL(eu.pago)}
+              tom="faturado"
+            />
+          </dl>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <LinkAcao href="/despesas" icone={FileText}>
+              Ver minhas despesas
+            </LinkAcao>
+            <LinkAcao href="/itinerarios" icone={Plane}>
+              Ver meus voos
+            </LinkAcao>
+          </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
-        <p className="text-[13px] font-semibold text-tse-muted">Custo da frota</p>
-        <p className="mt-1 text-[28px] leading-none font-bold tracking-tight tabular-nums sm:text-[32px]">
-          {formatMil(posicaoOperacao.total)}
-        </p>
-        <p className="mt-1 text-[12px] text-tse-muted">
-          Toda a operação no período — sua parte está em Minha conta.
-        </p>
-        <BarraSituacao posicao={posicaoOperacao} />
-        <dl className="mt-3 grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-3">
-          <SituacaoDespesa
-            icone={BadgeCheck}
-            tom="faturado"
-            rotulo="Faturado"
-            valor={posicaoOperacao.realizado}
-            detalhe="Com NF / lançado"
-          />
-          <SituacaoDespesa
-            icone={Clock3}
-            tom="previsto"
-            rotulo="Previsto"
-            valor={posicaoOperacao.previsto}
-            detalhe="Ainda por vir"
-          />
-          <SituacaoDespesa
-            icone={Clock3}
-            tom="provisionado"
-            rotulo="Provisionado"
-            valor={posicaoOperacao.provisionado}
-            detalhe="Sem fatura ainda"
-          />
-        </dl>
-        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#EEEEEE] pt-3">
-          <MetricaIcone icone={Plane} label="Voos" value={String(voos)} />
-          <MetricaIcone icone={Clock3} label="Horas" value={formatHours(horas)} />
-          <MetricaIcone
-            icone={CircleDollarSign}
-            label="Custo/hora"
-            value={custoHora === null ? "—" : formatBRL(Math.round(custoHora))}
-          />
+      <section className="overflow-hidden rounded-2xl border border-[#E4F0E3] bg-white shadow-sm">
+        <div className="bg-pos-faturado-soft px-3 py-2.5 sm:px-4">
+          <p className="text-[12px] font-bold tracking-wide text-pos-faturado uppercase">
+            Custo da frota
+          </p>
+          <p className="mt-1 text-[24px] leading-none font-bold tracking-tight text-[#3F6B4A] tabular-nums sm:text-[28px]">
+            {formatMil(posicaoOperacao.total)}
+          </p>
+          <p className="mt-0.5 text-[11px] text-tse-muted">
+            Toda a operação no período — sua parte está em Minha conta.
+          </p>
+          <BarraSituacao posicao={posicaoOperacao} compacta />
         </div>
-        <div className="mt-4">
-          <LinkAcao href="/rateio">Ver rateio entre sócios</LinkAcao>
+        <div className="p-3 sm:p-4">
+          <dl className="grid grid-cols-3 gap-2 text-[12px]">
+            <SituacaoDespesa
+              icone={BadgeCheck}
+              tom="faturado"
+              rotulo="Faturado"
+              valor={posicaoOperacao.realizado}
+              detalhe="Com NF / lançado"
+              compacta
+            />
+            <SituacaoDespesa
+              icone={Clock3}
+              tom="previsto"
+              rotulo="Previsto"
+              valor={posicaoOperacao.previsto}
+              detalhe="Ainda por vir"
+              compacta
+            />
+            <SituacaoDespesa
+              icone={Clock3}
+              tom="provisionado"
+              rotulo="Provisionado"
+              valor={posicaoOperacao.provisionado}
+              detalhe="Sem fatura ainda"
+              compacta
+            />
+          </dl>
+          <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#F6F3EE] p-2.5">
+            <MetricaIcone icone={Plane} label="Voos" value={String(voos)} compacta />
+            <MetricaIcone icone={Clock3} label="Horas" value={formatHours(horas)} compacta />
+            <MetricaIcone
+              icone={CircleDollarSign}
+              label="Custo/hora"
+              value={custoHora === null ? "—" : formatBRL(Math.round(custoHora))}
+              compacta
+            />
+          </div>
+          <div className="mt-3">
+            <LinkAcao href="/rateio">Ver rateio entre sócios</LinkAcao>
+          </div>
         </div>
       </section>
     </>
@@ -248,13 +278,18 @@ function PainelAdmin({
 
   return (
     <>
-      <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
-        <p className="text-[13px] font-semibold text-tse-muted">Despesas do período</p>
-        <p className="mt-1 text-[36px] leading-none font-bold tracking-tight tabular-nums">
-          {formatMil(posicao.total)}
-        </p>
-        <BarraSituacao posicao={posicao} />
-        <dl className="mt-4 grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-3">
+      <section className="overflow-hidden rounded-2xl border border-[#E4F0E3] bg-white shadow-sm">
+        <div className="bg-pos-faturado-soft px-4 py-3 sm:px-5">
+          <p className="text-[12px] font-bold tracking-wide text-pos-faturado uppercase">
+            Despesas do período
+          </p>
+          <p className="mt-1 text-[32px] leading-none font-bold tracking-tight text-[#3F6B4A] tabular-nums">
+            {formatMil(posicao.total)}
+          </p>
+          <BarraSituacao posicao={posicao} />
+        </div>
+        <div className="p-4 sm:p-5">
+        <dl className="grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-3">
           <SituacaoDespesa
             icone={BadgeCheck}
             tom="faturado"
@@ -283,24 +318,25 @@ function PainelAdmin({
             Aportes dos sócios
           </p>
           <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
-            <span className="bg-[#16A34A]" style={{ width: `${pctPago}%` }} />
-            <span className="bg-[#EA580C]" style={{ width: `${pctAberto}%` }} />
+            <span className="bg-pos-faturado" style={{ width: `${pctPago}%` }} />
+            <span className="bg-pos-provisionado" style={{ width: `${pctAberto}%` }} />
           </div>
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
             <span className="inline-flex items-center gap-2">
-              <span className="size-2 rounded-full bg-[#16A34A]" />
+              <span className="size-2 rounded-full bg-pos-faturado" />
               Já pago {formatMil(pago)}
             </span>
             <span className="inline-flex items-center gap-2">
-              <span className="size-2 rounded-full bg-[#EA580C]" />
+              <span className="size-2 rounded-full bg-pos-provisionado" />
               Em aberto {formatMil(emAberto)}
             </span>
           </div>
         </div>
+        </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
-        <p className="text-[13px] font-semibold text-tse-muted">Situação dos sócios</p>
+      <section className="rounded-2xl border border-[#E8E4F5] bg-white p-5 shadow-sm">
+        <p className="text-[13px] font-semibold text-[#6B5B95]">Situação dos sócios</p>
         <ul className="mt-3 divide-y divide-[#EEEEEE]">
           {partners.map((item) => {
             const width = item.total > 0 ? Math.min(100, (item.pago / item.total) * 100) : 0;
@@ -329,7 +365,7 @@ function PainelAdmin({
                     </span>
                     <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-tse-bg">
                       <span
-                        className="block h-full rounded-full bg-[#16A34A]"
+                        className="block h-full rounded-full bg-pos-faturado"
                         style={{ width: `${width}%` }}
                       />
                     </span>
@@ -349,7 +385,7 @@ function PainelAdmin({
         <div className="flex items-center justify-between gap-3">
           <p className="text-[13px] font-semibold text-tse-muted">Pendências de gestão</p>
           {pendencias > 0 ? (
-            <span className="rounded-full bg-[#EA580C] px-2 py-0.5 text-[11px] font-bold text-white">
+            <span className="rounded-full bg-pos-provisionado px-2 py-0.5 text-[11px] font-bold text-white">
               {pendencias}
             </span>
           ) : null}
@@ -371,27 +407,38 @@ function PainelAdmin({
   );
 }
 
-function BarraSituacao({ posicao }: { posicao: PosicaoDespesas }) {
+function BarraSituacao({
+  posicao,
+  compacta = false,
+}: {
+  posicao: PosicaoDespesas;
+  compacta?: boolean;
+}) {
   if (posicao.total <= 0) return null;
   return (
-    <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
+    <div
+      className={cn(
+        "flex overflow-hidden rounded-full bg-tse-bg",
+        compacta ? "mt-1.5 h-1.5" : "mt-3 h-2.5",
+      )}
+    >
       {posicao.realizado > 0 ? (
         <span
-          className="bg-[#16A34A]"
+          className="bg-pos-faturado"
           style={{ width: `${(posicao.realizado / posicao.total) * 100}%` }}
           title="Faturado"
         />
       ) : null}
       {posicao.previsto > 0 ? (
         <span
-          className="bg-[#2563EB]"
+          className="bg-pos-previsto"
           style={{ width: `${(posicao.previsto / posicao.total) * 100}%` }}
           title="Previsto"
         />
       ) : null}
       {posicao.provisionado > 0 ? (
         <span
-          className="bg-[#EA580C]"
+          className="bg-pos-provisionado"
           style={{ width: `${(posicao.provisionado / posicao.total) * 100}%` }}
           title="Provisionado"
         />
@@ -406,24 +453,55 @@ function SituacaoDespesa({
   rotulo,
   valor,
   detalhe,
+  compacta = false,
 }: {
   icone: LucideIcon;
   tom: "faturado" | "previsto" | "provisionado";
   rotulo: string;
   valor: number;
   detalhe: string;
+  compacta?: boolean;
 }) {
+  const fundo =
+    tom === "faturado"
+      ? "bg-pos-faturado-soft"
+      : tom === "previsto"
+        ? "bg-pos-previsto-soft"
+        : "bg-pos-provisionado-soft";
   const cor =
-    tom === "faturado" ? "text-[#16A34A]" : tom === "previsto" ? "text-[#2563EB]" : "text-[#EA580C]";
+    tom === "faturado"
+      ? "text-pos-faturado"
+      : tom === "previsto"
+        ? "text-pos-previsto"
+        : "text-pos-provisionado";
   return (
-    <div className="flex items-start gap-2">
-      <Icone className={cn("mt-0.5 size-4 shrink-0", cor)} aria-hidden />
-      <div className="min-w-0">
-        <dt className="text-tse-muted">{rotulo}</dt>
-        <dd className="mt-0.5 text-[18px] font-bold tracking-tight tabular-nums">
-          {formatMil(valor)}
-        </dd>
-        <p className="mt-0.5 text-[11px] text-tse-muted">{detalhe}</p>
+    <div
+      className={cn(
+        "rounded-xl",
+        compacta ? "p-2" : "p-3",
+        fundo,
+      )}
+    >
+      <div className={cn("flex items-start", compacta ? "gap-1" : "gap-2")}>
+        <Icone
+          className={cn("shrink-0", compacta ? "mt-0.5 size-3.5" : "mt-0.5 size-4", cor)}
+          aria-hidden
+        />
+        <div className="min-w-0">
+          <dt className={cn(cor, compacta ? "text-[11px] font-semibold" : "text-tse-muted")}>
+            {rotulo}
+          </dt>
+          <dd
+            className={cn(
+              "font-bold tracking-tight tabular-nums",
+              cor,
+              compacta ? "mt-0 text-[14px]" : "mt-0.5 text-[18px]",
+            )}
+          >
+            {formatMil(valor)}
+          </dd>
+          {compacta ? null : <p className="mt-0.5 text-[11px] text-tse-muted">{detalhe}</p>}
+        </div>
       </div>
     </div>
   );
@@ -433,18 +511,25 @@ function MetricaIcone({
   icone: Icone,
   label,
   value,
+  compacta = false,
 }: {
   icone: LucideIcon;
   label: string;
   value: string;
+  compacta?: boolean;
 }) {
   return (
     <div className="min-w-0">
-      <p className="flex items-center gap-1 text-[11px] text-tse-muted">
-        <Icone className="size-3.5 shrink-0 text-tse-olive" aria-hidden />
+      <p className={cn("flex items-center gap-1 text-tse-muted", compacta ? "text-[10px]" : "text-[11px]")}>
+        <Icone className="size-3.5 shrink-0 text-[#6B5B95]" aria-hidden />
         {label}
       </p>
-      <p className="mt-1 truncate text-[18px] font-bold tracking-tight tabular-nums sm:text-[20px]">
+      <p
+        className={cn(
+          "truncate font-bold tracking-tight text-[#4F4270] tabular-nums",
+          compacta ? "mt-0.5 text-[15px]" : "mt-1 text-[18px] sm:text-[20px]",
+        )}
+      >
         {value}
       </p>
     </div>
@@ -455,25 +540,32 @@ function LinhaConta({
   icone: Icone,
   rotulo,
   valor,
-  destaque = false,
+  tom = "previsto",
 }: {
   icone: LucideIcon;
   rotulo: string;
   valor: string;
-  destaque?: boolean;
+  tom?: "faturado" | "previsto" | "provisionado";
 }) {
+  const cor =
+    tom === "faturado"
+      ? "text-pos-faturado"
+      : tom === "provisionado"
+        ? "text-pos-provisionado"
+        : "text-pos-previsto";
+  const fundo =
+    tom === "faturado"
+      ? "bg-pos-faturado-soft"
+      : tom === "provisionado"
+        ? "bg-pos-provisionado-soft"
+        : "bg-pos-previsto-soft";
   return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="flex min-w-0 items-center gap-2 text-tse-muted">
-        <Icone
-          className={cn("size-4 shrink-0", destaque ? "text-[#16A34A]" : "text-tse-olive")}
-          aria-hidden
-        />
-        <span className="truncate">{rotulo}</span>
+    <div className={cn("flex items-center justify-between gap-3 rounded-lg px-2 py-1.5", fundo)}>
+      <dt className={cn("flex min-w-0 items-center gap-2", cor)}>
+        <Icone className="size-4 shrink-0" aria-hidden />
+        <span className="truncate font-medium text-tse-text">{rotulo}</span>
       </dt>
-      <dd className={cn("shrink-0 font-bold tabular-nums", destaque && "text-[#16A34A]")}>
-        {valor}
-      </dd>
+      <dd className={cn("shrink-0 font-bold tabular-nums", cor)}>{valor}</dd>
     </div>
   );
 }
@@ -490,7 +582,7 @@ function LinkAcao({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 text-[13px] font-bold text-tse-olive"
+      className="inline-flex items-center gap-1.5 rounded-full bg-[#E8E4F5] px-3 py-1.5 text-[12px] font-bold text-[#6B5B95]"
     >
       {Icone ? <Icone className="size-4 shrink-0" aria-hidden /> : null}
       {children}
@@ -513,7 +605,7 @@ function Pendencia({
       <Link href={href} className="flex items-center justify-between gap-3 py-3">
         <span className="text-[14px] font-semibold">{titulo}</span>
         <span className="flex items-center gap-2">
-          <span className={cn("text-[16px] font-bold", valor > 0 ? "text-[#EA580C]" : "text-tse-muted")}>
+          <span className={cn("text-[16px] font-bold", valor > 0 ? "text-pos-provisionado" : "text-tse-muted")}>
             {valor}
           </span>
           <ChevronRight className="size-4 text-tse-muted" aria-hidden />

@@ -162,7 +162,7 @@ export function PessoalView() {
                       className="flex size-11 shrink-0 items-center justify-center rounded-full text-[13px] font-bold"
                       style={{
                         background: corDoSocio(partner.id),
-                        color: corDoSocio(partner.id) === "#EBB402" ? "#333333" : "#ffffff",
+                        color: "#ffffff",
                       }}
                     >
                       {iniciais(partner.name)}

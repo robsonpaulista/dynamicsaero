@@ -22,7 +22,7 @@ function Marca() {
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      <path d="M12 17.4h8" fill="none" stroke="#38BDF8" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M12 17.4h8" fill="none" stroke="#6B5B95" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

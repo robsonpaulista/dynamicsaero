@@ -179,7 +179,7 @@ function Conversa({ telefone, month }: { telefone: string; month: string }) {
         />
         <button
           type="submit"
-          className="h-10 rounded-full bg-tse-olive px-4 text-[13px] font-bold text-white hover:bg-[#1E293B]"
+          className="h-10 rounded-full bg-tse-olive px-4 text-[13px] font-bold text-white hover:bg-[#4F4270]"
         >
           Enviar
         </button>

@@ -1,32 +1,53 @@
 @import "tailwindcss";
 
+/* Paleta alinhada ao calendário da agenda (Humberto / Ruan / Jadyel). */
 :root {
-  --tse-yellow: #1e293b;
-  --tse-yellow-strong: #e2e8f0;
-  --tse-soft: #f1f5f9;
-  --tse-gold: #334155;
-  --tse-olive: #334155;
-  --tse-bg: #f4f4f2;
+  --agenda-humberto: #c4843a;
+  --agenda-humberto-soft: #f3e6d8;
+  --agenda-ruan: #5b8a5e;
+  --agenda-ruan-soft: #e4f0e3;
+  --agenda-jadyel: #6b5b95;
+  --agenda-jadyel-soft: #e8e4f5;
+
+  --pos-faturado: var(--agenda-ruan);
+  --pos-faturado-soft: var(--agenda-ruan-soft);
+  --pos-previsto: var(--agenda-jadyel);
+  --pos-previsto-soft: var(--agenda-jadyel-soft);
+  --pos-provisionado: var(--agenda-humberto);
+  --pos-provisionado-soft: var(--agenda-humberto-soft);
+
+  --tse-yellow: #6b5b95;
+  --tse-yellow-strong: #e8e4f5;
+  --tse-soft: #e8e4f5;
+  --tse-gold: #c4843a;
+  --tse-olive: #6b5b95;
+  --tse-bg: #f6f3ee;
   --tse-text: #333333;
   --tse-muted: #717171;
   color-scheme: light;
-  accent-color: #334155;
+  accent-color: #6b5b95;
 }
 
 @theme inline {
-  --color-tse-yellow: #1e293b;
-  --color-tse-yellow-strong: #e2e8f0;
-  --color-tse-soft: #f1f5f9;
-  --color-tse-gold: #334155;
-  --color-tse-olive: #334155;
-  --color-tse-green: #38bdf8;
-  --color-tse-bg: #f4f4f2;
-  --color-tse-bar: #f9f9f9;
+  --color-tse-yellow: #6b5b95;
+  --color-tse-yellow-strong: #e8e4f5;
+  --color-tse-soft: #e8e4f5;
+  --color-tse-gold: #c4843a;
+  --color-tse-olive: #6b5b95;
+  --color-tse-green: #5b8a5e;
+  --color-tse-bg: #f6f3ee;
+  --color-tse-bar: #faf8f5;
   --color-tse-text: #333333;
   --color-tse-muted: #717171;
-  --color-tse-line: #e6e6e3;
-  --color-tse-border: #dddddd;
-  --color-tse-top-line: #0f172a;
+  --color-tse-line: #ebe6df;
+  --color-tse-border: #ddd6cc;
+  --color-tse-top-line: #6b5b95;
+  --color-pos-faturado: #5b8a5e;
+  --color-pos-faturado-soft: #e4f0e3;
+  --color-pos-previsto: #6b5b95;
+  --color-pos-previsto-soft: #e8e4f5;
+  --color-pos-provisionado: #c4843a;
+  --color-pos-provisionado-soft: #f3e6d8;
   --font-sans: var(--font-source), "Source Sans 3", sans-serif;
   --font-display: var(--font-michroma), sans-serif;
 }
@@ -37,11 +58,11 @@ body {
 }
 
 ::selection {
-  background: #e0f2fe;
+  background: #e8e4f5;
 }
 
 :focus-visible {
-  outline: 2px solid #38bdf8;
+  outline: 2px solid #6b5b95;
   outline-offset: 2px;
 }
 
@@ -154,7 +175,7 @@ body {
 }
 
 .aero-varredura {
-  background: linear-gradient(to bottom, transparent, rgba(56, 189, 248, 0.18), transparent);
+  background: linear-gradient(to bottom, transparent, rgba(107, 91, 149, 0.18), transparent);
   animation: aero-varredura 1.6s ease-out 0.15s forwards;
 }
 
@@ -167,7 +188,7 @@ body {
 .aero-campo:-webkit-autofill:focus {
   -webkit-text-fill-color: #fff;
   caret-color: #fff;
-  box-shadow: 0 0 0 1000px #162033 inset;
+  box-shadow: 0 0 0 1000px #2f2744 inset;
   transition: background-color 9999s ease-out;
 }
 

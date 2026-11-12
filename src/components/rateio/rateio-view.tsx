@@ -164,7 +164,7 @@ function RateioSocio({
             className={cn(
               "rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase",
               falta > 1
-                ? "bg-[#FFEDD5] text-[#C2410C]"
+                ? "bg-pos-provisionado-soft text-[#8B5E3C]"
                 : "bg-[#F1F5F9] text-[#334155]",
             )}
           >
@@ -181,7 +181,7 @@ function RateioSocio({
           </div>
           <div className="flex items-center justify-between gap-3">
             <dt className="flex items-center gap-2 text-tse-muted">
-              <CircleDollarSign className="size-4 text-[#16A34A]" aria-hidden />
+              <CircleDollarSign className="size-4 text-pos-faturado" aria-hidden />
               Você já pagou no período
             </dt>
             <dd className="font-bold text-[#15803D] tabular-nums">{formatBRL(eu.pago)}</dd>
@@ -367,13 +367,13 @@ function RateioAdmin({
           </div>
           <div className="min-w-0">
             <p className="flex items-center gap-1 text-[11px] text-tse-muted">
-              <CircleDollarSign className="size-3.5 shrink-0 text-[#EA580C]" aria-hidden />
+              <CircleDollarSign className="size-3.5 shrink-0 text-pos-provisionado" aria-hidden />
               Sem rateio
             </p>
             <p
               className={cn(
                 "mt-1 truncate text-[18px] font-bold tracking-tight tabular-nums sm:text-[20px]",
-                valorPendente > 1 && "text-[#EA580C]",
+                valorPendente > 1 && "text-pos-provisionado",
               )}
             >
               {formatMil(valorPendente)}

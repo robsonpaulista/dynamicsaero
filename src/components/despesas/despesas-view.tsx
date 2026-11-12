@@ -26,12 +26,12 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { RaioXDespesas } from "@/components/despesas/raio-x-despesas";
 import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   EmptyState,
   PageStack,
+  SelectField,
   tableClass,
   TableWrap,
   tdClass,
@@ -97,24 +97,24 @@ type Recorte = "todas" | "voo" | "estrutura" | "manutencao" | "nf";
 type FiltroPosicao = "todas" | Posting;
 
 const ABAS: { id: Recorte; label: string }[] = [
-  { id: "todas", label: "Tudo" },
+  { id: "todas", label: "Todos os tipos" },
   { id: "voo", label: "Voos" },
   { id: "estrutura", label: "Estrutura" },
   { id: "manutencao", label: "Manutenção" },
-  { id: "nf", label: "NF" },
+  { id: "nf", label: "Notas fiscais (NF)" },
 ];
 
 const ABAS_POSICAO: { id: FiltroPosicao; label: string }[] = [
-  { id: "todas", label: "Todas" },
+  { id: "todas", label: "Todas as posições" },
   { id: "realizado", label: "Faturado" },
   { id: "provisionado", label: "Provisionado" },
   { id: "previsto", label: "Previsto" },
 ];
 
 const POSICAO_TOM: Record<Posting, string> = {
-  realizado: "bg-[#DCFCE7] text-[#166534]",
-  previsto: "bg-[#DBEAFE] text-[#1D4ED8]",
-  provisionado: "bg-[#FFEDD5] text-[#C2410C]",
+  realizado: "bg-pos-faturado-soft text-[#3F6B4A]",
+  previsto: "bg-pos-previsto-soft text-[#4F4270]",
+  provisionado: "bg-pos-provisionado-soft text-[#8B5E3C]",
 };
 
 function passaRecorte(expense: Expense, recorte: Recorte): boolean {
@@ -265,6 +265,12 @@ function ordenarNotas(itens: NotaFiscal[], ordenacao: Ordenacao<ColunaNf>): Nota
         return 0;
     }
   });
+}
+
+function posicaoCurta(posting: Posting): string {
+  if (posting === "realizado") return "Fat";
+  if (posting === "previsto") return "Prev";
+  return "Prov";
 }
 
 function BadgePosicao({ posting }: { posting: Posting }) {
@@ -437,21 +443,21 @@ export function DespesasView() {
           <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-tse-bg">
             {totalFaturado > 0 ? (
               <span
-                className="bg-[#16A34A]"
+                className="bg-pos-faturado"
                 style={{ width: `${(totalFaturado / totalDespesas) * 100}%` }}
                 title="Faturado"
               />
             ) : null}
             {totalPrevisto > 0 ? (
               <span
-                className="bg-[#2563EB]"
+                className="bg-pos-previsto"
                 style={{ width: `${(totalPrevisto / totalDespesas) * 100}%` }}
                 title="Previsto"
               />
             ) : null}
             {totalProvisionado > 0 ? (
               <span
-                className="bg-[#EA580C]"
+                className="bg-pos-provisionado"
                 style={{ width: `${(totalProvisionado / totalDespesas) * 100}%` }}
                 title="Provisionado"
               />
@@ -461,7 +467,7 @@ export function DespesasView() {
 
         <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-[#EEEEEE] pt-4 text-[13px] sm:grid-cols-3">
           <div className="flex items-start gap-2">
-            <BadgeCheck className="mt-0.5 size-4 shrink-0 text-[#16A34A]" aria-hidden />
+            <BadgeCheck className="mt-0.5 size-4 shrink-0 text-pos-faturado" aria-hidden />
             <div>
               <dt className="text-tse-muted">Faturado</dt>
               <dd className="mt-0.5 text-[18px] font-bold tabular-nums">{formatBRL(totalFaturado)}</dd>
@@ -472,7 +478,7 @@ export function DespesasView() {
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <Clock3 className="mt-0.5 size-4 shrink-0 text-[#2563EB]" aria-hidden />
+            <Clock3 className="mt-0.5 size-4 shrink-0 text-pos-previsto" aria-hidden />
             <div>
               <dt className="text-tse-muted">Previsto</dt>
               <dd className="mt-0.5 text-[18px] font-bold tabular-nums">{formatBRL(totalPrevisto)}</dd>
@@ -480,7 +486,7 @@ export function DespesasView() {
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <Clock3 className="mt-0.5 size-4 shrink-0 text-[#EA580C]" aria-hidden />
+            <Clock3 className="mt-0.5 size-4 shrink-0 text-pos-provisionado" aria-hidden />
             <div>
               <dt className="text-tse-muted">Provisionado</dt>
               <dd className="mt-0.5 text-[18px] font-bold tabular-nums">{formatBRL(totalProvisionado)}</dd>
@@ -549,13 +555,6 @@ export function DespesasView() {
         ) : null}
       </section>
 
-      <RaioXDespesas
-        despesas={expensesIn(months, aircraftId)
-          .filter((item) => passaRecorte(item, recorte === "nf" ? "todas" : recorte))
-          .filter((item) => passaSocio(item, socioAtivo))}
-        socioId={socioEspecifico ? socioAtivo : null}
-      />
-
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[16px] font-bold">Lançamentos</h2>
         <Link
@@ -574,48 +573,37 @@ export function DespesasView() {
         </Link>
       </div>
 
-      <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-        <div className="flex w-max gap-2 pb-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <SelectField
+          label="Tipo de lançamento"
+          value={recorte}
+          onChange={(value) => {
+            const proximo = value as Recorte;
+            setRecorte(proximo);
+            if (proximo === "nf") setFiltroPosicao("todas");
+          }}
+        >
           {ABAS.map((aba) => (
-            <button
-              key={aba.id}
-              type="button"
-              aria-pressed={recorte === aba.id}
-              onClick={() => {
-                setRecorte(aba.id);
-                if (aba.id === "nf") setFiltroPosicao("todas");
-              }}
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-[13px] font-bold whitespace-nowrap",
-                recorte === aba.id
-                  ? "bg-tse-text text-white"
-                  : "border border-[#EEF0F3] bg-white text-tse-muted",
-              )}
-            >
+            <option key={aba.id} value={aba.id}>
               {aba.label}
-            </button>
+            </option>
           ))}
-        </div>
+        </SelectField>
         {!abaNf ? (
-          <div className="flex w-max gap-2 pb-3">
+          <SelectField
+            label="Posição"
+            value={filtroPosicao}
+            onChange={(value) => setFiltroPosicao(value as FiltroPosicao)}
+          >
             {ABAS_POSICAO.map((aba) => (
-              <button
-                key={aba.id}
-                type="button"
-                aria-pressed={filtroPosicao === aba.id}
-                onClick={() => setFiltroPosicao(aba.id)}
-                className={cn(
-                  "rounded-full px-3 py-1 text-[12px] font-bold whitespace-nowrap",
-                  filtroPosicao === aba.id
-                    ? "bg-tse-olive text-white"
-                    : "border border-[#EEF0F3] bg-white text-tse-muted",
-                )}
-              >
+              <option key={aba.id} value={aba.id}>
                 {aba.label}
-              </button>
+              </option>
             ))}
-          </div>
-        ) : null}
+          </SelectField>
+        ) : (
+          <div className="hidden sm:block" aria-hidden />
+        )}
       </div>
 
       {abaNf ? (
@@ -635,49 +623,66 @@ export function DespesasView() {
             <button
               type="button"
               onClick={alternarFiltroRapido}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#EEF0F3] bg-white px-3 py-1.5 text-[12px] font-bold text-tse-olive"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#E8E4F5] px-3 py-1.5 text-[12px] font-bold text-[#6B5B95]"
               aria-label="Alternar ordenação dos lançamentos"
             >
               <SlidersHorizontal className="size-3.5" aria-hidden />
-              Filtrar
+              Ordenar
             </button>
           </div>
 
-          {/* Mobile: lista compacta */}
-          <section className="overflow-hidden rounded-2xl border border-[#EEF0F3] bg-white shadow-sm md:hidden">
+          {/* Mobile: no máximo 2 linhas */}
+          <section className="overflow-hidden rounded-2xl border border-[#E8E4F5] bg-white shadow-sm md:hidden">
             <ul className="divide-y divide-[#EEEEEE]">
               {rows.map((item) => {
                 const trajeto = trajetoDaDespesa(item);
                 const Icone = ICONE_CATEGORIA[item.category];
+                const detalhe = [
+                  formatDateLista(item.date),
+                  trajeto,
+                  item.vendor,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
                 return (
                   <li key={item.id}>
                     <button
                       type="button"
                       onClick={() => setDetalheId(item.id)}
-                      className="flex w-full items-start gap-3 px-4 py-3.5 text-left"
+                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
                     >
-                      <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#F1F5F9] text-tse-olive">
-                        <Icone className="size-4" aria-hidden />
+                      <span
+                        className={cn(
+                          "inline-flex size-8 shrink-0 items-center justify-center rounded-lg",
+                          POSICAO_TOM[item.posting],
+                        )}
+                      >
+                        <Icone className="size-3.5" aria-hidden />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="flex items-baseline justify-between gap-3">
-                          <span className="truncate text-[15px] font-bold">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="truncate text-[13px] font-bold text-tse-text">
                             {CATEGORY_LABEL[item.category]}
                           </span>
-                          <span className="shrink-0 text-[15px] font-bold tabular-nums">
+                          <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#4F4270]">
                             {formatBRL(valorExibido(item, socioAtivo))}
                           </span>
                         </span>
-                        <span className="mt-0.5 block text-[12px] text-tse-muted">
-                          {formatDateLista(item.date)}
-                          {trajeto ? ` · ${trajeto}` : ""}
-                        </span>
-                        <span className="mt-1 flex flex-wrap items-center gap-2">
-                          <BadgePosicao posting={item.posting} />
-                          <span className="text-[12px] text-tse-muted">{item.vendor}</span>
+                        <span className="mt-0.5 flex items-center gap-1.5">
+                          <span className="min-w-0 truncate text-[11px] text-tse-muted">
+                            {detalhe}
+                          </span>
+                          <span
+                            className={cn(
+                              "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
+                              POSICAO_TOM[item.posting],
+                            )}
+                          >
+                            {posicaoCurta(item.posting)}
+                          </span>
                         </span>
                       </span>
-                      <ChevronRight className="mt-1 size-4 shrink-0 text-tse-muted" aria-hidden />
+                      <ChevronRight className="size-4 shrink-0 text-[#6B5B95]" aria-hidden />
                     </button>
                   </li>
                 );
@@ -887,7 +892,7 @@ function BibliotecaNf({
       )}
       {mostrarSem && semComprovante.length > 0 ? (
         <div className="border-t border-[#EEEEEE] px-4 py-3">
-          <p className="text-[13px] font-bold text-[#C2410C]">
+          <p className="text-[13px] font-bold text-pos-provisionado">
             {semComprovante.length} despesa(s) sem comprovante
           </p>
           <p className="mt-1 text-[12px] text-tse-muted">

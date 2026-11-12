@@ -39,15 +39,17 @@ export function AcoesRelatorio({
   }
 
   return (
-    <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-[16px] font-bold">{titulo}</h2>
-      <p className="mt-1 text-[13px] text-tse-muted">{texto}</p>
-      <div className="mt-4 flex flex-wrap gap-2">
+    <section className="overflow-hidden rounded-2xl border border-[#E8E4F5] bg-white shadow-sm">
+      <div className="bg-[#E8E4F5] px-4 py-3 sm:px-5">
+        <h2 className="text-[15px] font-bold text-[#4F4270]">{titulo}</h2>
+        <p className="mt-1 text-[13px] text-tse-muted">{texto}</p>
+      </div>
+      <div className="flex flex-wrap gap-2 p-4 sm:px-5">
         <button
           type="button"
           disabled={gerando !== null}
           onClick={() => void emitir("pdf")}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-tse-olive px-3 text-[13px] font-bold text-white hover:bg-[#1E293B] disabled:opacity-60"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#6B5B95] px-4 text-[13px] font-bold text-white hover:bg-[#4F4270] disabled:opacity-60"
         >
           <FileDown className="size-4" aria-hidden />
           {gerando === "pdf" ? "Gerando…" : "PDF"}
@@ -56,7 +58,7 @@ export function AcoesRelatorio({
           type="button"
           disabled={gerando !== null}
           onClick={() => void emitir("excel")}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-white px-3 text-[13px] font-bold text-tse-text ring-1 ring-[#EEF0F3] hover:bg-[#F4F4F2] disabled:opacity-60"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-4 text-[13px] font-bold text-[#6B5B95] ring-1 ring-[#6B5B95]/30 hover:bg-[#E8E4F5] disabled:opacity-60"
         >
           <FileSpreadsheet className="size-4" aria-hidden />
           {gerando === "excel" ? "Gerando…" : "Excel"}

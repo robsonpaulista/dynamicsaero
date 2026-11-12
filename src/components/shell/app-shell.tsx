@@ -46,12 +46,12 @@ function NavLinks({
               "flex min-h-11 items-center rounded-md border-l-[3px] text-[14px] transition-colors",
               compact ? "justify-center px-0" : "gap-3 px-3",
               active
-                ? "border-tse-yellow bg-tse-soft font-bold text-tse-text"
-                : "border-transparent font-medium text-tse-text hover:bg-[#F4F4F2]",
+                ? "border-[#6B5B95] bg-[#E8E4F5] font-bold text-tse-text"
+                : "border-transparent font-medium text-tse-text hover:bg-[#F6F3EE]",
             )}
           >
             <Icon
-              className={cn("size-4 shrink-0", active ? "text-tse-gold" : "text-tse-muted")}
+              className={cn("size-4 shrink-0", active ? "text-[#6B5B95]" : "text-tse-muted")}
               aria-hidden
             />
             <span className={compact ? "sr-only" : undefined}>{item.title}</span>
@@ -78,7 +78,7 @@ function Viewer({ sessao, compact = false }: { sessao: SessaoUsuario; compact?: 
         compact ? "flex-col items-center gap-2 px-2" : "items-center gap-3 px-4",
       )}
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tse-yellow text-[12px] font-bold text-white">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#6B5B95] text-[12px] font-bold text-white">
         {iniciais}
       </span>
       {compact ? (
@@ -137,7 +137,7 @@ function ShellFrame({ children, sessao }: { children: React.ReactNode; sessao: S
           aria-label={recolhida ? "Expandir menu" : "Recolher menu"}
           title={recolhida ? "Expandir menu" : "Recolher menu"}
           className={cn(
-            "flex h-16 w-full shrink-0 items-center border-b border-tse-top-line bg-tse-yellow text-white hover:bg-[#162032]",
+            "flex h-16 w-full shrink-0 items-center border-b border-[#4F4270] bg-[#6B5B95] text-white hover:bg-[#4F4270]",
             recolhida ? "justify-center px-0" : "px-4",
           )}
         >
@@ -165,7 +165,7 @@ function ShellFrame({ children, sessao }: { children: React.ReactNode; sessao: S
             onClick={closeMenu}
           />
           <aside className="relative flex h-full w-72 flex-col bg-white shadow-xl">
-            <div className="flex h-16 items-center justify-between border-b border-tse-top-line bg-tse-yellow px-4">
+            <div className="flex h-16 items-center justify-between border-b border-[#4F4270] bg-[#6B5B95] px-4">
               <Wordmark />
               <button
                 type="button"
@@ -190,7 +190,7 @@ function ShellFrame({ children, sessao }: { children: React.ReactNode; sessao: S
       <div className="flex min-w-0 flex-1 flex-col">
         <header
           id="cockpit-topbar"
-          className="flex h-16 shrink-0 items-center gap-3 border-b border-tse-top-line bg-tse-yellow px-3 sm:px-5"
+          className="flex h-16 shrink-0 items-center gap-3 border-b border-[#4F4270] bg-[#6B5B95] px-3 sm:px-5"
         >
           <button
             type="button"

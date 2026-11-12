@@ -18,7 +18,6 @@ import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   EmptyState,
   PageStack,
-  SelectField,
   StatusBadge,
   tableClass,
   TableWrap,
@@ -30,7 +29,7 @@ import {
 import { useOperacao } from "@/context/operacao-context";
 import { useDados } from "@/hooks/use-dados";
 import { cn, formatBRL, formatDateLista, formatDateShort, formatHours } from "@/lib/format";
-import { PURPOSE_LABEL } from "@/lib/labels";
+import { corDoSocio, PURPOSE_LABEL, STATUS_CLASS } from "@/lib/labels";
 import {
   expensesOfItinerary,
   getAircraft,
@@ -46,25 +45,44 @@ import {
 import { relatorioVoos } from "@/services/relatorios-operacao";
 import type { Itinerary, ItineraryStatus, Purpose } from "@/types/operacao";
 
+type AbaStatus = "todos" | "realizados" | "agendados" | "cancelados";
+
+const ABAS: { id: AbaStatus; label: string }[] = [
+  { id: "todos", label: "Todos" },
+  { id: "realizados", label: "Feitos" },
+  { id: "agendados", label: "Agendados" },
+  { id: "cancelados", label: "Cancelados" },
+];
+
 const FINALIDADES: { id: "todas" | Purpose; label: string }[] = [
   { id: "todas", label: "Todos" },
   { id: "negocios", label: "Negócios" },
   { id: "pessoal", label: "Pessoal" },
 ];
 
+function passaStatus(trip: Itinerary, aba: AbaStatus): boolean {
+  if (aba === "todos") return true;
+  if (aba === "realizados") return trip.status === "concluido";
+  if (aba === "cancelados") return trip.status === "cancelado";
+  return trip.status === "confirmado" || trip.status === "previsto" || trip.status === "em_voo";
+}
+
 export function ItinerariosView() {
   useDados();
   const { aircraftId, months, partnerId } = useOperacao();
+  const [aba, setAba] = useState<AbaStatus>("todos");
   const [purpose, setPurpose] = useState<"todas" | Purpose>("todas");
-  const [status, setStatus] = useState<string>("todas");
   const [query, setQuery] = useState<string>("");
   const [filtrosAbertos, setFiltrosAbertos] = useState<boolean>(false);
 
   const needle = query.trim().toLowerCase();
-  const trips = itinerariesIn(months, aircraftId)
+  const base = itinerariesIn(months, aircraftId)
     .filter((trip) => !partnerId || trip.requestedBy === partnerId)
+    .sort((left, right) => (right.legs[0]?.date ?? "").localeCompare(left.legs[0]?.date ?? ""));
+
+  const trips = base
+    .filter((trip) => passaStatus(trip, aba))
     .filter((trip) => purpose === "todas" || trip.purpose === purpose)
-    .filter((trip) => status === "todas" || trip.status === (status as ItineraryStatus))
     .filter((trip) => {
       if (!needle) return true;
       const blob = [
@@ -73,15 +91,16 @@ export function ItinerariosView() {
         itineraryCities(trip),
         itineraryRoute(trip),
         PURPOSE_LABEL[trip.purpose],
+        partnerShort(trip.requestedBy),
         ...trip.passengers,
       ]
         .join(" ")
         .toLowerCase();
       return blob.includes(needle);
-    })
-    .sort((left, right) => (right.legs[0]?.date ?? "").localeCompare(left.legs[0]?.date ?? ""));
+    });
 
   const horas = trips.reduce((sum, trip) => {
+    if (trip.status === "cancelado") return sum;
     const hours = tripHours(trip);
     return sum + hours.voadas + hours.previstas;
   }, 0);
@@ -91,7 +110,17 @@ export function ItinerariosView() {
     craftAtiva?.registration ?? (aircraftId === "todas" ? "Toda a operação" : aircraftId),
     monthsLabel(months),
   ].join(" · ");
-  const titulo = partnerId ? "Meus voos" : "Itinerários";
+  const titulo = partnerId ? "Meus voos" : "Voos";
+
+  const contagem: Record<AbaStatus, number> = {
+    todos: base.length,
+    realizados: base.filter((trip) => trip.status === "concluido").length,
+    agendados: base.filter(
+      (trip) =>
+        trip.status === "confirmado" || trip.status === "previsto" || trip.status === "em_voo",
+    ).length,
+    cancelados: base.filter((trip) => trip.status === "cancelado").length,
+  };
 
   return (
     <PageStack>
@@ -122,7 +151,7 @@ export function ItinerariosView() {
 
       <FiltrosOperacao
         compacto={Boolean(partnerId)}
-        legenda={partnerId ? undefined : "Cada linha é uma ida e, quando há, a volta."}
+        legenda={partnerId ? undefined : "Lista dos voos do período — realizados, agendados e cancelados."}
       />
 
       {!partnerId ? (
@@ -146,6 +175,29 @@ export function ItinerariosView() {
         </div>
       </section>
 
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:px-6 lg:px-8 [&::-webkit-scrollbar]:hidden">
+          {ABAS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={aba === item.id}
+              onClick={() => setAba(item.id)}
+              className={cn(
+                "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold whitespace-nowrap sm:text-[13px]",
+                aba === item.id
+                  ? "bg-tse-text text-white"
+                  : "border border-[#EEF0F3] bg-white text-tse-muted",
+              )}
+            >
+              {item.label}
+              <span className="ml-1 tabular-nums opacity-70">{contagem[item.id]}</span>
+            </button>
+          ))}
+          <span className="w-2 shrink-0" aria-hidden />
+        </div>
+      </div>
+
       <section className="overflow-hidden rounded-2xl border border-[#EEF0F3] bg-white shadow-sm">
         <button
           type="button"
@@ -153,7 +205,7 @@ export function ItinerariosView() {
           onClick={() => setFiltrosAbertos((atual) => !atual)}
           className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
         >
-          <span className="text-[13px] font-bold">Filtrar voos</span>
+          <span className="text-[13px] font-bold">Filtrar lista</span>
           <ChevronDown
             className={cn(
               "size-4 text-tse-muted transition-transform",
@@ -164,14 +216,24 @@ export function ItinerariosView() {
         </button>
         {filtrosAbertos ? (
           <div className="space-y-3 border-t border-[#EEEEEE] px-4 py-3">
-            <SelectField label="Situação" value={status} onChange={setStatus}>
-              <option value="todas">Todas</option>
-              <option value="em_voo">Em voo</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="previsto">Previsto</option>
-              <option value="concluido">Concluído</option>
-              <option value="cancelado">Cancelado</option>
-            </SelectField>
+            <div className="flex flex-wrap gap-2">
+              {FINALIDADES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={purpose === item.id}
+                  onClick={() => setPurpose(item.id)}
+                  className={cn(
+                    "rounded-full px-3.5 py-1.5 text-[13px] font-bold",
+                    purpose === item.id
+                      ? "bg-[#6B5B95] text-white"
+                      : "border border-[#EEF0F3] bg-white text-tse-muted",
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
         <div className="border-t border-[#EEEEEE] px-4 py-3">
@@ -188,47 +250,27 @@ export function ItinerariosView() {
               className="h-11 w-full rounded-xl border border-tse-line bg-tse-bg/40 pr-3 pl-10 text-[14px] outline-none focus:border-tse-olive"
             />
           </label>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {FINALIDADES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={purpose === item.id}
-                onClick={() => setPurpose(item.id)}
-                className={cn(
-                  "rounded-full px-3.5 py-1.5 text-[13px] font-bold",
-                  purpose === item.id
-                    ? "bg-tse-text text-white"
-                    : "border border-[#EEF0F3] bg-white text-tse-muted",
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
       {trips.length === 0 ? (
-        <EmptyState>Nada encontrado com esses filtros.</EmptyState>
+        <EmptyState>Nenhum voo neste recorte.</EmptyState>
       ) : (
         <>
           <p className="text-[13px] text-tse-muted">
-            {trips.length} voo{trips.length === 1 ? "" : "s"} · {formatHours(horas)} no período
+            {trips.length} voo{trips.length === 1 ? "" : "s"} · {formatHours(horas)}
           </p>
 
-          {/* Mobile: cards */}
           <section className="overflow-hidden rounded-2xl border border-[#EEF0F3] bg-white shadow-sm md:hidden">
             <ul className="divide-y divide-[#EEEEEE]">
               {trips.map((trip) => (
                 <li key={trip.id}>
-                  <CartaoVoo trip={trip} />
+                  <CartaoVoo trip={trip} mostrarSocio={!partnerId} />
                 </li>
               ))}
             </ul>
           </section>
 
-          {/* Desktop: tabela */}
           <div className="hidden md:block">
             <TableWrap>
               <table className={tableClass}>
@@ -331,40 +373,61 @@ function MetricaIcone({
   );
 }
 
-function cidadesCurtas(trip: Itinerary): string {
+function rotaCurta(trip: Itinerary): string {
   const first = trip.legs[0];
+  const last = trip.legs[trip.legs.length - 1];
   if (!first) return trip.title;
-  const nomes = [first.fromCity.trim() || first.fromIcao, ...trip.legs.map((leg) => leg.toCity.trim() || leg.toIcao)];
-  const compact: string[] = [];
-  for (const nome of nomes) {
-    if (compact[compact.length - 1] !== nome) compact.push(nome);
-  }
-  return compact.join(" → ");
+  const origem = first.fromCity.trim() || first.fromIcao;
+  const destino = (last?.toCity.trim() || last?.toIcao) ?? origem;
+  if (origem === destino && trip.legs.length <= 1) return origem;
+  return `${origem} → ${destino}`;
 }
 
-function CartaoVoo({ trip }: { trip: Itinerary }) {
+function CartaoVoo({ trip, mostrarSocio }: { trip: Itinerary; mostrarSocio: boolean }) {
   const span = itinerarySpan(trip);
   const hours = tripHours(trip);
   const data = span?.first ? formatDateLista(span.first) : "—";
 
   return (
-    <Link href={`/itinerarios/${trip.id}`} className="flex items-start gap-3 px-4 py-3.5">
-      <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#F1F5F9] text-tse-olive">
-        <Plane className="size-4" aria-hidden />
+    <Link href={`/itinerarios/${trip.id}`} className="flex items-center gap-2.5 px-3 py-2.5">
+      <span
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-white"
+        style={{ background: corDoSocio(trip.requestedBy) }}
+      >
+        <Plane className="size-3.5" aria-hidden />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-baseline justify-between gap-3">
-          <span className="truncate text-[15px] font-bold">{cidadesCurtas(trip)}</span>
-          <span className="shrink-0 text-[15px] font-bold tabular-nums">
-            {formatHours(hours.voadas + hours.previstas)}
-          </span>
-        </span>
-        <span className="mt-0.5 block text-[12px] text-tse-muted">
-          {data} · {PURPOSE_LABEL[trip.purpose]}
-        </span>
-        <span className="block text-[12px] text-tse-muted">{itineraryRoute(trip)}</span>
+      <span className="min-w-0 flex-1 truncate text-[13px]">
+        <span className="text-tse-muted">{data}</span>
+        <span className="text-tse-muted"> · </span>
+        <span className="font-bold text-tse-text">{rotaCurta(trip)}</span>
+        {mostrarSocio ? (
+          <>
+            <span className="text-tse-muted"> · </span>
+            <span className="text-tse-muted">{partnerShort(trip.requestedBy)}</span>
+          </>
+        ) : null}
       </span>
-      <ChevronRight className="mt-1 size-4 shrink-0 text-tse-muted" aria-hidden />
+      <span className="shrink-0 text-[12px] font-bold tabular-nums">
+        {formatHours(hours.voadas + hours.previstas)}
+      </span>
+      <span
+        className={cn(
+          "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase",
+          STATUS_CLASS[trip.status] ?? "bg-tse-bg text-tse-muted",
+        )}
+      >
+        {statusCurto(trip.status)}
+      </span>
+      <ChevronRight className="size-4 shrink-0 text-tse-muted" aria-hidden />
     </Link>
   );
+}
+
+function statusCurto(status: ItineraryStatus): string {
+  if (status === "concluido") return "Ok";
+  if (status === "em_voo") return "Voo";
+  if (status === "confirmado") return "Conf";
+  if (status === "previsto") return "Prev";
+  if (status === "cancelado") return "Canc";
+  return status;
 }

@@ -10,19 +10,63 @@ import type {
   Purpose,
 } from "@/types/operacao";
 
+/** Cores sólidas e suaves do calendário — base visual do cockpit. */
+export const CORES_AGENDA = {
+  humberto: "#C4843A",
+  humbertoSoft: "#F3E6D8",
+  ruan: "#5B8A5E",
+  ruanSoft: "#E4F0E3",
+  jadyel: "#6B5B95",
+  jadyelSoft: "#E8E4F5",
+} as const;
+
+/** Posição da despesa: faturado=Ruan, previsto=Jadyel, provisionado=Humberto. */
+export const CORES_POSICAO = {
+  faturado: CORES_AGENDA.ruan,
+  faturadoSoft: CORES_AGENDA.ruanSoft,
+  faturadoTexto: "#3F6B4A",
+  previsto: CORES_AGENDA.jadyel,
+  previstoSoft: CORES_AGENDA.jadyelSoft,
+  previstoTexto: "#4F4270",
+  provisionado: CORES_AGENDA.humberto,
+  provisionadoSoft: CORES_AGENDA.humbertoSoft,
+  provisionadoTexto: "#8B5E3C",
+} as const;
+
 export const PARTNER_COLOR: Record<string, string> = {
-  eduardo: "#1E293B",
-  marina: "#0284C7",
-  leme: "#334155",
+  eduardo: CORES_AGENDA.jadyel,
+  marina: CORES_AGENDA.ruan,
+  leme: CORES_AGENDA.humberto,
+  humberto: CORES_AGENDA.humberto,
+  ruan: CORES_AGENDA.ruan,
+  jadyel: CORES_AGENDA.jadyel,
 };
 
-const CORES_SOCIO = ["#1E293B", "#0284C7", "#334155", "#0F172A", "#EF4444"];
+/** Fundo suave do dia na agenda (calendário). */
+export const PARTNER_CALENDAR_BG: Record<string, string> = {
+  humberto: CORES_AGENDA.humbertoSoft,
+  ruan: CORES_AGENDA.ruanSoft,
+  jadyel: CORES_AGENDA.jadyelSoft,
+  eduardo: CORES_AGENDA.jadyelSoft,
+  marina: CORES_AGENDA.ruanSoft,
+  leme: CORES_AGENDA.humbertoSoft,
+};
+
+const CORES_SOCIO = [CORES_AGENDA.humberto, CORES_AGENDA.ruan, CORES_AGENDA.jadyel];
+const FUNDOS_SOCIO = [CORES_AGENDA.humbertoSoft, CORES_AGENDA.ruanSoft, CORES_AGENDA.jadyelSoft];
 
 export function corDoSocio(id: string): string {
   const conhecida = PARTNER_COLOR[id];
   if (conhecida) return conhecida;
   const indice = [...id].reduce((soma, letra) => soma + letra.charCodeAt(0), 0) % CORES_SOCIO.length;
   return CORES_SOCIO[indice] ?? "#717171";
+}
+
+export function fundoCalendarioSocio(id: string): string {
+  const conhecida = PARTNER_CALENDAR_BG[id];
+  if (conhecida) return conhecida;
+  const indice = [...id].reduce((soma, letra) => soma + letra.charCodeAt(0), 0) % FUNDOS_SOCIO.length;
+  return FUNDOS_SOCIO[indice] ?? "#F4F4F2";
 }
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -128,42 +172,42 @@ export const CATEGORY_TONE: Record<AircraftCategory, string> = {
 };
 
 export function categoryBarColor(category: ExpenseCategory): string {
-  if (category === "manutencao") return "#0284C7";
+  if (category === "manutencao") return CORES_AGENDA.jadyel;
   if (
     category === "combustivel" ||
     category === "taxas" ||
     category === "handling" ||
     category === "catering"
   ) {
-    return "#334155";
+    return CORES_AGENDA.humberto;
   }
-  return "#0284C7";
+  return CORES_AGENDA.ruan;
 }
 
 export const STATUS_CLASS: Record<string, string> = {
-  disponivel: "bg-[#F1F5F9] text-[#334155]",
-  em_voo: "bg-[#38BDF8] text-[#0F172A]",
-  manutencao: "bg-[#FEF2F2] text-[#EF4444]",
-  concluido: "bg-[#F1F5F9] text-[#334155]",
-  confirmado: "bg-[#E0F2FE] text-[#0369A1]",
-  previsto: "bg-[#F4F4F2] text-[#333333]",
+  disponivel: "bg-[#E4F0E3] text-[#3F6B4A]",
+  em_voo: "bg-[#E8E4F5] text-[#4F4270]",
+  manutencao: "bg-[#F3E6D8] text-[#8B5E3C]",
+  concluido: "bg-[#E4F0E3] text-[#3F6B4A]",
+  confirmado: "bg-[#E8E4F5] text-[#4F4270]",
+  previsto: "bg-[#E8E4F5] text-[#4F4270]",
   cancelado: "bg-[#F4F4F2] text-[#717171]",
-  em_dia: "bg-[#F1F5F9] text-[#334155]",
-  proxima: "bg-[#E0F2FE] text-[#0369A1]",
-  em_execucao: "bg-[#FEF2F2] text-[#EF4444]",
-  regular: "bg-[#F1F5F9] text-[#334155]",
-  renovacao: "bg-[#E0F2FE] text-[#0369A1]",
-  ativo: "bg-[#F1F5F9] text-[#334155]",
+  em_dia: "bg-[#E4F0E3] text-[#3F6B4A]",
+  proxima: "bg-[#E8E4F5] text-[#4F4270]",
+  em_execucao: "bg-[#F3E6D8] text-[#8B5E3C]",
+  regular: "bg-[#E4F0E3] text-[#3F6B4A]",
+  renovacao: "bg-[#E8E4F5] text-[#4F4270]",
+  ativo: "bg-[#E4F0E3] text-[#3F6B4A]",
   ferias: "bg-[#F4F4F2] text-[#717171]",
-  treinamento: "bg-[#E8EEF4] text-[#334155]",
-  realizado: "bg-[#DCFCE7] text-[#166534]",
-  previsto_posting: "bg-[#DBEAFE] text-[#1D4ED8]",
-  provisionado: "bg-[#FFEDD5] text-[#C2410C]",
-  critico: "bg-[#FEF2F2] text-[#EF4444]",
-  atencao: "bg-[#E0F2FE] text-[#0369A1]",
+  treinamento: "bg-[#E8E4F5] text-[#4F4270]",
+  realizado: "bg-[#E4F0E3] text-[#3F6B4A]",
+  previsto_posting: "bg-[#E8E4F5] text-[#4F4270]",
+  provisionado: "bg-[#F3E6D8] text-[#8B5E3C]",
+  critico: "bg-[#F3E6D8] text-[#8B5E3C]",
+  atencao: "bg-[#E8E4F5] text-[#4F4270]",
   info: "bg-[#F4F4F2] text-[#333333]",
-  negocios: "bg-[#E0F2FE] text-[#0369A1]",
-  pessoal: "bg-[#F4F4F2] text-[#333333]",
-  preventiva: "bg-[#F1F5F9] text-[#334155]",
-  corretiva: "bg-[#FEF2F2] text-[#EF4444]",
+  negocios: "bg-[#E8E4F5] text-[#4F4270]",
+  pessoal: "bg-[#F3E6D8] text-[#8B5E3C]",
+  preventiva: "bg-[#E4F0E3] text-[#3F6B4A]",
+  corretiva: "bg-[#F3E6D8] text-[#8B5E3C]",
 };
