@@ -13,7 +13,7 @@ import {
   Grade,
   numeroCampo,
 } from "@/components/formularios/campos";
-import { cidadeDoIcao } from "@/data/aerodromos";
+import { cidadeAerodromo } from "@/services/operacao";
 import { useDados, usePronto } from "@/hooks/use-dados";
 import { formatBRL } from "@/lib/format";
 import { criarId, excluirItinerario, salvarItinerario } from "@/services/acoes";
@@ -49,11 +49,11 @@ function pernaVazia(): PernaCampo {
     date: "2026-11-06",
     depart: "08:00",
     arrive: "10:00",
-    fromIcao: "SBTE",
-    toIcao: "SBFZ",
-    fromCity: "Teresina",
-    toCity: "Fortaleza",
-    blockHours: "1.2",
+    fromIcao: "",
+    toIcao: "",
+    fromCity: "",
+    toCity: "",
+    blockHours: "",
     fees: "0",
     handling: "0",
     catering: "0",
@@ -89,6 +89,20 @@ function tripulacao(aircraftId: string, crew: CrewMember[]): { commanderId: stri
   };
 }
 
+/** Título interno a partir das pernas (origem → destino), sem campo no formulário. */
+function tituloDoVoo(legs: Leg[]): string {
+  const primeiro = legs[0];
+  const ultimo = legs[legs.length - 1];
+  if (!primeiro || !ultimo) return "Voo";
+  const origem = primeiro.fromCity.trim() || primeiro.fromIcao;
+  const destinoIda = primeiro.toCity.trim() || primeiro.toIcao;
+  const destinoFim = ultimo.toCity.trim() || ultimo.toIcao;
+  if (legs.length > 1 && primeiro.fromIcao === ultimo.toIcao) {
+    return `${origem} ↔ ${destinoIda}`;
+  }
+  return `${origem} → ${destinoFim}`;
+}
+
 function lerArquivoComoDataUrl(file: File): Promise<{ nome: string; url: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -122,7 +136,6 @@ function ItinerarioCampos({ id }: { id?: string }) {
   const router = useRouter();
   const atual = id ? getItinerary(id) : undefined;
   const [erro, setErro] = useState<string>("");
-  const [title, setTitle] = useState<string>(atual?.title ?? "");
   const [aircraftId, setAircraftId] = useState<string>(atual?.aircraftId ?? base.aircraft[0]?.id ?? "");
   const [purpose, setPurpose] = useState<Purpose>(atual?.purpose ?? "negocios");
   const [requestedBy, setRequestedBy] = useState<string>(atual?.requestedBy ?? base.partners[0]?.id ?? "");
@@ -207,8 +220,8 @@ function ItinerarioCampos({ id }: { id?: string }) {
 
   function salvar(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!title.trim() || !aircraftId || !requestedBy) {
-      setErro("Informe o título, a aeronave e quem pediu o voo.");
+    if (!aircraftId || !requestedBy) {
+      setErro("Informe a aeronave e quem pediu o voo.");
       return;
     }
     if (legs.length === 0) {
@@ -237,9 +250,13 @@ function ItinerarioCampos({ id }: { id?: string }) {
     const crew = tripulacao(aircraftId, base.crew);
     const montadas: Leg[] = [];
     for (const perna of legs) {
-      const horas = numeroCampo(perna.blockHours);
+      const horas = numeroCampo(perna.blockHours || "0");
       const valores = [perna.fees, perna.handling, perna.catering].map(numeroCampo);
-      if (!perna.date || Number.isNaN(horas) || valores.some((item) => Number.isNaN(item))) {
+      if (!perna.fromIcao.trim() || !perna.toIcao.trim()) {
+        setErro("Informe origem e destino de cada perna.");
+        return;
+      }
+      if (!perna.date || Number.isNaN(horas) || horas <= 0 || valores.some((item) => Number.isNaN(item))) {
         setErro("Revise data, horas e valores de cada perna.");
         return;
       }
@@ -270,7 +287,7 @@ function ItinerarioCampos({ id }: { id?: string }) {
     salvarItinerario({
       id: itineraryId,
       aircraftId,
-      title: title.trim(),
+      title: tituloDoVoo(montadas),
       purpose,
       requestedBy,
       passengers: passengers
@@ -290,11 +307,10 @@ function ItinerarioCampos({ id }: { id?: string }) {
     <FormPage
       voltarHref={atual ? `/itinerarios/${atual.id}` : "/itinerarios"}
       voltar="Voltar aos itinerários"
-      titulo={atual ? `Editar ${atual.title}` : "Novo voo"}
+      titulo={atual ? "Editar voo" : "Novo voo"}
     >
       <form onSubmit={salvar}>
         <Grade>
-          <Campo label="Título" value={title} onChange={setTitle} required />
           <CampoSelect label="Aeronave" value={aircraftId} onChange={setAircraftId}>
             {base.aircraft.map((item) => (
               <option key={item.id} value={item.id}>
@@ -461,10 +477,11 @@ function ItinerarioCampos({ id }: { id?: string }) {
                   label="Origem"
                   icao={perna.fromIcao}
                   cidade={perna.fromCity}
+                  placeholder="ex.: SBTE ou Teresina"
                   onChange={(icao, cidade) =>
                     atualizarPerna(perna.id, {
                       fromIcao: icao,
-                      fromCity: cidade || cidadeDoIcao(icao, perna.fromCity),
+                      fromCity: cidade || cidadeAerodromo(icao),
                     })
                   }
                 />
@@ -472,10 +489,11 @@ function ItinerarioCampos({ id }: { id?: string }) {
                   label="Destino"
                   icao={perna.toIcao}
                   cidade={perna.toCity}
+                  placeholder="ex.: SBFZ ou Fortaleza"
                   onChange={(icao, cidade) =>
                     atualizarPerna(perna.id, {
                       toIcao: icao,
-                      toCity: cidade || cidadeDoIcao(icao, perna.toCity),
+                      toCity: cidade || cidadeAerodromo(icao),
                     })
                   }
                 />

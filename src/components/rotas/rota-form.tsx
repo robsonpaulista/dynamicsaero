@@ -12,9 +12,9 @@ import {
   Grade,
   numeroCampo,
 } from "@/components/formularios/campos";
-import { cidadeDoIcao } from "@/data/aerodromos";
 import { useDados, usePronto } from "@/hooks/use-dados";
 import { criarId, excluirRota, salvarRota } from "@/services/acoes";
+import { cidadeAerodromo } from "@/services/operacao";
 
 export function RotaForm({ id }: { id?: string }) {
   const pronto = usePronto();
@@ -62,8 +62,8 @@ function RotaCampos({ id }: { id?: string }) {
       setErro("Informe as horas de bloco.");
       return;
     }
-    const cidadeOrigem = fromCity.trim() || cidadeDoIcao(origem, origem);
-    const cidadeDestino = toCity.trim() || cidadeDoIcao(destino, destino);
+    const cidadeOrigem = fromCity.trim() || cidadeAerodromo(origem, origem);
+    const cidadeDestino = toCity.trim() || cidadeAerodromo(destino, destino);
     const titulo = nome.trim() || `${cidadeOrigem} → ${cidadeDestino}`;
     salvarRota({
       id: atual?.id ?? criarId("rota"),

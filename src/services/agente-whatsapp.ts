@@ -1,4 +1,3 @@
-import { AERODROMOS } from "@/data/calendario";
 import { formatBRL, formatDateShort } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/labels";
 import { digitosWhatsapp } from "@/lib/telefone";
@@ -16,6 +15,7 @@ import {
   type TrechoPedido,
 } from "@/services/disponibilidade-voo";
 import {
+  cidadeAerodromo,
   contaCorrente,
   getAircraft,
   itinerariesIn,
@@ -426,8 +426,8 @@ function proporConfirmacao(
   const aircraft = getAircraft(aircraftId);
   const socio = listPartners().find((item) => item.id === partnerId);
   const linhas = trechos.map((trecho) => {
-    const origem = AERODROMOS[trecho.fromIcao] ?? trecho.fromIcao;
-    const destino = AERODROMOS[trecho.toIcao] ?? trecho.toIcao;
+    const origem = cidadeAerodromo(trecho.fromIcao, trecho.fromIcao);
+    const destino = cidadeAerodromo(trecho.toIcao, trecho.toIcao);
     return `${formatDateShort(trecho.date)} · ${trecho.depart}–${trecho.arrive}\n${origem} → ${destino}`;
   });
   const notas = avisos.length > 0 ? ["", ...avisos] : [];
@@ -478,8 +478,8 @@ function confirmar(identidade: IdentidadeAgente, rascunho: RascunhoVoo, texto: s
   salvarItinerario(itinerario);
   const aircraft = getAircraft(aircraftId);
   const linhas = rascunho.trechos.map((trecho) => {
-    const origem = AERODROMOS[trecho.fromIcao] ?? trecho.fromIcao;
-    const destino = AERODROMOS[trecho.toIcao] ?? trecho.toIcao;
+    const origem = cidadeAerodromo(trecho.fromIcao, trecho.fromIcao);
+    const destino = cidadeAerodromo(trecho.toIcao, trecho.toIcao);
     return `${formatDateShort(trecho.date)} · ${trecho.depart}–${trecho.arrive} · ${origem} → ${destino}`;
   });
   return responder(
@@ -510,8 +510,8 @@ function montarItinerario(
       arrive: trecho.arrive,
       fromIcao: trecho.fromIcao,
       toIcao: trecho.toIcao,
-      fromCity: AERODROMOS[trecho.fromIcao] ?? trecho.fromIcao,
-      toCity: AERODROMOS[trecho.toIcao] ?? trecho.toIcao,
+      fromCity: cidadeAerodromo(trecho.fromIcao, trecho.fromIcao),
+      toCity: cidadeAerodromo(trecho.toIcao, trecho.toIcao),
       blockHours: Math.round(((chegada - saida) / 60) * 10) / 10,
       fuel: 0,
       fees: 0,
@@ -524,9 +524,9 @@ function montarItinerario(
   });
   const primeiro = trechos[0];
   const ultimo = trechos[trechos.length - 1];
-  const origem = primeiro ? (AERODROMOS[primeiro.fromIcao] ?? primeiro.fromIcao) : "Voo";
-  const destinoIda = primeiro ? (AERODROMOS[primeiro.toIcao] ?? primeiro.toIcao) : "";
-  const destinoFim = ultimo ? (AERODROMOS[ultimo.toIcao] ?? ultimo.toIcao) : "";
+  const origem = primeiro ? (cidadeAerodromo(primeiro.fromIcao, primeiro.fromIcao)) : "Voo";
+  const destinoIda = primeiro ? (cidadeAerodromo(primeiro.toIcao, primeiro.toIcao)) : "";
+  const destinoFim = ultimo ? (cidadeAerodromo(ultimo.toIcao, ultimo.toIcao)) : "";
   const titulo =
     primeiro && ultimo && trechos.length > 1 && primeiro.fromIcao === ultimo.toIcao
       ? `${origem} ↔ ${destinoIda}`

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, ScanFace } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, ScanFace } from "lucide-react";
 import { cn } from "@/lib/format";
 import { CHAVE_BIO_PENDENTE, CHAVE_BIOMETRIA, CHAVE_EMAIL, COOKIE_LEMBRAR } from "@/lib/lembrar-cookie";
 import { clienteNavegador } from "@/services/supabase-navegador";
@@ -136,7 +136,13 @@ export function EntradaView({
     });
   }, []);
 
-  function aoEnviar() {
+  function aoEnviar(event: React.FormEvent<HTMLFormElement>) {
+    if (enviando) {
+      event.preventDefault();
+      return;
+    }
+    setEnviando(true);
+    setErro("");
     guardarEmail(email, lembrar);
     if (lembrar && usarBiometria && biometria) {
       window.localStorage.setItem(CHAVE_BIO_PENDENTE, "1");
@@ -188,6 +194,7 @@ export function EntradaView({
             method="post"
             action="/acesso"
             onSubmit={aoEnviar}
+            aria-busy={enviando}
             className="aero-sobe mt-8 w-full"
           >
             <input type="hidden" name="primeiro" value={primeiroAcesso ? "1" : "0"} />
@@ -203,7 +210,12 @@ export function EntradaView({
                 : "Use o e-mail e a senha da operação."}
             </p>
 
-            <div className="mt-7 flex flex-col gap-4">
+            <div
+              className={cn(
+                "mt-7 flex flex-col gap-4 transition-opacity",
+                enviando && "pointer-events-none opacity-70",
+              )}
+            >
               {primeiroAcesso ? (
                 <label>
                   <span className="mb-1.5 block text-[11px] font-semibold tracking-[0.18em] text-white/55 uppercase">
@@ -214,8 +226,9 @@ export function EntradaView({
                     name="nome"
                     autoComplete="name"
                     value={nome}
+                    readOnly={enviando}
                     onChange={(event) => setNome(event.target.value)}
-                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95]"
+                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95] read-only:cursor-wait"
                   />
                 </label>
               ) : null}
@@ -229,8 +242,9 @@ export function EntradaView({
                   name="email"
                   autoComplete={primeiroAcesso ? "username" : "username webauthn"}
                   value={email}
+                  readOnly={enviando}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95]"
+                  className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95] read-only:cursor-wait"
                 />
               </label>
               <label>
@@ -245,14 +259,16 @@ export function EntradaView({
                     autoComplete={primeiroAcesso ? "new-password" : "current-password"}
                     minLength={8}
                     value={senha}
+                    readOnly={enviando}
                     onChange={(event) => setSenha(event.target.value)}
-                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 pr-11 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95]"
+                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 pr-11 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95] read-only:cursor-wait"
                   />
                   <button
                     type="button"
+                    disabled={enviando}
                     onClick={() => setMostrarSenha((atual) => !atual)}
                     aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-white/70 hover:text-white"
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-white/70 hover:text-white disabled:opacity-50"
                   >
                     {mostrarSenha ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                   </button>
@@ -267,6 +283,7 @@ export function EntradaView({
                   name="lembrar"
                   value="1"
                   checked={lembrar}
+                  disabled={enviando}
                   onChange={(event) => {
                     const marcado = event.target.checked;
                     setLembrar(marcado);
@@ -281,7 +298,7 @@ export function EntradaView({
                   <input
                     type="checkbox"
                     checked={lembrar && usarBiometria}
-                    disabled={!lembrar}
+                    disabled={!lembrar || enviando}
                     onChange={(event) => setUsarBiometria(event.target.checked)}
                     className="mt-0.5 size-4 accent-[#6B5B95]"
                   />
@@ -301,11 +318,18 @@ export function EntradaView({
               </p>
             ) : null}
 
+            {enviando ? (
+              <p className="mt-4 text-center text-[13px] font-semibold text-white/70" aria-live="polite">
+                Validando o acesso…
+              </p>
+            ) : null}
+
             <button
               type="submit"
               disabled={enviando}
-              className="mt-7 h-11 w-full rounded-xl bg-[#6B5B95] text-[15px] font-bold text-white transition-colors hover:bg-[#8A7BB0] disabled:opacity-60"
+              className="mt-7 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#6B5B95] text-[15px] font-bold text-white transition-colors hover:bg-[#8A7BB0] disabled:cursor-wait disabled:opacity-80"
             >
+              {enviando ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : null}
               {enviando ? "Entrando…" : primeiroAcesso ? "Criar e entrar" : "Entrar"}
             </button>
             {temPasskey && biometria && !primeiroAcesso ? (
@@ -315,10 +339,14 @@ export function EntradaView({
                 onClick={() => {
                   void aoUsarBiometria();
                 }}
-                className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/25 text-[15px] font-bold text-white hover:border-[#6B5B95] disabled:opacity-60"
+                className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/25 text-[15px] font-bold text-white hover:border-[#6B5B95] disabled:cursor-wait disabled:opacity-60"
               >
-                <ScanFace className="size-4" aria-hidden />
-                {rotuloBio}
+                {enviando ? (
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <ScanFace className="size-4" aria-hidden />
+                )}
+                {enviando ? "Entrando…" : rotuloBio}
               </button>
             ) : null}
           </form>

@@ -1,3 +1,5 @@
+import type { Aerodromo } from "@/data/aerodromos";
+import { normalizarAerodromo } from "@/data/aerodromos";
 import { getBase, novoId, updateBase } from "@/services/dados";
 import { validarFaixaEscala } from "@/services/operacao";
 import type {
@@ -169,6 +171,25 @@ export function excluirContaPlano(id: string): void {
   updateBase((atual) => ({
     ...atual,
     contas: atual.contas.filter((item) => item.id !== id),
+  }));
+}
+
+/** Cadastra ou atualiza aeródromo (sigla + cidade) na base da operação. */
+export function salvarAerodromo(item: Aerodromo): string | null {
+  const normalizado = normalizarAerodromo(item.icao, item.cidade);
+  if (!normalizado) return "Informe a sigla (3–4 caracteres) e a cidade.";
+  updateBase((atual) => {
+    const resto = atual.aerodromos.filter((entry) => entry.icao !== normalizado.icao);
+    return { ...atual, aerodromos: [...resto, normalizado] };
+  });
+  return null;
+}
+
+export function excluirAerodromo(icao: string): void {
+  const codigo = icao.trim().toUpperCase();
+  updateBase((atual) => ({
+    ...atual,
+    aerodromos: atual.aerodromos.filter((item) => item.icao !== codigo),
   }));
 }
 

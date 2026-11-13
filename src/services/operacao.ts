@@ -1,3 +1,9 @@
+import {
+  buscarAerodromos as buscarAerodromosBase,
+  cidadeDoIcao as cidadeDoIcaoBase,
+  mapaAerodromos,
+  type Aerodromo,
+} from "@/data/aerodromos";
 import { HOJE, MONTHS, VIEWER_ID } from "@/data/calendario";
 import { NOTAS_FISCAIS } from "@/data/caso-real";
 import { getBase } from "@/services/dados";
@@ -331,6 +337,22 @@ export function listContasPlano(): ContaPlano[] {
 
 export function getContaPlano(id: string): ContaPlano | undefined {
   return listContasPlano().find((item) => item.id === id);
+}
+
+export function listAerodromosExtras(): Aerodromo[] {
+  return getBase().aerodromos;
+}
+
+export function mapaAerodromosOperacao(): Record<string, string> {
+  return mapaAerodromos(listAerodromosExtras());
+}
+
+export function cidadeAerodromo(icao: string, fallback = ""): string {
+  return cidadeDoIcaoBase(icao, fallback, listAerodromosExtras());
+}
+
+export function buscarAerodromosOperacao(query: string, limite = 12): Aerodromo[] {
+  return buscarAerodromosBase(query, limite, listAerodromosExtras());
 }
 
 export function seguroDe(aircraftId: string): Insurance | undefined {

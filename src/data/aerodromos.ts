@@ -151,19 +151,31 @@ function normalizar(texto: string): string {
     .trim();
 }
 
-export function cidadeDoIcao(icao: string, fallback = ""): string {
+/** Catálogo estático + cadastros da operação (extras sobrescrevem). */
+export function mapaAerodromos(extras: Aerodromo[] = []): Record<string, string> {
+  const mapa: Record<string, string> = { ...AERODROMOS };
+  for (const item of extras) {
+    const icao = item.icao.trim().toUpperCase();
+    const cidade = item.cidade.trim();
+    if (!icao || !cidade) continue;
+    mapa[icao] = cidade;
+  }
+  return mapa;
+}
+
+export function cidadeDoIcao(icao: string, fallback = "", extras: Aerodromo[] = []): string {
   const codigo = icao.trim().toUpperCase();
-  return AERODROMOS[codigo] ?? fallback;
+  return mapaAerodromos(extras)[codigo] ?? fallback;
 }
 
 /** Busca por ICAO ou cidade (acentos ignorados; palavras inteiras têm prioridade). */
-export function buscarAerodromos(query: string, limite = 12): Aerodromo[] {
+export function buscarAerodromos(query: string, limite = 12, extras: Aerodromo[] = []): Aerodromo[] {
   const bruto = query.includes("·") ? (query.split("·")[0] ?? query) : query;
   const q = normalizar(bruto);
   if (!q) return [];
 
   const lista: Array<Aerodromo & { score: number }> = [];
-  for (const [icao, cidade] of Object.entries(AERODROMOS)) {
+  for (const [icao, cidade] of Object.entries(mapaAerodromos(extras))) {
     const icaoN = normalizar(icao);
     const cidadeN = normalizar(cidade);
     const palavras = cidadeN.split(/[^a-z0-9]+/).filter(Boolean);
@@ -191,11 +203,19 @@ export function buscarAerodromos(query: string, limite = 12): Aerodromo[] {
     .map(({ icao, cidade }) => ({ icao, cidade }));
 }
 
-export function listarAerodromos(): Aerodromo[] {
-  return Object.entries(AERODROMOS)
+export function listarAerodromos(extras: Aerodromo[] = []): Aerodromo[] {
+  return Object.entries(mapaAerodromos(extras))
     .map(([icao, cidade]) => ({ icao, cidade }))
     .sort(
       (left, right) =>
         left.cidade.localeCompare(right.cidade, "pt-BR") || left.icao.localeCompare(right.icao),
     );
+}
+
+/** Normaliza e valida sigla + cidade no padrão do cadastro. */
+export function normalizarAerodromo(icao: string, cidade: string): Aerodromo | null {
+  const codigo = icao.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const nome = cidade.trim().replace(/\s+/g, " ");
+  if (codigo.length < 3 || codigo.length > 4 || !nome) return null;
+  return { icao: codigo, cidade: nome };
 }

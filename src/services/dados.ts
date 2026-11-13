@@ -12,6 +12,7 @@ import {
   ROTAS,
   SEGUROS,
 } from "@/data/caso-real";
+import type { Aerodromo } from "@/data/aerodromos";
 import { mesclarContasPlano } from "@/data/plano-contas";
 import { carregarOperacao, gravarOperacao } from "@/services/banco";
 import type {
@@ -45,6 +46,8 @@ export type BaseDados = {
   escalas: FaixaEscala[];
   rotas: Rota[];
   contas: ContaPlano[];
+  /** Aeródromos cadastrados na operação (além do catálogo estático). */
+  aerodromos: Aerodromo[];
 };
 
 export const INITIAL_BASE: BaseDados = {
@@ -60,6 +63,7 @@ export const INITIAL_BASE: BaseDados = {
   escalas: ESCALAS,
   rotas: ROTAS,
   contas: CONTAS,
+  aerodromos: [],
 };
 
 const STORAGE_KEY = "dynamics-aero-dados-v1";
@@ -145,6 +149,14 @@ function lerBase(parsed: unknown): BaseDados | null {
   const escalas = asArray<FaixaEscala>(parsed.escalas) ?? [];
   const rotas = asArray<Rota>(parsed.rotas) ?? [];
   const contas = mesclarContasPlano(asArray<ContaPlano>(parsed.contas));
+  const aerodromos = (asArray<Aerodromo>(parsed.aerodromos) ?? [])
+    .map((item) => ({
+      icao: String(item.icao ?? "")
+        .trim()
+        .toUpperCase(),
+      cidade: String(item.cidade ?? "").trim(),
+    }))
+    .filter((item) => item.icao && item.cidade);
   if (!aircraft || !partners || !crew || !hangars || !seguros || !itineraries || !maintenance) {
     return null;
   }
@@ -161,6 +173,7 @@ function lerBase(parsed: unknown): BaseDados | null {
     escalas,
     rotas,
     contas,
+    aerodromos,
   };
 }
 

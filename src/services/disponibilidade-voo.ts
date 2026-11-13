@@ -1,11 +1,13 @@
-import { AERODROMOS, HOJE } from "@/data/calendario";
+import { HOJE } from "@/data/calendario";
 import { formatDate, formatDateShort } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/labels";
 import {
+  cidadeAerodromo,
   getAircraft,
   listAircraft,
   listItinerarySource,
   listMaintenance,
+  mapaAerodromosOperacao,
   partnerShort,
 } from "@/services/operacao";
 import type { Aircraft, MaintenanceItem } from "@/types/operacao";
@@ -184,11 +186,11 @@ export function lerTrecho(linha: string): TrechoPedido | { erro: string } {
   if (fromIcao === toIcao) {
     return { erro: "Origem e destino precisam ser aeródromos diferentes." };
   }
-  const desconhecido = [fromIcao, toIcao].filter((icao) => !AERODROMOS[icao]);
+  const mapa = mapaAerodromosOperacao();
+  const desconhecido = [fromIcao, toIcao].filter((icao) => !mapa[icao]);
   if (desconhecido.length > 0) {
-    const conhecidos = Object.keys(AERODROMOS).join(", ");
     return {
-      erro: `Não conheço ${desconhecido.join(" e ")}. Use um código da operação: ${conhecidos}.`,
+      erro: `Não conheço ${desconhecido.join(" e ")}. Cadastre o aeródromo (sigla e cidade) ou use um código já conhecido.`,
     };
   }
   return { date, depart, arrive, fromIcao, toIcao };
@@ -477,5 +479,5 @@ function dataValida(iso: string): boolean {
 }
 
 function cidade(icao: string): string {
-  return AERODROMOS[icao] ?? icao;
+  return cidadeAerodromo(icao, icao);
 }
