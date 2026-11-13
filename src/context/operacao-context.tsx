@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { mesDeReferencia, partnerIdDaSessao, type MonthFilter } from "@/services/operacao";
+import { HOJE, mesDeReferencia, partnerIdDaSessao, type MonthFilter } from "@/services/operacao";
 import type { SessaoUsuario } from "@/types/usuario";
 
 type OperacaoContextValue = {
@@ -24,6 +24,11 @@ type OperacaoContextValue = {
 
 const OperacaoContext = createContext<OperacaoContextValue | null>(null);
 
+/** Mês corrente da operação (HOJE), no formato YYYY-MM. */
+function mesAtualOperacao(): MonthFilter {
+  return [HOJE.slice(0, 7)] as MonthFilter;
+}
+
 export function OperacaoProvider({
   children,
   sessao,
@@ -32,7 +37,7 @@ export function OperacaoProvider({
   sessao: SessaoUsuario;
 }) {
   const [aircraftId, setAircraftId] = useState<string>("todas");
-  const [months, setMonths] = useState<MonthFilter>(["2026-05"]);
+  const [months, setMonths] = useState<MonthFilter>(mesAtualOperacao);
   const partnerId = useMemo(
     () => partnerIdDaSessao(sessao.nome, sessao.papel),
     [sessao.nome, sessao.papel],

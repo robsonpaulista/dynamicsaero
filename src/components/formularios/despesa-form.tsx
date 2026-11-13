@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { CampoConta } from "@/components/formularios/campo-conta";
 import {
   AcoesForm,
   Campo,
@@ -12,10 +14,10 @@ import {
   numeroCampo,
 } from "@/components/formularios/campos";
 import { useDados, usePronto } from "@/hooks/use-dados";
-import { CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/labels";
+import { CATEGORY_LABEL } from "@/lib/labels";
 import { criarId, excluirDespesa, salvarDespesa } from "@/services/acoes";
-import { getDespesaManual } from "@/services/operacao";
-import type { Allocation, ExpenseCategory, Posting } from "@/types/operacao";
+import { getContaPlano, getDespesaManual, listContasPlano } from "@/services/operacao";
+import type { Allocation, ContaPlano, Posting } from "@/types/operacao";
 
 export function DespesaForm({ id }: { id?: string }) {
   const pronto = usePronto();
@@ -33,10 +35,21 @@ function DespesaCampos({ id }: { id?: string }) {
   const base = useDados();
   const router = useRouter();
   const atual = id ? getDespesaManual(id) : undefined;
+  const contas = useMemo(() => listContasPlano(), [base.contas]);
+  const contaInicial = atual?.contaId ? getContaPlano(atual.contaId) ?? null : null;
+  const detalheInicial = (() => {
+    if (!atual?.description) return "";
+    if (contaInicial && atual.description.startsWith(contaInicial.nome)) {
+      const resto = atual.description.slice(contaInicial.nome.length).replace(/^\s*·\s*/, "");
+      return resto;
+    }
+    return atual.description;
+  })();
+
   const [erro, setErro] = useState<string>("");
-  const [description, setDescription] = useState<string>(atual?.description ?? "");
+  const [conta, setConta] = useState<ContaPlano | null>(contaInicial);
+  const [detalhe, setDetalhe] = useState<string>(detalheInicial);
   const [aircraftId, setAircraftId] = useState<string>(atual?.aircraftId ?? base.aircraft[0]?.id ?? "");
-  const [category, setCategory] = useState<ExpenseCategory>(atual?.category ?? "administrativo");
   const [date, setDate] = useState<string>(atual?.date ?? "2026-11-06");
   const [vendor, setVendor] = useState<string>(atual?.vendor ?? "");
   const [amount, setAmount] = useState<string>(atual ? String(atual.amount) : "");
@@ -58,8 +71,12 @@ function DespesaCampos({ id }: { id?: string }) {
   function salvar(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const valor = numeroCampo(amount);
-    if (!description.trim() || !aircraftId || !date) {
-      setErro("Informe descrição, aeronave e data.");
+    if (!conta) {
+      setErro("Escolha uma conta do plano de contas.");
+      return;
+    }
+    if (!aircraftId || !date) {
+      setErro("Informe aeronave e data.");
       return;
     }
     if (Number.isNaN(valor) || valor <= 0) {
@@ -70,14 +87,17 @@ function DespesaCampos({ id }: { id?: string }) {
       setErro("Escolha o sócio que assume esta despesa.");
       return;
     }
+    const detalheLimpo = detalhe.trim();
+    const description = detalheLimpo ? `${conta.nome} · ${detalheLimpo}` : conta.nome;
     salvarDespesa({
       id: atual?.id ?? criarId("extra"),
       aircraftId,
       manual: true,
+      contaId: conta.id,
       month: date.slice(0, 7),
       date,
-      category,
-      description: description.trim(),
+      category: conta.category,
+      description,
       vendor: vendor.trim() || "Lançamento manual",
       amount: valor,
       allocation,
@@ -92,10 +112,25 @@ function DespesaCampos({ id }: { id?: string }) {
       voltarHref="/despesas"
       voltar="Voltar às despesas"
       titulo={atual ? "Editar despesa avulsa" : "Nova despesa avulsa"}
+      texto="Escolha a conta no plano (fixa ou variável). O detalhe completa a descrição do lançamento."
     >
       <form onSubmit={salvar}>
         <Grade>
-          <Campo label="Descrição" value={description} onChange={setDescription} required />
+          <CampoConta label="Conta (plano de contas)" contas={contas} value={conta} onChange={setConta} required />
+          <Campo
+            label="Detalhe"
+            value={detalhe}
+            onChange={setDetalhe}
+            placeholder="Ex.: SBGR · pouso 06/11"
+          />
+          {conta ? (
+            <div className="rounded-xl bg-tse-bg px-3 py-2.5 text-[13px] sm:col-span-2">
+              <span className="font-bold">
+                {conta.grupo === "fixa" ? "Despesa fixa" : "Despesa variável"}
+              </span>
+              <span className="text-tse-muted"> · natureza {CATEGORY_LABEL[conta.category]}</span>
+            </div>
+          ) : null}
           <CampoSelect label="Aeronave" value={aircraftId} onChange={setAircraftId}>
             {base.aircraft.map((item) => (
               <option key={item.id} value={item.id}>
@@ -103,22 +138,19 @@ function DespesaCampos({ id }: { id?: string }) {
               </option>
             ))}
           </CampoSelect>
-          <CampoSelect label="Natureza" value={category} onChange={(value) => setCategory(value as ExpenseCategory)}>
-            {CATEGORY_ORDER.map((item) => (
-              <option key={item} value={item}>
-                {CATEGORY_LABEL[item]}
-              </option>
-            ))}
-          </CampoSelect>
           <Campo label="Data" value={date} onChange={setDate} type="date" />
           <Campo label="Fornecedor" value={vendor} onChange={setVendor} />
-          <Campo label="Valor (R$)" value={amount} onChange={setAmount} type="number" />
-          <CampoSelect label="Rateio" value={allocation} onChange={(value) => setAllocation(value as Allocation)}>
-            <option value="participacao">Pela participação</option>
-            <option value="solicitante">Um sócio assume</option>
+          <Campo label="Valor (R$)" value={amount} onChange={setAmount} type="number" step="0.01" />
+          <CampoSelect
+            label="Rateio"
+            value={allocation}
+            onChange={(value) => setAllocation(value as Allocation)}
+          >
+            <option value="participacao">Proporcional à participação societária</option>
+            <option value="solicitante">Individual de um sócio</option>
           </CampoSelect>
           {allocation === "solicitante" ? (
-            <CampoSelect label="Sócio" value={partnerId} onChange={setPartnerId}>
+            <CampoSelect label="Sócio que assume" value={partnerId} onChange={setPartnerId}>
               {base.partners.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -133,7 +165,11 @@ function DespesaCampos({ id }: { id?: string }) {
           </CampoSelect>
         </Grade>
         <p className="mt-3 text-[12px] text-tse-muted">
-          Use isto para o que não nasce de um voo, do hangar, da folha, do seguro ou da oficina.
+          Contas novas entram em{" "}
+          <Link href="/despesas/contas" className="font-bold text-tse-olive hover:underline">
+            Plano de contas
+          </Link>
+          . Hangar, seguro e folha também podem nascer da operação.
         </p>
         {erro ? <ErroForm>{erro}</ErroForm> : null}
         <AcoesForm

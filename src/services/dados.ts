@@ -1,7 +1,9 @@
 import {
   AIRCRAFT,
   APORTES,
+  CONTAS,
   CREW,
+  ESCALAS,
   EXTRAS,
   HANGARS,
   ITINERARIES,
@@ -10,12 +12,15 @@ import {
   ROTAS,
   SEGUROS,
 } from "@/data/caso-real";
+import { mesclarContasPlano } from "@/data/plano-contas";
 import { carregarOperacao, gravarOperacao } from "@/services/banco";
 import type {
   Aircraft,
   Aporte,
+  ContaPlano,
   CrewMember,
   Expense,
+  FaixaEscala,
   Hangar,
   Insurance,
   Itinerary,
@@ -37,7 +42,9 @@ export type BaseDados = {
   maintenance: MaintenanceItem[];
   extras: Expense[];
   aportes: Aporte[];
+  escalas: FaixaEscala[];
   rotas: Rota[];
+  contas: ContaPlano[];
 };
 
 export const INITIAL_BASE: BaseDados = {
@@ -50,7 +57,9 @@ export const INITIAL_BASE: BaseDados = {
   maintenance: MAINTENANCE,
   extras: EXTRAS,
   aportes: APORTES,
+  escalas: ESCALAS,
   rotas: ROTAS,
+  contas: CONTAS,
 };
 
 const STORAGE_KEY = "dynamics-aero-dados-v1";
@@ -133,7 +142,9 @@ function lerBase(parsed: unknown): BaseDados | null {
   const maintenance = asArray<MaintenanceItem>(parsed.maintenance);
   const extras = asArray<Expense>(parsed.extras) ?? [];
   const aportes = asArray<Aporte>(parsed.aportes) ?? [];
+  const escalas = asArray<FaixaEscala>(parsed.escalas) ?? [];
   const rotas = asArray<Rota>(parsed.rotas) ?? [];
+  const contas = mesclarContasPlano(asArray<ContaPlano>(parsed.contas));
   if (!aircraft || !partners || !crew || !hangars || !seguros || !itineraries || !maintenance) {
     return null;
   }
@@ -147,7 +158,9 @@ function lerBase(parsed: unknown): BaseDados | null {
     maintenance,
     extras,
     aportes,
+    escalas,
     rotas,
+    contas,
   };
 }
 

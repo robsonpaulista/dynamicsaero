@@ -50,7 +50,13 @@ import {
   formatDateShort,
   formatPercent,
 } from "@/lib/format";
-import { CATEGORY_LABEL, categoryBarColor, corDoSocio, POSTING_LABEL } from "@/lib/labels";
+import {
+  CATEGORY_LABEL,
+  categoryBarColor,
+  corDoSocio,
+  grupoDaDespesa,
+  POSTING_LABEL,
+} from "@/lib/labels";
 import {
   expensesIn,
   getAircraft,
@@ -93,29 +99,23 @@ type Ordem = "asc" | "desc";
 
 type Ordenacao<T extends string> = { coluna: T; ordem: Ordem };
 
-type Recorte = "todas" | "voo" | "estrutura" | "manutencao" | "comuns" | "nf";
+type Recorte = "todas" | "fixas" | "variaveis" | "nf";
 
 type FiltroPosicao = "todas" | Posting;
 
-const ABAS: { id: Exclude<Recorte, "comuns">; label: string }[] = [
+const ABAS: { id: Recorte; label: string }[] = [
   { id: "todas", label: "Todos os tipos" },
-  { id: "voo", label: "Voos" },
-  { id: "estrutura", label: "Estrutura" },
-  { id: "manutencao", label: "Manutenção" },
+  { id: "fixas", label: "Fixas" },
+  { id: "variaveis", label: "Variáveis" },
   { id: "nf", label: "Notas fiscais (NF)" },
 ];
 
 function recorteDaUrl(valor: string | null): Recorte {
-  if (
-    valor === "todas" ||
-    valor === "voo" ||
-    valor === "estrutura" ||
-    valor === "manutencao" ||
-    valor === "comuns" ||
-    valor === "nf"
-  ) {
-    return valor;
+  if (valor === "fixas" || valor === "estrutura" || valor === "manutencao" || valor === "comuns") {
+    return "fixas";
   }
+  if (valor === "variaveis" || valor === "voo") return "variaveis";
+  if (valor === "nf") return "nf";
   return "todas";
 }
 
@@ -134,10 +134,8 @@ const POSICAO_TOM: Record<Posting, string> = {
 
 function passaRecorte(expense: Expense, recorte: Recorte): boolean {
   if (recorte === "todas" || recorte === "nf") return true;
-  if (recorte === "manutencao") return expense.category === "manutencao";
-  if (recorte === "voo") return expense.allocation === "solicitante";
-  if (recorte === "comuns") return expense.allocation === "participacao";
-  return expense.allocation === "participacao" && expense.category !== "manutencao";
+  if (recorte === "fixas") return grupoDaDespesa(expense.category) === "fixa";
+  return grupoDaDespesa(expense.category) === "variavel";
 }
 
 function rotuloSocio(expense: Expense): string {
@@ -189,12 +187,11 @@ function notaDaDespesa(expense: Expense, notas: NotaFiscal[]): NotaFiscal | null
 }
 
 function tipoRecorte(expense: Expense): string {
-  if (expense.allocation === "solicitante") return "Voo";
-  if (expense.category === "manutencao") return "Manutenção";
-  return "Estrutura";
+  return grupoDaDespesa(expense.category) === "fixa" ? "Fixa" : "Variável";
 }
 
 function socioDaDespesa(expense: Expense): string | null {
+  if (expense.origem === "abastecimento") return null;
   if (expense.partnerId) return expense.partnerId;
   if (expense.itineraryId) {
     return getItinerary(expense.itineraryId)?.requestedBy ?? null;
@@ -205,6 +202,7 @@ function socioDaDespesa(expense: Expense): string | null {
 function passaSocio(expense: Expense, socioFiltro: string): boolean {
   if (socioFiltro === "todos") return true;
   if (socioFiltro === "sem") {
+    if (expense.origem === "abastecimento") return false;
     return socioDaDespesa(expense) === null && expense.allocation !== "participacao";
   }
   return valorDoParceiro(expense, socioFiltro) > 0;
@@ -381,6 +379,20 @@ export function DespesasView() {
   );
   const abaNf = recorte === "nf";
   const detalhe = detalheId ? rows.find((item) => item.id === detalheId) ?? null : null;
+  const gruposLancamento = (() => {
+    const fixas = rows.filter((item) => grupoDaDespesa(item.category) === "fixa");
+    const variaveis = rows.filter((item) => grupoDaDespesa(item.category) === "variavel");
+    if (recorte === "fixas") {
+      return [{ id: "fixas", titulo: "Despesas fixas", itens: fixas }] as const;
+    }
+    if (recorte === "variaveis") {
+      return [{ id: "variaveis", titulo: "Despesas variáveis", itens: variaveis }] as const;
+    }
+    return [
+      { id: "fixas", titulo: "Despesas fixas", itens: fixas },
+      { id: "variaveis", titulo: "Despesas variáveis", itens: variaveis },
+    ].filter((grupo) => grupo.itens.length > 0);
+  })();
   const semComprovante = expensesIn(months, aircraftId).filter(
     (item) =>
       item.posting === "realizado" &&
@@ -581,20 +593,28 @@ export function DespesasView() {
 
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[16px] font-bold">Lançamentos</h2>
-        <Link
-          href="/despesas/nova"
-          className="inline-flex size-9 items-center justify-center rounded-full bg-tse-text text-white md:hidden"
-          aria-label="Nova despesa"
-        >
-          <Plus className="size-4" aria-hidden />
-        </Link>
-        <Link
-          href="/despesas/nova"
-          className="hidden items-center gap-1 text-[13px] font-bold text-tse-olive md:inline-flex"
-        >
-          <Plus className="size-4" aria-hidden />
-          Nova despesa
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/despesas/contas"
+            className="hidden text-[13px] font-bold text-tse-muted hover:text-tse-olive md:inline-flex"
+          >
+            Plano de contas
+          </Link>
+          <Link
+            href="/despesas/nova"
+            className="inline-flex size-9 items-center justify-center rounded-full bg-tse-text text-white md:hidden"
+            aria-label="Nova despesa"
+          >
+            <Plus className="size-4" aria-hidden />
+          </Link>
+          <Link
+            href="/despesas/nova"
+            className="hidden items-center gap-1 text-[13px] font-bold text-tse-olive md:inline-flex"
+          >
+            <Plus className="size-4" aria-hidden />
+            Nova despesa
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -607,9 +627,6 @@ export function DespesasView() {
             if (proximo === "nf") setFiltroPosicao("todas");
           }}
         >
-          {recorte === "comuns" ? (
-            <option value="comuns">Despesas comuns</option>
-          ) : null}
           {ABAS.map((aba) => (
             <option key={aba.id} value={aba.id}>
               {aba.label}
@@ -658,134 +675,177 @@ export function DespesasView() {
             </button>
           </div>
 
-          {/* Mobile: no máximo 2 linhas */}
-          <section className="overflow-hidden rounded-2xl border border-[#E8E4F5] bg-white shadow-sm md:hidden">
-            <ul className="divide-y divide-[#EEEEEE]">
-              {rows.map((item) => {
-                const trajeto = trajetoDaDespesa(item);
-                const Icone = ICONE_CATEGORIA[item.category];
-                const detalhe = [
-                  formatDateLista(item.date),
-                  trajeto,
-                  item.vendor,
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => setDetalheId(item.id)}
-                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
-                    >
-                      <span
-                        className={cn(
-                          "inline-flex size-8 shrink-0 items-center justify-center rounded-lg",
-                          POSICAO_TOM[item.posting],
-                        )}
-                      >
-                        <Icone className="size-3.5" aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="truncate text-[13px] font-bold text-tse-text">
-                            {CATEGORY_LABEL[item.category]}
-                          </span>
-                          <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#4F4270]">
-                            {formatBRL(valorExibido(item, socioAtivo))}
-                          </span>
-                        </span>
-                        <span className="mt-0.5 flex items-center gap-1.5">
-                          <span className="min-w-0 truncate text-[11px] text-tse-muted">
-                            {detalhe}
-                          </span>
+          {gruposLancamento.map((grupo) => (
+            <div key={grupo.id} className="space-y-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-[14px] font-bold tracking-tight">{grupo.titulo}</h3>
+                <p className="text-[12px] text-tse-muted">
+                  {grupo.itens.length} ·{" "}
+                  {formatBRL(
+                    grupo.itens.reduce(
+                      (soma, item) => soma + valorExibido(item, socioAtivo),
+                      0,
+                    ),
+                  )}
+                </p>
+              </div>
+
+              {/* Mobile: no máximo 2 linhas */}
+              <section className="overflow-hidden rounded-2xl border border-[#E8E4F5] bg-white shadow-sm md:hidden">
+                <ul className="divide-y divide-[#EEEEEE]">
+                  {grupo.itens.map((item) => {
+                    const trajeto = trajetoDaDespesa(item);
+                    const Icone = ICONE_CATEGORIA[item.category];
+                    const linha = [formatDateLista(item.date), trajeto, item.vendor]
+                      .filter(Boolean)
+                      .join(" · ");
+                    return (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          onClick={() => setDetalheId(item.id)}
+                          className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+                        >
                           <span
                             className={cn(
-                              "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
+                              "inline-flex size-8 shrink-0 items-center justify-center rounded-lg",
                               POSICAO_TOM[item.posting],
                             )}
                           >
-                            {posicaoCurta(item.posting)}
+                            <Icone className="size-3.5" aria-hidden />
                           </span>
-                        </span>
-                      </span>
-                      <ChevronRight className="size-4 shrink-0 text-[#6B5B95]" aria-hidden />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          {/* Desktop: tabela */}
-          <div className="hidden md:block">
-            <TableWrap>
-              <table className={tableClass}>
-                <thead className={theadClass}>
-                  <tr>
-                    <CabecalhoOrdenavel coluna="data" atual={ordenacao} onOrdenar={alternarOrdenacao}>
-                      Data
-                    </CabecalhoOrdenavel>
-                    <CabecalhoOrdenavel coluna="lancamento" atual={ordenacao} onOrdenar={alternarOrdenacao}>
-                      Lançamento
-                    </CabecalhoOrdenavel>
-                    <CabecalhoOrdenavel coluna="aeronave" atual={ordenacao} onOrdenar={alternarOrdenacao}>
-                      Aeronave
-                    </CabecalhoOrdenavel>
-                    <CabecalhoOrdenavel coluna="natureza" atual={ordenacao} onOrdenar={alternarOrdenacao}>
-                      Natureza
-                    </CabecalhoOrdenavel>
-                    <CabecalhoOrdenavel coluna="socio" atual={ordenacao} onOrdenar={alternarOrdenacao}>
-                      Sócio
-                    </CabecalhoOrdenavel>
-                    <CabecalhoOrdenavel coluna="situacao" atual={ordenacao} onOrdenar={alternarOrdenacao}>
-                      Posição
-                    </CabecalhoOrdenavel>
-                    <CabecalhoOrdenavel coluna="valor" atual={ordenacao} onOrdenar={alternarOrdenacao}>
-                      Valor
-                    </CabecalhoOrdenavel>
-                    <th className={thClass}>Origem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((item) => {
-                    const craft = getAircraft(item.aircraftId);
-                    return (
-                      <tr
-                        key={item.id}
-                        className={cn(trClass, "cursor-pointer")}
-                        onClick={() => setDetalheId(item.id)}
-                      >
-                        <td className={tdClass}>{formatDateShort(item.date)}</td>
-                        <td className={tdClass}>
-                          <span className="font-bold">{item.description}</span>
-                          <span className="block text-[12px] text-tse-muted">{item.vendor}</span>
-                        </td>
-                        <td className={tdClass}>{craft?.registration}</td>
-                        <td className={tdClass}>{CATEGORY_LABEL[item.category]}</td>
-                        <td className={tdClass}>{rotuloSocio(item)}</td>
-                        <td className={tdClass}>
-                          <BadgePosicao posting={item.posting} />
-                        </td>
-                        <td className={`${tdClass} font-bold`}>
-                          {formatBRL(valorExibido(item, socioAtivo))}
-                        </td>
-                        <td className={tdClass}>
-                          <Link
-                            href={hrefOrigem(item)}
-                            onClick={(event) => event.stopPropagation()}
-                            className="text-[12px] font-bold tracking-wide text-tse-olive uppercase hover:underline"
-                          >
-                            {item.manual ? "Editar" : "Abrir"}
-                          </Link>
-                        </td>
-                      </tr>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center justify-between gap-2">
+                              <span className="truncate text-[13px] font-bold text-tse-text">
+                                {CATEGORY_LABEL[item.category]}
+                              </span>
+                              <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#4F4270]">
+                                {formatBRL(valorExibido(item, socioAtivo))}
+                              </span>
+                            </span>
+                            <span className="mt-0.5 flex items-center gap-1.5">
+                              <span className="min-w-0 truncate text-[11px] text-tse-muted">
+                                {linha}
+                              </span>
+                              <span
+                                className={cn(
+                                  "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
+                                  POSICAO_TOM[item.posting],
+                                )}
+                              >
+                                {posicaoCurta(item.posting)}
+                              </span>
+                            </span>
+                          </span>
+                          <ChevronRight className="size-4 shrink-0 text-[#6B5B95]" aria-hidden />
+                        </button>
+                      </li>
                     );
                   })}
-                </tbody>
-              </table>
-            </TableWrap>
-          </div>
+                </ul>
+              </section>
+
+              {/* Desktop: tabela */}
+              <div className="hidden md:block">
+                <TableWrap>
+                  <table className={tableClass}>
+                    <thead className={theadClass}>
+                      <tr>
+                        <CabecalhoOrdenavel
+                          coluna="data"
+                          atual={ordenacao}
+                          onOrdenar={alternarOrdenacao}
+                        >
+                          Data
+                        </CabecalhoOrdenavel>
+                        <CabecalhoOrdenavel
+                          coluna="lancamento"
+                          atual={ordenacao}
+                          onOrdenar={alternarOrdenacao}
+                        >
+                          Lançamento
+                        </CabecalhoOrdenavel>
+                        <CabecalhoOrdenavel
+                          coluna="aeronave"
+                          atual={ordenacao}
+                          onOrdenar={alternarOrdenacao}
+                        >
+                          Aeronave
+                        </CabecalhoOrdenavel>
+                        <CabecalhoOrdenavel
+                          coluna="natureza"
+                          atual={ordenacao}
+                          onOrdenar={alternarOrdenacao}
+                        >
+                          Natureza
+                        </CabecalhoOrdenavel>
+                        <CabecalhoOrdenavel
+                          coluna="socio"
+                          atual={ordenacao}
+                          onOrdenar={alternarOrdenacao}
+                        >
+                          Sócio
+                        </CabecalhoOrdenavel>
+                        <CabecalhoOrdenavel
+                          coluna="situacao"
+                          atual={ordenacao}
+                          onOrdenar={alternarOrdenacao}
+                        >
+                          Posição
+                        </CabecalhoOrdenavel>
+                        <CabecalhoOrdenavel
+                          coluna="valor"
+                          atual={ordenacao}
+                          onOrdenar={alternarOrdenacao}
+                        >
+                          Valor
+                        </CabecalhoOrdenavel>
+                        <th className={thClass}>Origem</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grupo.itens.map((item) => {
+                        const craft = getAircraft(item.aircraftId);
+                        return (
+                          <tr
+                            key={item.id}
+                            className={cn(trClass, "cursor-pointer")}
+                            onClick={() => setDetalheId(item.id)}
+                          >
+                            <td className={tdClass}>{formatDateShort(item.date)}</td>
+                            <td className={tdClass}>
+                              <span className="font-bold">{item.description}</span>
+                              <span className="block text-[12px] text-tse-muted">
+                                {item.vendor}
+                              </span>
+                            </td>
+                            <td className={tdClass}>{craft?.registration}</td>
+                            <td className={tdClass}>{CATEGORY_LABEL[item.category]}</td>
+                            <td className={tdClass}>{rotuloSocio(item)}</td>
+                            <td className={tdClass}>
+                              <BadgePosicao posting={item.posting} />
+                            </td>
+                            <td className={`${tdClass} font-bold`}>
+                              {formatBRL(valorExibido(item, socioAtivo))}
+                            </td>
+                            <td className={tdClass}>
+                              <Link
+                                href={hrefOrigem(item)}
+                                onClick={(event) => event.stopPropagation()}
+                                className="text-[12px] font-bold tracking-wide text-tse-olive uppercase hover:underline"
+                              >
+                                {item.manual ? "Editar" : "Abrir"}
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </TableWrap>
+              </div>
+            </div>
+          ))}
         </>
       )}
 

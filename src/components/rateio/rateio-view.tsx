@@ -196,13 +196,13 @@ function RateioSocio({
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <ResumoBloco
-            href="/despesas?recorte=voo"
+            href="/despesas?recorte=variaveis"
             titulo="Meus voos"
             valor={formatBRL(eu.voos)}
             detalhe={`${voosPedidos.length} ${voosPedidos.length === 1 ? "voo" : "voos"}`}
           />
           <ResumoBloco
-            href="/despesas?recorte=comuns"
+            href="/despesas?recorte=fixas"
             titulo="Despesas comuns"
             valor={formatBRL(eu.participacao)}
             detalhe={`${comuns.length} ${comuns.length === 1 ? "despesa" : "despesas"}`}
@@ -459,6 +459,7 @@ function ResumoBloco({
 }
 
 function despesaSemSocio(expense: Expense): boolean {
+  if (expense.origem === "abastecimento") return false;
   if (expense.partnerId) return false;
   if (expense.itineraryId) {
     const trip = getItinerary(expense.itineraryId);

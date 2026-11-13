@@ -1,8 +1,11 @@
 import { getBase, novoId, updateBase } from "@/services/dados";
+import { validarFaixaEscala } from "@/services/operacao";
 import type {
   Aircraft,
+  ContaPlano,
   CrewMember,
   Expense,
+  FaixaEscala,
   Hangar,
   Insurance,
   Itinerary,
@@ -49,6 +52,9 @@ export function excluirSocio(id: string): string | null {
   if (atual.extras.some((item) => item.partnerId === id)) {
     return "Este cotista está em despesas. Ajuste as despesas antes de excluir.";
   }
+  if (atual.escalas.some((item) => item.partnerId === id)) {
+    return "Este cotista tem faixas na escala. Remova a posse na agenda antes.";
+  }
   updateBase((base) => ({
     ...base,
     partners: base.partners.filter((item) => item.id !== id),
@@ -89,6 +95,7 @@ export function excluirAeronave(id: string): void {
     maintenance: atual.maintenance.filter((item) => item.aircraftId !== id),
     extras: atual.extras.filter((item) => item.aircraftId !== id),
     aportes: atual.aportes.filter((item) => item.aircraftId !== id),
+    escalas: atual.escalas.filter((item) => item.aircraftId !== id),
     crew: atual.crew.map((person) => ({
       ...person,
       aircraftIds: person.aircraftIds.filter((aircraftId) => aircraftId !== id),
@@ -154,6 +161,17 @@ export function excluirDespesa(id: string): void {
   }));
 }
 
+export function salvarContaPlano(item: ContaPlano): void {
+  updateBase((atual) => ({ ...atual, contas: upsert(atual.contas, item) }));
+}
+
+export function excluirContaPlano(id: string): void {
+  updateBase((atual) => ({
+    ...atual,
+    contas: atual.contas.filter((item) => item.id !== id),
+  }));
+}
+
 export function salvarAporte(item: Aporte): void {
   updateBase((atual) => ({ ...atual, aportes: upsert(atual.aportes, item) }));
 }
@@ -162,6 +180,20 @@ export function excluirAporte(id: string): void {
   updateBase((atual) => ({
     ...atual,
     aportes: atual.aportes.filter((item) => item.id !== id),
+  }));
+}
+
+export function salvarFaixaEscala(item: FaixaEscala): string | null {
+  const erro = validarFaixaEscala(item);
+  if (erro) return erro;
+  updateBase((atual) => ({ ...atual, escalas: upsert(atual.escalas, item) }));
+  return null;
+}
+
+export function excluirFaixaEscala(id: string): void {
+  updateBase((atual) => ({
+    ...atual,
+    escalas: atual.escalas.filter((item) => item.id !== id),
   }));
 }
 

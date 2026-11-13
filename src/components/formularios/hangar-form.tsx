@@ -21,7 +21,7 @@ export function HangarForm({ id }: { id?: string }) {
   const pronto = usePronto();
   if (!pronto) {
     return (
-      <FormPage voltarHref="/hangar" voltar="Voltar ao hangar" titulo="Hangar">
+      <FormPage voltarHref="/despesas?recorte=fixas" voltar="Voltar às despesas" titulo="Hangar">
         <p className="text-[13px] text-tse-muted">Carregando o cadastro…</p>
       </FormPage>
     );
@@ -49,7 +49,15 @@ function HangarCampos({ id }: { id?: string }) {
   const [note, setNote] = useState<string>(atual?.note ?? "");
 
   if (id && !atual) {
-    return <FormPage voltarHref="/hangar" voltar="Voltar ao hangar" titulo="Hangar não encontrado">{null}</FormPage>;
+    return (
+      <FormPage
+        voltarHref="/despesas?recorte=fixas"
+        voltar="Voltar às despesas"
+        titulo="Hangar não encontrado"
+      >
+        {null}
+      </FormPage>
+    );
   }
 
   function salvar(event: React.FormEvent<HTMLFormElement>) {
@@ -79,11 +87,15 @@ function HangarCampos({ id }: { id?: string }) {
       status,
       note: note.trim() || "Contrato lançado na demonstração.",
     });
-    router.push("/hangar");
+    router.push("/despesas?recorte=fixas");
   }
 
   return (
-    <FormPage voltarHref="/hangar" voltar="Voltar ao hangar" titulo={atual ? `Editar ${atual.name}` : "Novo hangar"}>
+    <FormPage
+      voltarHref="/despesas?recorte=fixas"
+      voltar="Voltar às despesas"
+      titulo={atual ? `Editar ${atual.name}` : "Novo hangar"}
+    >
       <form onSubmit={salvar}>
         <Grade>
           <Campo label="Nome" value={name} onChange={setName} required />
@@ -111,12 +123,12 @@ function HangarCampos({ id }: { id?: string }) {
         </Grade>
         {erro ? <ErroForm>{erro}</ErroForm> : null}
         <AcoesForm
-          cancelarHref="/hangar"
+          cancelarHref="/despesas?recorte=fixas"
           excluir={
             atual
               ? () => {
                   excluirHangar(atual.id);
-                  router.push("/hangar");
+                  router.push("/despesas?recorte=fixas");
                 }
               : undefined
           }

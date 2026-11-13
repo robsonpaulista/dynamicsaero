@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { HangarView } from "@/components/hangar/hangar-view";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Hangar" };
+export const metadata: Metadata = { title: "Despesas fixas" };
 
+/** Hangar deixou de ser página própria — vira despesa fixa em Despesas. */
 export default function HangarPage() {
-  return <HangarView />;
+  redirect("/despesas?recorte=fixas");
 }

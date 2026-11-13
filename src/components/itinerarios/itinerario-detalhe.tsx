@@ -8,11 +8,16 @@ import { formatBRL, formatDate, formatHours } from "@/lib/format";
 import { CATEGORY_LABEL, PURPOSE_LABEL, ROLE_LABEL } from "@/lib/labels";
 import {
   aerodromoLabel,
+  consumoMedioGph,
+  eDespesaFinanceira,
   expensesOfItinerary,
+  fatiasTanqueDoVoo,
   getAircraft,
   getCrew,
   getItinerary,
   partnerName,
+  precoPorLitroAbastecimento,
+  statusTanqueAeronave,
   tripHours,
 } from "@/services/operacao";
 
@@ -32,9 +37,15 @@ export function ItinerarioDetalhe() {
   }
 
   const craft = getAircraft(trip.aircraftId);
-  const expenses = expensesOfItinerary(trip.id);
-  const total = expenses.reduce((sum, item) => sum + item.amount, 0);
+  const expenses = expensesOfItinerary(trip.id).filter(eDespesaFinanceira);
+  const fatiasVoo = fatiasTanqueDoVoo(trip.id);
+  const totalFatias = fatiasVoo.reduce((soma, item) => soma + item.amount, 0);
+  const totalFinanceiro = expenses.reduce((sum, item) => sum + item.amount, 0);
   const hours = tripHours(trip);
+  const precoLitro = trip.abastecimento
+    ? precoPorLitroAbastecimento(trip.abastecimento)
+    : null;
+  const tanque = statusTanqueAeronave(trip.aircraftId);
 
   return (
     <PageStack>
@@ -109,15 +120,103 @@ export function ItinerarioDetalhe() {
         })}
       </div>
 
+      {trip.abastecimento ? (
+        <Card
+          title="Abastecimento (NF)"
+          subtitle="Despesa financeira da operação. Os litros alimentam o tanque da aeronave."
+        >
+          <dl className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <dt className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">Valor total</dt>
+              <dd className="mt-1 font-semibold">{formatBRL(trip.abastecimento.valor)}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">Quantidade</dt>
+              <dd className="mt-1 font-semibold">
+                {trip.abastecimento.litros.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} L
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">Preço / L</dt>
+              <dd className="mt-1 font-semibold">{precoLitro !== null ? formatBRL(precoLitro) : "—"}</dd>
+            </div>
+          </dl>
+          {trip.abastecimento.anexoUrl ? (
+            <a
+              href={trip.abastecimento.anexoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex text-[13px] font-bold text-tse-olive underline-offset-2 hover:underline"
+            >
+              {trip.abastecimento.anexoNome || "Ver comprovante"}
+            </a>
+          ) : (
+            <p className="mt-4 text-[13px] text-tse-muted">Sem comprovante anexado.</p>
+          )}
+        </Card>
+      ) : null}
+
+      <Card
+        title={`Tanque · ${craft?.registration ?? "aeronave"}`}
+        subtitle={`Consumo médio ${consumoMedioGph(trip.aircraftId)} gal/h. Voos realizados fecham a conta pelos litros.`}
+      >
+        <dl className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <dt className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">Comprado</dt>
+            <dd className="mt-1 font-semibold">
+              {tanque.litrosComprados.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L ·{" "}
+              {formatBRL(tanque.valorComprado)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">Distribuído</dt>
+            <dd className="mt-1 font-semibold">
+              {tanque.litrosConsumidos.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L ·{" "}
+              {formatBRL(tanque.valorDistribuido)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-bold tracking-wide text-tse-muted uppercase">Saldo</dt>
+            <dd className="mt-1 font-semibold">
+              {tanque.litrosSaldo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L ·{" "}
+              {formatBRL(tanque.valorSaldo)}
+            </dd>
+          </div>
+        </dl>
+        {fatiasVoo.length > 0 ? (
+          <ul className="mt-4 divide-y divide-[#EEEEEE]">
+            {fatiasVoo.map((fatia) => (
+              <li key={`${fatia.legId}-${fatia.abastecimentoId}`} className="flex justify-between gap-3 py-2 text-[13px]">
+                <span>
+                  <span className="block font-semibold">
+                    {aerodromoLabel(fatia.fromCity, fatia.fromIcao)} →{" "}
+                    {aerodromoLabel(fatia.toCity, fatia.toIcao)}
+                  </span>
+                  <span className="text-tse-muted">
+                    {fatia.litros.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L ·{" "}
+                    {partnerName(fatia.partnerId)}
+                  </span>
+                </span>
+                <span className="font-bold">{formatBRL(fatia.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-[13px] text-tse-muted">
+            Este voo ainda não retirou litros do tanque (só pernas realizadas consomem).
+          </p>
+        )}
+      </Card>
+
       <Card
         title="Custo deste itinerário"
         subtitle={
           trip.status === "cancelado"
             ? "Cancelado antes de gerar despesa."
-            : `Entra no rateio de ${partnerName(trip.requestedBy)}.`
+            : `NF de abastecimento na operação; consumo e demais custos no rateio de ${partnerName(trip.requestedBy)}.`
         }
       >
-        {expenses.length === 0 ? (
+        {expenses.length === 0 && fatiasVoo.length === 0 ? (
           <p className="text-[13px] text-tse-muted">Sem lançamentos.</p>
         ) : (
           <ul className="divide-y divide-[#EEEEEE]">
@@ -127,6 +226,7 @@ export function ItinerarioDetalhe() {
                   <span className="block font-semibold">{item.description}</span>
                   <span className="text-tse-muted">
                     {CATEGORY_LABEL[item.category]} · {item.vendor}
+                    {item.origem === "abastecimento" ? " · NF operação" : ""}
                   </span>
                 </span>
                 <span className="text-right">
@@ -135,10 +235,37 @@ export function ItinerarioDetalhe() {
                 </span>
               </li>
             ))}
+            {fatiasVoo.map((fatia) => (
+              <li
+                key={`fatia-${fatia.legId}-${fatia.abastecimentoId}`}
+                className="flex items-center justify-between gap-3 py-2 text-[13px]"
+              >
+                <span>
+                  <span className="block font-semibold">
+                    Combustível (consumo) · {aerodromoLabel(fatia.fromCity, fatia.fromIcao)} →{" "}
+                    {aerodromoLabel(fatia.toCity, fatia.toIcao)}
+                  </span>
+                  <span className="text-tse-muted">
+                    Rateio · {fatia.litros.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L ·{" "}
+                    {partnerName(fatia.partnerId)}
+                  </span>
+                </span>
+                <span className="text-right">
+                  <span className="block font-bold">{formatBRL(fatia.amount)}</span>
+                  <StatusBadge value="realizado" />
+                </span>
+              </li>
+            ))}
             <li className="flex items-center justify-between py-3 text-[15px] font-bold">
-              <span>Total</span>
-              <span>{formatBRL(total)}</span>
+              <span>Total financeiro (NF + custos do voo)</span>
+              <span>{formatBRL(totalFinanceiro)}</span>
             </li>
+            {totalFatias > 0 ? (
+              <li className="flex items-center justify-between py-2 text-[13px] font-semibold text-tse-muted">
+                <span>Rateio combustível (consumo do tanque)</span>
+                <span>{formatBRL(totalFatias)}</span>
+              </li>
+            ) : null}
           </ul>
         )}
       </Card>

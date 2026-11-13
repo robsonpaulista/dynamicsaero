@@ -59,7 +59,8 @@ export function formatDateLista(iso: string): string {
 
 export function formatPercent(share: number): string {
   return `${new Intl.NumberFormat("pt-BR", {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(share * 100)}%`;
 }
 

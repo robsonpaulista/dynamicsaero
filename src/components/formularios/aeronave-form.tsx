@@ -58,7 +58,7 @@ function AeronaveCampos({ id }: { id?: string }) {
     const map: Record<string, string> = {};
     for (const partner of base.partners) {
       const share = atual?.ownership.find((item) => item.partnerId === partner.id)?.share ?? 0;
-      map[partner.id] = String(Math.round(share * 1000) / 10);
+      map[partner.id] = String(Math.round(share * 10000) / 100);
     }
     return map;
   });
@@ -224,7 +224,8 @@ function AeronaveCampos({ id }: { id?: string }) {
                 type="number"
                 min={0}
                 max={100}
-                step="0.1"
+                step="0.01"
+                inputMode="decimal"
                 value={fatias[partner.id] ?? "0"}
                 onChange={(event) =>
                   setFatias((atualFatias) => ({ ...atualFatias, [partner.id]: event.target.value }))
@@ -246,7 +247,14 @@ function AeronaveCampos({ id }: { id?: string }) {
               placeholder="+55 (11) 99999-9999"
               inputMode="tel"
             />
-            <Campo label="Participação (%)" value={novoPercent} onChange={setNovoPercent} type="number" />
+            <Campo
+              label="Participação (%)"
+              value={novoPercent}
+              onChange={setNovoPercent}
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+            />
           </Grade>
         </div>
         {erro ? <ErroForm>{erro}</ErroForm> : null}

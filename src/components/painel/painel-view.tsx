@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import {
   BadgeCheck,
   ChevronRight,
@@ -18,10 +19,12 @@ import { corDoSocio } from "@/lib/labels";
 import {
   consumoMedioGph,
   expensesIn,
+  GALAO_EM_LITROS,
   getAircraft,
   getAlertas,
   getItinerary,
   getRateio,
+  HOJE,
   listAircraft,
   partnerShort,
   posicaoDespesas,
@@ -31,11 +34,17 @@ import {
 import { relatorioPainel } from "@/services/relatorios-operacao";
 import type { Aircraft, ExpenseCategory, RateioPartner } from "@/types/operacao";
 
-const GALAO_EM_LITROS = 3.785411784;
 
 export function PainelView() {
   useDados();
-  const { aircraftId, months, partnerId } = useOperacao();
+  const { aircraftId, months, partnerId, setMonths } = useOperacao();
+
+  // Painel sempre abre no mês atual da operação.
+  useEffect(() => {
+    const mesAtual = HOJE.slice(0, 7);
+    setMonths([mesAtual] as MonthFilter);
+  }, [setMonths]);
+
   const rateio = getRateio(months, aircraftId);
   const eu = partnerId
     ? rateio.partners.find((item) => item.partnerId === partnerId)
@@ -630,6 +639,7 @@ function iniciais(nome: string): string {
 }
 
 function despesaSemIdentificacao(expense: ReturnType<typeof expensesIn>[number]): boolean {
+  if (expense.origem === "abastecimento") return false;
   if (expense.partnerId) return false;
   if (expense.itineraryId) {
     const trip = getItinerary(expense.itineraryId);

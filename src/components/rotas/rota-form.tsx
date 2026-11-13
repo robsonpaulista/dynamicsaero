@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { CampoAerodromo } from "@/components/formularios/campo-aerodromo";
 import {
   AcoesForm,
   Campo,
@@ -11,13 +12,9 @@ import {
   Grade,
   numeroCampo,
 } from "@/components/formularios/campos";
-import { AERODROMOS } from "@/data/calendario";
+import { cidadeDoIcao } from "@/data/aerodromos";
 import { useDados, usePronto } from "@/hooks/use-dados";
 import { criarId, excluirRota, salvarRota } from "@/services/acoes";
-
-function cidadeDe(icao: string, atual: string): string {
-  return AERODROMOS[icao.trim().toUpperCase()] ?? atual;
-}
 
 export function RotaForm({ id }: { id?: string }) {
   const pronto = usePronto();
@@ -58,15 +55,15 @@ function RotaCampos({ id }: { id?: string }) {
     const destino = toIcao.trim().toUpperCase();
     const horas = numeroCampo(blockHours || "0");
     if (origem.length < 3 || destino.length < 3) {
-      setErro("Informe o ICAO de origem e de destino.");
+      setErro("Informe o aeródromo de origem e de destino (ICAO ou cidade).");
       return;
     }
     if (Number.isNaN(horas) || horas < 0) {
       setErro("Informe as horas de bloco.");
       return;
     }
-    const cidadeOrigem = fromCity.trim() || cidadeDe(origem, origem);
-    const cidadeDestino = toCity.trim() || cidadeDe(destino, destino);
+    const cidadeOrigem = fromCity.trim() || cidadeDoIcao(origem, origem);
+    const cidadeDestino = toCity.trim() || cidadeDoIcao(destino, destino);
     const titulo = nome.trim() || `${cidadeOrigem} → ${cidadeDestino}`;
     salvarRota({
       id: atual?.id ?? criarId("rota"),
@@ -86,7 +83,7 @@ function RotaCampos({ id }: { id?: string }) {
       voltarHref="/rotas"
       voltar="Voltar às rotas"
       titulo={atual ? "Editar rota" : "Nova rota"}
-      texto="A rota fica disponível para preencher as pernas de um itinerário."
+      texto="Busque por ICAO ou cidade. A rota fica disponível para preencher as pernas de um itinerário."
     >
       <form onSubmit={salvar}>
         <Grade>
@@ -96,29 +93,29 @@ function RotaCampos({ id }: { id?: string }) {
             value={blockHours}
             onChange={setBlockHours}
             type="number"
+            step="0.1"
+            inputMode="decimal"
           />
-          <Campo
-            label="Origem ICAO"
-            value={fromIcao}
-            onChange={(value) => {
-              const icao = value.toUpperCase();
+          <CampoAerodromo
+            label="Origem"
+            icao={fromIcao}
+            cidade={fromCity}
+            onChange={(icao, cidade) => {
               setFromIcao(icao);
-              setFromCity((cidade) => cidadeDe(icao, cidade));
+              setFromCity(cidade);
             }}
             required
           />
-          <Campo label="Cidade de origem" value={fromCity} onChange={setFromCity} />
-          <Campo
-            label="Destino ICAO"
-            value={toIcao}
-            onChange={(value) => {
-              const icao = value.toUpperCase();
+          <CampoAerodromo
+            label="Destino"
+            icao={toIcao}
+            cidade={toCity}
+            onChange={(icao, cidade) => {
               setToIcao(icao);
-              setToCity((cidade) => cidadeDe(icao, cidade));
+              setToCity(cidade);
             }}
             required
           />
-          <Campo label="Cidade de destino" value={toCity} onChange={setToCity} />
           <CampoArea label="Nota" value={note} onChange={setNote} />
         </Grade>
         {erro ? <ErroForm>{erro}</ErroForm> : null}

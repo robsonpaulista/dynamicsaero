@@ -141,9 +141,29 @@ export const POSTING_LABEL: Record<Posting, string> = {
 };
 
 export const ALLOCATION_LABEL: Record<Allocation, string> = {
-  participacao: "Pela participação",
-  solicitante: "Quem pediu o voo",
+  participacao: "Proporcional à participação societária",
+  solicitante: "Individual de um sócio",
 };
+
+/** Fixas = hangar, seguro, tripulação, gestão, manutenção. Variáveis = voo. */
+export const CATEGORIAS_FIXAS: ExpenseCategory[] = [
+  "hangar",
+  "seguro",
+  "tripulacao",
+  "administrativo",
+  "manutencao",
+];
+
+export const CATEGORIAS_VARIAVEIS: ExpenseCategory[] = [
+  "combustivel",
+  "taxas",
+  "handling",
+  "catering",
+];
+
+export function grupoDaDespesa(category: ExpenseCategory): "fixa" | "variavel" {
+  return CATEGORIAS_VARIAVEIS.includes(category) ? "variavel" : "fixa";
+}
 
 export const METODO_LABEL: Record<AporteMetodo, string> = {
   pix: "PIX",

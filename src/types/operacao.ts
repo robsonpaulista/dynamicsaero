@@ -26,6 +26,17 @@ export type ExpenseCategory =
   | "administrativo"
   | "manutencao";
 
+export type GrupoDespesa = "fixa" | "variavel";
+
+/** Conta do plano de contas — usada na despesa avulsa (natureza + fixa/variável). */
+export type ContaPlano = {
+  id: string;
+  nome: string;
+  category: ExpenseCategory;
+  grupo: GrupoDespesa;
+  ativo: boolean;
+};
+
 export type CrewRole = "comandante" | "copiloto" | "mecanico" | "gestor";
 
 export type CrewStatus = "ativo" | "ferias" | "treinamento";
@@ -143,6 +154,17 @@ export type Leg = {
   posting?: Posting;
 };
 
+/** NF de abastecimento registrada no voo — despesa financeira da operação; tanque FIFO da aeronave. */
+export type AbastecimentoVoo = {
+  valor: number;
+  litros: number;
+  anexoNome?: string;
+  anexoUrl?: string;
+};
+
+/** Origem contábil do lançamento de combustível. */
+export type OrigemDespesa = "abastecimento" | "consumo-tanque";
+
 export type Itinerary = {
   id: string;
   aircraftId: string;
@@ -153,6 +175,7 @@ export type Itinerary = {
   status: ItineraryStatus;
   note: string;
   conditional?: string;
+  abastecimento?: AbastecimentoVoo;
   legs: Leg[];
 };
 
@@ -185,6 +208,12 @@ export type Expense = {
   hangarId?: string;
   crewId?: string;
   manual?: boolean;
+  /** Conta do plano usada no lançamento avulso. */
+  contaId?: string;
+  /** NF de abastecimento ou fatia de consumo do tanque. */
+  origem?: OrigemDespesa;
+  /** Itinerário que registrou a NF da qual a fatia retirou litros. */
+  abastecimentoId?: string;
   month: string;
   date: string;
   category: ExpenseCategory;
@@ -243,6 +272,16 @@ export type Aporte = {
   reference: string;
   note: string;
   aircraftId: string | null;
+};
+
+/** Posse da aeronave na agenda: faixa de dias do sócio no mês (independente de quem voou). */
+export type FaixaEscala = {
+  id: string;
+  aircraftId: string;
+  month: string;
+  partnerId: string;
+  startDay: number;
+  endDay: number;
 };
 
 export type AporteAplicado = {

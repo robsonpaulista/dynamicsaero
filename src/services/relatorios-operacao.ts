@@ -1,5 +1,7 @@
 import { CATEGORY_LABEL, POSTING_LABEL, PURPOSE_LABEL, STATUS_LABEL } from "@/lib/labels";
 import {
+  eDespesaFinanceira,
+  eDespesaRateavel,
   expensesIn,
   expensesOfItinerary,
   getAircraft,
@@ -62,12 +64,14 @@ function situacaoSaldo(saldo: number): string {
 }
 
 function socioDaDespesa(expense: Expense): string | null {
+  if (expense.origem === "abastecimento") return null;
   if (expense.partnerId) return expense.partnerId;
   if (expense.itineraryId) return getItinerary(expense.itineraryId)?.requestedBy ?? null;
   return null;
 }
 
 function rotuloSocio(expense: Expense): string {
+  if (expense.origem === "abastecimento") return "Operação (tanque)";
   const id = socioDaDespesa(expense);
   if (id) return partnerName(id);
   if (expense.allocation === "participacao") return "Participação";
@@ -95,6 +99,7 @@ function detalheLancamento(expense: Expense): string {
 function passaSocio(expense: Expense, socioFiltro: string): boolean {
   if (socioFiltro === "todos") return true;
   if (socioFiltro === "sem") {
+    if (expense.origem === "abastecimento") return false;
     return socioDaDespesa(expense) === null && expense.allocation !== "participacao";
   }
   return valorDoParceiro(expense, socioFiltro) > 0;
@@ -217,6 +222,7 @@ export function relatorioDespesas(
   );
   const { total, realizado, previsto, provisionado, categorias } = posicao;
   const despesas = expensesIn(months, aircraftId)
+    .filter((item) => (socioEspecifico ? eDespesaRateavel(item) : eDespesaFinanceira(item)))
     .filter((item) => passaSocio(item, socioFiltro))
     .sort((left, right) => right.date.localeCompare(left.date) || right.amount - left.amount);
   const nfs = listNotasFiscais(months, aircraftId);

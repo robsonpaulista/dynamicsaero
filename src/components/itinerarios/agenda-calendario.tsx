@@ -2,16 +2,21 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronRight as Seta, Plane, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronRight as Seta, Pencil, Plane, Plus, Trash2 } from "lucide-react";
 import { EmptyState, StatusBadge } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
+import { useDados } from "@/hooks/use-dados";
 import { cn, formatBRL, formatHours, formatPercent } from "@/lib/format";
 import { corDoSocio, fundoCalendarioSocio, PURPOSE_LABEL } from "@/lib/labels";
+import { criarId, excluirFaixaEscala, salvarFaixaEscala } from "@/services/acoes";
 import {
+  escalasIn,
   expensesOfItinerary,
+  getAircraft,
   itinerariesIn,
   itineraryRoute,
   itinerarySpan,
+  listAircraft,
   listMonths,
   mesDeReferencia,
   MONTHS,
@@ -19,7 +24,7 @@ import {
   tripHours,
   type MonthFilter,
 } from "@/services/operacao";
-import type { Itinerary } from "@/types/operacao";
+import type { FaixaEscala, Itinerary } from "@/types/operacao";
 
 const DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
 
@@ -27,6 +32,7 @@ type DiaAgenda = {
   iso: string;
   dia: number;
   foraDoMes: boolean;
+  /** Posse do dia na escala (independente de quem voou). */
   partnerId: string | null;
   voos: Itinerary[];
 };
@@ -50,38 +56,52 @@ export function AgendaCalendario({
   /** No painel: calendário + resumo, sem o bloco longo do dia. */
   compacto?: boolean;
 }) {
+  const base = useDados();
   const { aircraftId, months, setMonths, partnerId } = useOperacao();
   const mesAtivo = mesDeReferencia(months);
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
+  const [editandoEscala, setEditandoEscala] = useState<boolean>(false);
 
   const voosMes = useMemo(
     () =>
       itinerariesIn([mesAtivo], aircraftId)
         .filter((trip) => trip.status !== "cancelado")
         .sort((left, right) => (left.legs[0]?.date ?? "").localeCompare(right.legs[0]?.date ?? "")),
-    [aircraftId, mesAtivo],
+    [aircraftId, mesAtivo, base.itineraries],
   );
 
-  const grade = useMemo(() => montarGrade(mesAtivo, voosMes), [mesAtivo, voosMes]);
+  const escalasMes = useMemo(
+    () => escalasIn(mesAtivo, aircraftId),
+    [aircraftId, mesAtivo, base.escalas],
+  );
+
+  const grade = useMemo(
+    () => montarGrade(mesAtivo, voosMes, escalasMes),
+    [mesAtivo, voosMes, escalasMes],
+  );
   const resumo = useMemo(() => resumoSocios(grade), [grade]);
   const faixas = useMemo(() => faixasDoMes(grade), [grade]);
   const diasNoMes = grade.filter((item) => !item.foraDoMes).length;
 
+  // Só destaca o dia depois do toque — não pré-seleciona o primeiro com voo.
   const diaAtivo =
-    diaSelecionado && diaSelecionado.startsWith(mesAtivo)
-      ? diaSelecionado
-      : (grade.find((item) => !item.foraDoMes && item.voos.length > 0)?.iso ?? null);
+    diaSelecionado && diaSelecionado.startsWith(mesAtivo) ? diaSelecionado : null;
 
-  const voosDoDia = diaAtivo
-    ? (grade.find((item) => item.iso === diaAtivo)?.voos ?? []).filter(
-        (trip) => !partnerId || trip.requestedBy === partnerId,
-      )
-    : [];
+  const celulaAtiva = diaAtivo
+    ? (grade.find((item) => item.iso === diaAtivo) ?? null)
+    : null;
+  const posseDia = celulaAtiva?.partnerId ?? null;
+  const voosDoDia = celulaAtiva?.voos ?? [];
 
   const mesLabel =
     MONTHS.find((item) => item.id === mesAtivo)?.label ??
     listMonths().find((item) => item.id === mesAtivo)?.label ??
     mesAtivo;
+
+  const aeronaveEscala =
+    aircraftId !== "todas"
+      ? aircraftId
+      : (listAircraft()[0]?.id ?? "");
 
   function irMes(delta: number) {
     const [anoTexto, mesTexto] = mesAtivo.split("-");
@@ -136,27 +156,43 @@ export function AgendaCalendario({
               return <div key={`vazio-${celula.iso}`} className="min-h-[44px] sm:min-h-[56px]" />;
             }
             const selecionado = celula.iso === diaAtivo;
+            const temPosse = Boolean(celula.partnerId);
             const temVoo = celula.voos.length > 0;
+            const voosOutro = celula.partnerId
+              ? celula.voos.filter((trip) => trip.requestedBy !== celula.partnerId)
+              : celula.voos;
+            const marcadorOutro = voosOutro[0]?.requestedBy ?? null;
             return (
               <button
                 key={celula.iso}
                 type="button"
                 onClick={() => setDiaSelecionado(celula.iso)}
                 className={cn(
-                  "flex min-h-[44px] flex-col rounded-lg px-1 py-1 text-left transition sm:min-h-[56px] sm:rounded-xl sm:px-1.5 sm:py-1.5",
-                  !temVoo && "bg-[#F7F7F5]",
+                  "relative flex min-h-[44px] flex-col rounded-lg px-1 py-1 text-left transition sm:min-h-[56px] sm:rounded-xl sm:px-1.5 sm:py-1.5",
+                  !temPosse && "bg-[#F7F7F5]",
                   selecionado && "ring-2 ring-[#6B5B95] ring-offset-1",
                 )}
                 style={
-                  temVoo && celula.partnerId
+                  temPosse && celula.partnerId
                     ? { background: fundoCalendarioSocio(celula.partnerId) }
                     : undefined
                 }
               >
-                <span className="text-[11px] font-bold tabular-nums sm:text-[12px]">
-                  {celula.dia}
+                <span className="flex items-start justify-between gap-0.5">
+                  <span className="text-[11px] font-bold tabular-nums sm:text-[12px]">
+                    {celula.dia}
+                  </span>
+                  {marcadorOutro ? (
+                    <span
+                      className="mt-0.5 size-1.5 shrink-0 rounded-full sm:size-2"
+                      style={{ background: corDoSocio(marcadorOutro) }}
+                      title={`Voo de ${partnerShort(marcadorOutro)}`}
+                    />
+                  ) : temVoo ? (
+                    <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[#6B5B95]/40 sm:size-2" />
+                  ) : null}
                 </span>
-                {temVoo && celula.partnerId ? (
+                {temPosse && celula.partnerId ? (
                   <span className="mt-auto truncate text-[9px] font-semibold leading-tight sm:text-[10px]">
                     {partnerShort(celula.partnerId)}
                   </span>
@@ -199,11 +235,36 @@ export function AgendaCalendario({
             </div>
           </div>
         ) : null}
+
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] text-tse-muted">
+            Cor = posse na escala. Ponto = voo{partnerId ? "" : " (pode ser de outro sócio)"}.
+          </p>
+          {aeronaveEscala ? (
+            <button
+              type="button"
+              onClick={() => setEditandoEscala((atual) => !atual)}
+              className="inline-flex items-center gap-1 text-[12px] font-bold text-[#6B5B95]"
+            >
+              <Pencil className="size-3.5" aria-hidden />
+              {editandoEscala ? "Fechar escala" : "Editar escala"}
+            </button>
+          ) : null}
+        </div>
+
+        {editandoEscala && aeronaveEscala ? (
+          <EditorEscala
+            month={mesAtivo}
+            aircraftId={aeronaveEscala}
+            faixas={escalasIn(mesAtivo, aeronaveEscala)}
+          />
+        ) : null}
       </section>
 
       {resumo.length > 0 ? (
         <section className="hidden rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:block sm:p-5">
-          <ul className="space-y-4">
+          <p className="text-[13px] font-bold">Dias com a aeronave × escala</p>
+          <ul className="mt-3 space-y-4">
             {resumo.map((item) => (
               <li key={item.partnerId}>
                 <div className="flex items-center justify-between gap-3 text-[13px]">
@@ -217,9 +278,9 @@ export function AgendaCalendario({
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block font-bold tabular-nums">
-                      {item.dias} de {item.dias} dias
+                      {item.dias} / {item.dias} dias
                     </span>
-                    <span className="block text-[11px] text-tse-muted">com voo</span>
+                    <span className="block text-[11px] text-tse-muted">na escala</span>
                   </span>
                 </div>
                 <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-tse-bg">
@@ -235,7 +296,7 @@ export function AgendaCalendario({
             ))}
           </ul>
           <p className="mt-4 text-[12px] text-tse-muted">
-            Toque em um dia para ver os voos ou marcar um novo.
+            A linha vertical da cota fica no painel. Aqui a cor marca a posse do dia.
           </p>
           {compacto ? (
             <div className="mt-3">
@@ -271,9 +332,17 @@ export function AgendaCalendario({
                 {diaAtivo ? `Voos em ${formatDiaMes(diaAtivo)}` : "Voos do dia"}
               </p>
               <p className="mt-0.5 text-[12px] text-tse-muted">
-                {voosDoDia.length === 0
-                  ? "Nenhum voo neste dia."
-                  : `${voosDoDia.length} voo${voosDoDia.length === 1 ? "" : "s"}`}
+                {!diaAtivo
+                  ? "Toque em um dia no calendário."
+                  : posseDia
+                    ? `Período de ${partnerShort(posseDia)}${
+                        voosDoDia.length === 0
+                          ? " · nenhum voo"
+                          : ` · ${voosDoDia.length} voo${voosDoDia.length === 1 ? "" : "s"}`
+                      }`
+                    : voosDoDia.length === 0
+                      ? "Dia sem posse na escala."
+                      : `${voosDoDia.length} voo${voosDoDia.length === 1 ? "" : "s"} · sem posse cadastrada`}
               </p>
             </div>
             <Link
@@ -285,7 +354,11 @@ export function AgendaCalendario({
             </Link>
           </div>
 
-          {voosDoDia.length === 0 ? (
+          {!diaAtivo ? (
+            <div className="mt-3">
+              <EmptyState>Escolha um dia para ver os voos.</EmptyState>
+            </div>
+          ) : voosDoDia.length === 0 ? (
             <div className="mt-3">
               <EmptyState>Toque em outro dia ou marque um voo.</EmptyState>
             </div>
@@ -293,7 +366,11 @@ export function AgendaCalendario({
             <ul className="mt-3 divide-y divide-[#EEEEEE]">
               {voosDoDia.map((trip) => (
                 <li key={trip.id}>
-                  <CartaoVoo trip={trip} mostrarSocio={!partnerId} />
+                  <CartaoVoo
+                    trip={trip}
+                    mostrarSocio
+                    possePartnerId={posseDia}
+                  />
                 </li>
               ))}
             </ul>
@@ -301,11 +378,19 @@ export function AgendaCalendario({
         </section>
       ) : diaAtivo && voosDoDia.length > 0 ? (
         <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-[13px] font-bold">Voos em {formatDiaMes(diaAtivo)}</p>
+          <p className="text-[13px] font-bold">
+            Voos em {formatDiaMes(diaAtivo)}
+            {posseDia ? (
+              <span className="font-normal text-tse-muted">
+                {" "}
+                · período de {partnerShort(posseDia)}
+              </span>
+            ) : null}
+          </p>
           <ul className="mt-2 divide-y divide-[#EEEEEE]">
             {voosDoDia.slice(0, 3).map((trip) => (
               <li key={trip.id}>
-                <CartaoVoo trip={trip} mostrarSocio={!partnerId} />
+                <CartaoVoo trip={trip} mostrarSocio possePartnerId={posseDia} />
               </li>
             ))}
           </ul>
@@ -324,7 +409,145 @@ export function AgendaCalendario({
   );
 }
 
-function montarGrade(mesId: string, voos: Itinerary[]): DiaAgenda[] {
+function EditorEscala({
+  month,
+  aircraftId,
+  faixas,
+}: {
+  month: string;
+  aircraftId: string;
+  faixas: FaixaEscala[];
+}) {
+  const base = useDados();
+  const craft = getAircraft(aircraftId);
+  const ultimo = new Date(
+    Number(month.slice(0, 4)),
+    Number(month.slice(5, 7)),
+    0,
+  ).getDate();
+  const [partnerId, setPartnerId] = useState<string>(base.partners[0]?.id ?? "");
+  const [inicio, setInicio] = useState<string>("1");
+  const [fim, setFim] = useState<string>(String(Math.min(10, ultimo)));
+  const [erro, setErro] = useState<string>("");
+
+  function adicionar() {
+    const startDay = Number(inicio);
+    const endDay = Number(fim);
+    const item: FaixaEscala = {
+      id: criarId("esc"),
+      aircraftId,
+      month,
+      partnerId,
+      startDay,
+      endDay,
+    };
+    const falha = salvarFaixaEscala(item);
+    if (falha) {
+      setErro(falha);
+      return;
+    }
+    setErro("");
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-[#E8E4F5] bg-[#F7F5FB] p-3">
+      <p className="text-[12px] font-bold text-[#6B5B95]">
+        Escala · {craft?.registration ?? aircraftId} · {month}
+      </p>
+      <p className="mt-0.5 text-[11px] text-tse-muted">
+        Cadastre quem fica com a aeronave em cada faixa de dias. O custo do voo continua com quem
+        pediu.
+      </p>
+
+      {faixas.length > 0 ? (
+        <ul className="mt-2 divide-y divide-[#E8E4F5]">
+          {faixas.map((faixa) => (
+            <li key={faixa.id} className="flex items-center justify-between gap-2 py-2">
+              <span className="inline-flex min-w-0 items-center gap-2 text-[13px]">
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ background: corDoSocio(faixa.partnerId) }}
+                />
+                <span className="truncate font-semibold">
+                  {partnerShort(faixa.partnerId)}
+                </span>
+                <span className="tabular-nums text-tse-muted">
+                  {String(faixa.startDay).padStart(2, "0")}–{String(faixa.endDay).padStart(2, "0")}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => excluirFaixaEscala(faixa.id)}
+                className="inline-flex size-8 items-center justify-center rounded-full text-tse-muted hover:bg-white hover:text-[#8B5E3C]"
+                aria-label={`Remover faixa de ${partnerShort(faixa.partnerId)}`}
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-[12px] text-tse-muted">Nenhuma faixa neste mês.</p>
+      )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <label className="col-span-2 block text-[11px] font-semibold text-tse-muted sm:col-span-1">
+          Sócio
+          <select
+            value={partnerId}
+            onChange={(event) => setPartnerId(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-[#E8E4F5] bg-white px-2 py-1.5 text-[13px] text-tse-text"
+          >
+            {base.partners.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.shortName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-[11px] font-semibold text-tse-muted">
+          De
+          <input
+            type="number"
+            min={1}
+            max={ultimo}
+            value={inicio}
+            onChange={(event) => setInicio(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-[#E8E4F5] bg-white px-2 py-1.5 text-[13px] tabular-nums text-tse-text"
+          />
+        </label>
+        <label className="block text-[11px] font-semibold text-tse-muted">
+          Até
+          <input
+            type="number"
+            min={1}
+            max={ultimo}
+            value={fim}
+            onChange={(event) => setFim(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-[#E8E4F5] bg-white px-2 py-1.5 text-[13px] tabular-nums text-tse-text"
+          />
+        </label>
+        <div className="col-span-2 flex items-end sm:col-span-1">
+          <button
+            type="button"
+            onClick={adicionar}
+            className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-[#6B5B95] px-3 py-1.5 text-[12px] font-bold text-white"
+          >
+            <Plus className="size-3.5" aria-hidden />
+            Incluir
+          </button>
+        </div>
+      </div>
+      {erro ? <p className="mt-2 text-[12px] font-semibold text-[#8B5E3C]">{erro}</p> : null}
+    </div>
+  );
+}
+
+function montarGrade(
+  mesId: string,
+  voos: Itinerary[],
+  escalas: FaixaEscala[],
+): DiaAgenda[] {
   const [anoTexto, mesTexto] = mesId.split("-");
   const ano = Number(anoTexto);
   const mes = Number(mesTexto);
@@ -345,6 +568,11 @@ function montarGrade(mesId: string, voos: Itinerary[]): DiaAgenda[] {
     }
   }
 
+  function posseNoDia(dia: number): string | null {
+    const faixa = escalas.find((item) => dia >= item.startDay && dia <= item.endDay);
+    return faixa?.partnerId ?? null;
+  }
+
   const celulas: DiaAgenda[] = [];
   for (let i = 0; i < offset; i += 1) {
     celulas.push({
@@ -358,35 +586,16 @@ function montarGrade(mesId: string, voos: Itinerary[]): DiaAgenda[] {
 
   for (let dia = 1; dia <= totalDias; dia += 1) {
     const iso = `${mesId}-${String(dia).padStart(2, "0")}`;
-    const voosDia = porDia.get(iso) ?? [];
     celulas.push({
       iso,
       dia,
       foraDoMes: false,
-      partnerId: socioDoDia(voosDia),
-      voos: voosDia,
+      partnerId: posseNoDia(dia),
+      voos: porDia.get(iso) ?? [],
     });
   }
 
   return celulas;
-}
-
-function socioDoDia(voos: Itinerary[]): string | null {
-  if (voos.length === 0) return null;
-  const horas = new Map<string, number>();
-  for (const trip of voos) {
-    const h = tripHours(trip);
-    horas.set(trip.requestedBy, (horas.get(trip.requestedBy) ?? 0) + h.voadas + h.previstas);
-  }
-  let melhor: string | null = null;
-  let max = -1;
-  for (const [id, valor] of horas) {
-    if (valor > max) {
-      max = valor;
-      melhor = id;
-    }
-  }
-  return melhor;
 }
 
 function resumoSocios(grade: DiaAgenda[]): ResumoSocio[] {
@@ -453,10 +662,22 @@ function cidadesCurtas(trip: Itinerary): string {
   return compact.join(" → ");
 }
 
-function CartaoVoo({ trip, mostrarSocio }: { trip: Itinerary; mostrarSocio: boolean }) {
+function CartaoVoo({
+  trip,
+  mostrarSocio,
+  possePartnerId,
+}: {
+  trip: Itinerary;
+  mostrarSocio: boolean;
+  possePartnerId?: string | null;
+}) {
   const hours = tripHours(trip);
   const cost = expensesOfItinerary(trip.id).reduce((sum, item) => sum + item.amount, 0);
   const span = itinerarySpan(trip);
+  const vooDeOutro =
+    possePartnerId && trip.requestedBy !== possePartnerId
+      ? `Voo de ${partnerShort(trip.requestedBy)} no período de ${partnerShort(possePartnerId)}`
+      : null;
 
   return (
     <Link href={`/itinerarios/${trip.id}`} className="flex items-start gap-3 py-3.5">
@@ -474,10 +695,15 @@ function CartaoVoo({ trip, mostrarSocio }: { trip: Itinerary; mostrarSocio: bool
           </span>
         </span>
         <span className="mt-0.5 block text-[12px] text-tse-muted">
-          {mostrarSocio ? `${partnerShort(trip.requestedBy)} · ` : ""}
+          {mostrarSocio && !vooDeOutro ? `${partnerShort(trip.requestedBy)} · ` : ""}
           {PURPOSE_LABEL[trip.purpose]}
           {span && span.first !== span.last ? ` · até ${formatDiaMes(span.last)}` : ""}
         </span>
+        {vooDeOutro ? (
+          <span className="mt-1 block text-[12px] font-semibold text-[#8B5E3C]">
+            {vooDeOutro}
+          </span>
+        ) : null}
         <span className="mt-1 flex flex-wrap items-center gap-2">
           <StatusBadge value={trip.status} />
           <span className="text-[12px] text-tse-muted">{itineraryRoute(trip)}</span>

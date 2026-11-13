@@ -8,7 +8,6 @@ import {
   Signpost,
   UserRoundCog,
   Users,
-  Warehouse,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -25,8 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/itinerarios", title: "Voos", icon: Route },
   { href: "/rotas", title: "Rotas", icon: Signpost },
   { href: "/despesas", title: "Despesas", icon: Receipt },
-  { href: "/hangar", title: "Hangar", icon: Warehouse },
-  { href: "/pessoal", title: "Pessoal", icon: Users },
+  { href: "/pessoal", title: "Sócios", icon: Users },
   { href: "/manutencao", title: "Manutenção", icon: Wrench },
   { href: "/rateio", title: "Rateio", icon: PieChart },
   { href: "/agente", title: "Agente", icon: MessageCircle },

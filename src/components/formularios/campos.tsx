@@ -47,6 +47,9 @@ export function Campo({
   required,
   placeholder,
   inputMode,
+  step,
+  min,
+  max,
 }: {
   label: string;
   value: string;
@@ -55,6 +58,9 @@ export function Campo({
   required?: boolean;
   placeholder?: string;
   inputMode?: "text" | "tel" | "numeric" | "decimal";
+  step?: string | number;
+  min?: string | number;
+  max?: string | number;
 }) {
   return (
     <label>
@@ -63,6 +69,9 @@ export function Campo({
         required={required}
         type={type}
         inputMode={inputMode}
+        step={step}
+        min={min}
+        max={max}
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}

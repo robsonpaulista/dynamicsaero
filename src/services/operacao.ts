@@ -1,7 +1,7 @@
 import { HOJE, MONTHS, VIEWER_ID } from "@/data/calendario";
 import { NOTAS_FISCAIS } from "@/data/caso-real";
 import { getBase } from "@/services/dados";
-import { daysUntil, formatDate, formatMil } from "@/lib/format";
+import { daysUntil, formatBRL, formatDate, formatMil, formatPercent } from "@/lib/format";
 import { METODO_LABEL, POSTING_LABEL, ROLE_LABEL } from "@/lib/labels";
 import type {
   Aircraft,
@@ -10,9 +10,11 @@ import type {
   AporteAplicado,
   CategoryTotal,
   ContaCorrente,
+  ContaPlano,
   CrewMember,
   Expense,
   ExpenseCategory,
+  FaixaEscala,
   Hangar,
   Insurance,
   Itinerary,
@@ -27,6 +29,7 @@ import type {
   Rateio,
   RateioPartner,
 } from "@/types/operacao";
+import { mesclarContasPlano } from "@/data/plano-contas";
 
 export { HOJE, MONTHS, VIEWER_ID };
 
@@ -48,9 +51,200 @@ export function getAircraft(id: string): Aircraft | undefined {
 /** Consumo médio (gal/h) cadastrado na aeronave — base do custo automático de combustível. */
 export const CONSUMO_COMBUSTIVEL_PADRAO_GPH = 74;
 
+/** Conversão US gal → litros (NFs Vibra em litros; consumo da frota em gal/h). */
+export const GALAO_EM_LITROS = 3.785411784;
+
 export function consumoMedioGph(aircraftId: string): number {
   const valor = getAircraft(aircraftId)?.fuelBurnGph;
   return typeof valor === "number" && valor > 0 ? valor : CONSUMO_COMBUSTIVEL_PADRAO_GPH;
+}
+
+/** Preço unitário do abastecimento (R$/L), ou null se inválido. */
+export function precoPorLitroAbastecimento(abastecimento: {
+  valor: number;
+  litros: number;
+}): number | null {
+  if (!(abastecimento.valor > 0) || !(abastecimento.litros > 0)) return null;
+  return abastecimento.valor / abastecimento.litros;
+}
+
+/** Litros consumidos no trecho: horas × gal/h × conversão. */
+export function litrosConsumidosTrecho(aircraftId: string, blockHours: number): number {
+  if (!(blockHours > 0)) return 0;
+  return blockHours * consumoMedioGph(aircraftId) * GALAO_EM_LITROS;
+}
+
+/** Valor estimado do consumo (só referência; a NF é a despesa financeira). */
+export function custoCombustivelPorConsumo(
+  aircraftId: string,
+  blockHours: number,
+  precoPorLitro: number,
+): number {
+  if (!(precoPorLitro > 0)) return 0;
+  return Math.round(litrosConsumidosTrecho(aircraftId, blockHours) * precoPorLitro * 100) / 100;
+}
+
+export type FatiaTanque = {
+  abastecimentoId: string;
+  itineraryId: string;
+  legId: string;
+  aircraftId: string;
+  partnerId: string;
+  date: string;
+  litros: number;
+  amount: number;
+  fromIcao: string;
+  toIcao: string;
+  fromCity: string;
+  toCity: string;
+};
+
+export type StatusTanque = {
+  aircraftId: string;
+  litrosComprados: number;
+  litrosConsumidos: number;
+  litrosSaldo: number;
+  valorComprado: number;
+  valorDistribuido: number;
+  valorSaldo: number;
+};
+
+function dataAbastecimento(trip: Itinerary): string {
+  return trip.legs[0]?.date ?? "";
+}
+
+function centavosValor(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * Consome o tanque da aeronave em FIFO: NFs de abastecimento × pernas realizadas.
+ * Cada fatia rateia o valor da NF ao solicitante do voo pelos litros.
+ */
+export function alocarTanqueCombustivel(aircraftId?: string): FatiaTanque[] {
+  const trips = getBase().itineraries.filter(
+    (trip) => trip.status !== "cancelado" && (!aircraftId || trip.aircraftId === aircraftId),
+  );
+
+  type Lote = {
+    abastecimentoId: string;
+    aircraftId: string;
+    litrosRestantes: number;
+    valorRestantes: number;
+  };
+
+  const lotesPorAeronave = new Map<string, Lote[]>();
+  const abastecimentos = trips
+    .filter((trip) => trip.abastecimento && trip.abastecimento.valor > 0 && trip.abastecimento.litros > 0)
+    .sort(
+      (left, right) =>
+        dataAbastecimento(left).localeCompare(dataAbastecimento(right)) ||
+        left.id.localeCompare(right.id),
+    );
+
+  for (const trip of abastecimentos) {
+    const abast = trip.abastecimento;
+    if (!abast) continue;
+    const lista = lotesPorAeronave.get(trip.aircraftId) ?? [];
+    lista.push({
+      abastecimentoId: trip.id,
+      aircraftId: trip.aircraftId,
+      litrosRestantes: abast.litros,
+      valorRestantes: abast.valor,
+    });
+    lotesPorAeronave.set(trip.aircraftId, lista);
+  }
+
+  type Demanda = {
+    trip: Itinerary;
+    leg: Leg;
+    litros: number;
+  };
+
+  const demandas: Demanda[] = [];
+  for (const trip of trips) {
+    for (const leg of trip.legs) {
+      if (legPosting(leg, trip) !== "realizado") continue;
+      const litros = litrosConsumidosTrecho(trip.aircraftId, leg.blockHours);
+      if (litros <= 0) continue;
+      demandas.push({ trip, leg, litros });
+    }
+  }
+  demandas.sort(
+    (left, right) =>
+      left.leg.date.localeCompare(right.leg.date) ||
+      left.leg.depart.localeCompare(right.leg.depart) ||
+      left.leg.id.localeCompare(right.leg.id),
+  );
+
+  const fatias: FatiaTanque[] = [];
+  for (const demanda of demandas) {
+    let falta = demanda.litros;
+    const lotes = lotesPorAeronave.get(demanda.trip.aircraftId) ?? [];
+    while (falta > 1e-9 && lotes.length > 0) {
+      const lote = lotes[0];
+      if (!lote || lote.litrosRestantes <= 1e-9) {
+        lotes.shift();
+        continue;
+      }
+      const take = Math.min(falta, lote.litrosRestantes);
+      const fechaLote = take >= lote.litrosRestantes - 1e-9;
+      const amount = fechaLote
+        ? centavosValor(lote.valorRestantes)
+        : centavosValor((take / lote.litrosRestantes) * lote.valorRestantes);
+      if (amount > 0) {
+        fatias.push({
+          abastecimentoId: lote.abastecimentoId,
+          itineraryId: demanda.trip.id,
+          legId: demanda.leg.id,
+          aircraftId: demanda.trip.aircraftId,
+          partnerId: demanda.trip.requestedBy,
+          date: demanda.leg.date,
+          litros: take,
+          amount,
+          fromIcao: demanda.leg.fromIcao,
+          toIcao: demanda.leg.toIcao,
+          fromCity: demanda.leg.fromCity,
+          toCity: demanda.leg.toCity,
+        });
+      }
+      lote.litrosRestantes = Math.max(0, lote.litrosRestantes - take);
+      lote.valorRestantes = Math.max(0, centavosValor(lote.valorRestantes - amount));
+      falta -= take;
+      if (lote.litrosRestantes <= 1e-9 || lote.valorRestantes <= 0) {
+        lotes.shift();
+      }
+    }
+  }
+  return fatias;
+}
+
+export function statusTanqueAeronave(aircraftId: string): StatusTanque {
+  const fatias = alocarTanqueCombustivel(aircraftId);
+  let litrosComprados = 0;
+  let valorComprado = 0;
+  for (const trip of getBase().itineraries) {
+    if (trip.aircraftId !== aircraftId || trip.status === "cancelado") continue;
+    const abast = trip.abastecimento;
+    if (!abast || !(abast.valor > 0) || !(abast.litros > 0)) continue;
+    litrosComprados += abast.litros;
+    valorComprado += abast.valor;
+  }
+  const litrosConsumidos = fatias.reduce((soma, item) => soma + item.litros, 0);
+  const valorDistribuido = fatias.reduce((soma, item) => soma + item.amount, 0);
+  return {
+    aircraftId,
+    litrosComprados,
+    litrosConsumidos,
+    litrosSaldo: Math.max(0, litrosComprados - litrosConsumidos),
+    valorComprado,
+    valorDistribuido,
+    valorSaldo: Math.max(0, centavosValor(valorComprado - valorDistribuido)),
+  };
+}
+
+export function fatiasTanqueDoVoo(itineraryId: string): FatiaTanque[] {
+  return alocarTanqueCombustivel().filter((item) => item.itineraryId === itineraryId);
 }
 
 export function listPartners(): Partner[] {
@@ -131,6 +325,14 @@ export function getDespesaManual(id: string): Expense | undefined {
   return extra ? resolverRateioDespesa(extra) : undefined;
 }
 
+export function listContasPlano(): ContaPlano[] {
+  return mesclarContasPlano(getBase().contas);
+}
+
+export function getContaPlano(id: string): ContaPlano | undefined {
+  return listContasPlano().find((item) => item.id === id);
+}
+
 export function seguroDe(aircraftId: string): Insurance | undefined {
   return getBase().seguros.find((item) => item.aircraftId === aircraftId);
 }
@@ -140,7 +342,7 @@ export function hrefOrigem(expense: Expense): string {
   if (expense.itineraryId) return `/itinerarios/${expense.itineraryId}/editar`;
   if (expense.maintenanceId) return `/manutencao/${expense.maintenanceId}/editar`;
   if (expense.hangarId) return `/hangar/${expense.hangarId}/editar`;
-  if (expense.crewId) return `/pessoal/${expense.crewId}/editar`;
+  if (expense.crewId) return `/despesas?recorte=fixas`;
   if (expense.category === "seguro") return `/frota/${expense.aircraftId}/editar`;
   return `/frota/${expense.aircraftId}/editar`;
 }
@@ -371,21 +573,37 @@ function buildExpenses(): Expense[] {
 
   for (const trip of getBase().itineraries) {
     if (trip.status === "cancelado") continue;
+
+    const abast = trip.abastecimento;
+    if (abast && abast.valor > 0 && abast.litros > 0) {
+      const dataNf = dataAbastecimento(trip) || HOJE;
+      expenses.push({
+        id: `abast-${trip.id}`,
+        aircraftId: trip.aircraftId,
+        itineraryId: trip.id,
+        month: dataNf.slice(0, 7),
+        date: dataNf,
+        category: "combustivel",
+        description: `Abastecimento · ${abast.litros.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} L · ${trip.title}`,
+        vendor: VENDORS.combustivel,
+        amount: abast.valor,
+        allocation: "participacao",
+        posting: "realizado",
+        origem: "abastecimento",
+        abastecimentoId: trip.id,
+      });
+    }
+
     for (const leg of trip.legs) {
       const posting = legPosting(leg, trip);
       const month = leg.date.slice(0, 7);
       const origem = aerodromoLabel(leg.fromCity, leg.fromIcao);
       const destino = aerodromoLabel(leg.toCity, leg.toIcao);
       const items: Array<{
-        category: ExpenseCategory;
+        category: "taxas" | "handling" | "catering";
         amount: number;
         description: string;
       }> = [
-        {
-          category: "combustivel",
-          amount: leg.fuel,
-          description: `Combustível · ${origem} → ${destino}`,
-        },
         {
           category: "taxas",
           amount: leg.fees,
@@ -405,19 +623,6 @@ function buildExpenses(): Expense[] {
 
       for (const item of items) {
         if (item.amount <= 0) continue;
-        const vendorKey = item.category;
-        if (
-          vendorKey !== "combustivel" &&
-          vendorKey !== "taxas" &&
-          vendorKey !== "handling" &&
-          vendorKey !== "catering"
-        ) {
-          continue;
-        }
-        const descricao =
-          item.category === "combustivel" && posting === "provisionado"
-            ? `${item.description} · estimativa por distância · sem despesa de gasolina faturada no período`
-            : item.description;
         expenses.push({
           id: `${leg.id}-${item.category}`,
           aircraftId: trip.aircraftId,
@@ -426,8 +631,8 @@ function buildExpenses(): Expense[] {
           month,
           date: leg.date,
           category: item.category,
-          description: descricao,
-          vendor: VENDORS[vendorKey],
+          description: item.description,
+          vendor: VENDORS[item.category],
           amount: item.amount,
           allocation: "solicitante",
           partnerId: trip.requestedBy,
@@ -435,6 +640,28 @@ function buildExpenses(): Expense[] {
         });
       }
     }
+  }
+
+  for (const fatia of alocarTanqueCombustivel()) {
+    const origem = aerodromoLabel(fatia.fromCity, fatia.fromIcao);
+    const destino = aerodromoLabel(fatia.toCity, fatia.toIcao);
+    expenses.push({
+      id: `tanque-${fatia.legId}-${fatia.abastecimentoId}`,
+      aircraftId: fatia.aircraftId,
+      itineraryId: fatia.itineraryId,
+      legId: fatia.legId,
+      month: fatia.date.slice(0, 7),
+      date: fatia.date,
+      category: "combustivel",
+      description: `Combustível (consumo) · ${origem} → ${destino} · ${fatia.litros.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L`,
+      vendor: VENDORS.combustivel,
+      amount: fatia.amount,
+      allocation: "solicitante",
+      partnerId: fatia.partnerId,
+      posting: "realizado",
+      origem: "consumo-tanque",
+      abastecimentoId: fatia.abastecimentoId,
+    });
   }
 
   for (const item of getBase().maintenance) {
@@ -535,6 +762,16 @@ export function listExpenses(): Expense[] {
   return [...buildExpenses(), ...getBase().extras.map(resolverRateioDespesa)];
 }
 
+/** NF e demais custos — sem fatias de consumo do tanque (evita double count). */
+export function eDespesaFinanceira(expense: Expense): boolean {
+  return expense.origem !== "consumo-tanque";
+}
+
+/** Entra no rateio dos sócios — NF de abastecimento fica de fora (só as fatias). */
+export function eDespesaRateavel(expense: Expense): boolean {
+  return expense.origem !== "abastecimento";
+}
+
 export function expensesIn(months: MonthFilter, aircraftId: string): Expense[] {
   return listExpenses().filter(
     (item) => matchesMonth(item.month, months) && matchesAircraft(item.aircraftId, aircraftId),
@@ -594,7 +831,9 @@ export function aircraftMonth(aircraftId: string, months: MonthFilter): {
   custo: number;
 } {
   const hours = hoursIn(months, aircraftId);
-  const custo = expensesIn(months, aircraftId).reduce((sum, item) => sum + item.amount, 0);
+  const custo = expensesIn(months, aircraftId)
+    .filter(eDespesaFinanceira)
+    .reduce((sum, item) => sum + item.amount, 0);
   return { voadas: hours.voadas, previstas: hours.previstas, custo };
 }
 
@@ -610,6 +849,75 @@ export function listAportes(months?: MonthFilter): Aporte[] {
 
 export function getAporte(id: string): Aporte | undefined {
   return getBase().aportes.find((item) => item.id === id);
+}
+
+export function listEscalas(): FaixaEscala[] {
+  return getBase().escalas;
+}
+
+export function getFaixaEscala(id: string): FaixaEscala | undefined {
+  return getBase().escalas.find((item) => item.id === id);
+}
+
+/** Faixas de posse no mês/aeronave (ordem por início). */
+export function escalasIn(month: string, aircraftId: string): FaixaEscala[] {
+  return getBase()
+    .escalas.filter(
+      (item) =>
+        item.month === month &&
+        (aircraftId === "todas" || item.aircraftId === aircraftId),
+    )
+    .sort(
+      (left, right) =>
+        left.startDay - right.startDay ||
+        left.endDay - right.endDay ||
+        left.partnerId.localeCompare(right.partnerId),
+    );
+}
+
+/** Sócio com posse da aeronave na data (YYYY-MM-DD), ou null se livre. */
+export function posseDoDia(iso: string, aircraftId: string): string | null {
+  const month = iso.slice(0, 7);
+  const day = Number(iso.slice(8, 10));
+  if (!month || !day) return null;
+  const faixa = escalasIn(month, aircraftId).find(
+    (item) => day >= item.startDay && day <= item.endDay,
+  );
+  return faixa?.partnerId ?? null;
+}
+
+export function faixasEscalasSobrepoem(
+  left: Pick<FaixaEscala, "startDay" | "endDay">,
+  right: Pick<FaixaEscala, "startDay" | "endDay">,
+): boolean {
+  return left.startDay <= right.endDay && right.startDay <= left.endDay;
+}
+
+export function validarFaixaEscala(item: FaixaEscala): string | null {
+  if (!item.aircraftId || !item.partnerId || !/^\d{4}-\d{2}$/.test(item.month)) {
+    return "Informe aeronave, sócio e mês.";
+  }
+  const ultimo = new Date(
+    Number(item.month.slice(0, 4)),
+    Number(item.month.slice(5, 7)),
+    0,
+  ).getDate();
+  if (
+    !Number.isInteger(item.startDay) ||
+    !Number.isInteger(item.endDay) ||
+    item.startDay < 1 ||
+    item.endDay > ultimo ||
+    item.startDay > item.endDay
+  ) {
+    return `Informe dias entre 1 e ${ultimo}, com início ≤ fim.`;
+  }
+  const conflito = escalasIn(item.month, item.aircraftId).find(
+    (outra) => outra.id !== item.id && faixasEscalasSobrepoem(item, outra),
+  );
+  if (conflito) {
+    return `A faixa cruza com ${partnerShort(conflito.partnerId)} (${conflito.startDay}–${conflito.endDay}).`;
+  }
+  return null;
 }
 
 function aplicarAportes(
@@ -655,7 +963,7 @@ function variation(current: number, previous: number | null): string | null {
 
 export function custosPorCategoria(months: MonthFilter, aircraftId: string): CategoryTotal[] {
   const totals = new Map<ExpenseCategory, number>();
-  for (const expense of expensesIn(months, aircraftId)) {
+  for (const expense of expensesIn(months, aircraftId).filter(eDespesaFinanceira)) {
     totals.set(expense.category, (totals.get(expense.category) ?? 0) + expense.amount);
   }
   return [...totals.entries()]
@@ -669,6 +977,7 @@ function contaDoMes(months: MonthFilter, aircraftId: string): Map<string, number
     totais.set(partnerId, (totais.get(partnerId) ?? 0) + amount);
   };
   for (const expense of expensesIn(months, aircraftId)) {
+    if (!eDespesaRateavel(expense)) continue;
     if (expense.allocation === "solicitante" && expense.partnerId) {
       somar(expense.partnerId, expense.amount);
       continue;
@@ -721,6 +1030,9 @@ export function getRateio(months: MonthFilter, aircraftId: string): Rateio {
   };
 
   for (const expense of expenses) {
+    // NF de abastecimento é despesa financeira da operação; o rateio vem das fatias de consumo.
+    if (expense.origem === "abastecimento") continue;
+
     if (expense.allocation === "solicitante" && expense.partnerId) {
       const row = bucket.get(expense.partnerId);
       if (!row) continue;
@@ -835,6 +1147,8 @@ export function getRateio(months: MonthFilter, aircraftId: string): Rateio {
 
 /** Parte do sócio em um lançamento (voo integral ou fatia da participação). */
 export function valorDoParceiro(expense: Expense, partnerId: string): number {
+  // NF do tanque não cabe a um sócio; a fatia de consumo (origem consumo-tanque) sim.
+  if (expense.origem === "abastecimento") return 0;
   if (expense.allocation === "solicitante") {
     return expense.partnerId === partnerId ? expense.amount : 0;
   }
@@ -865,10 +1179,22 @@ export function raioXAlocacao(expense: Expense): RaioXAlocacao {
   const trip = expense.itineraryId ? getItinerary(expense.itineraryId) : undefined;
   const leg = trip?.legs.find((item) => item.id === expense.legId);
 
+  if (expense.origem === "abastecimento") {
+    const tanque = statusTanqueAeronave(expense.aircraftId);
+    return {
+      criterio: "sem_dono",
+      regra: "Despesa financeira da operação (tanque)",
+      cruzamento: `NF de abastecimento. Voos realizados fecham o tanque pelos litros (distribuído ${formatBRL(tanque.valorDistribuido)} de ${formatBRL(tanque.valorComprado)}; saldo ${formatBRL(tanque.valorSaldo)}).`,
+      partes: [],
+    };
+  }
+
   if (expense.allocation === "solicitante" && expense.partnerId) {
     const nome = partnerName(expense.partnerId);
     let cruzamento = `100% para ${nome} (quem pediu o voo).`;
-    if (tarifa && leg) {
+    if (expense.origem === "consumo-tanque") {
+      cruzamento = `Consumo do tanque na etapa ${leg ? `${leg.fromIcao}→${leg.toIcao}` : "do voo"}; cobrado de ${nome} (solicitante).`;
+    } else if (tarifa && leg) {
       cruzamento = `Tarifa de pouso ${tarifa.pouso} casada com a etapa ${leg.fromIcao}→${leg.toIcao} em ${expense.date}; cobrada 100% de ${nome}.`;
     } else if (leg) {
       cruzamento = `Vinculada à etapa ${leg.fromIcao}→${leg.toIcao} (${leg.fromCity} → ${leg.toCity}); 100% de ${nome}.`;
@@ -877,7 +1203,7 @@ export function raioXAlocacao(expense: Expense): RaioXAlocacao {
     }
     return {
       criterio: "solicitante",
-      regra: "Quem pediu o voo",
+      regra: expense.origem === "consumo-tanque" ? "Consumo do tanque · quem pediu o voo" : "Quem pediu o voo",
       cruzamento,
       partes: [{ partnerId: expense.partnerId, amount: expense.amount, share: 1 }],
     };
@@ -901,7 +1227,7 @@ export function raioXAlocacao(expense: Expense): RaioXAlocacao {
     share: craft.ownership.find((owner) => owner.partnerId === item.partnerId)?.share ?? null,
   }));
   const participacao = craft.ownership
-    .map((owner) => `${partnerShort(owner.partnerId)} ${Math.round(owner.share * 100)}%`)
+    .map((owner) => `${partnerShort(owner.partnerId)} ${formatPercent(owner.share)}`)
     .join(" · ");
   const cruzamento = tarifa
     ? `Tarifa de pouso ${tarifa.pouso} sem voo casado → participação em ${craft.registration} (${participacao}).`
@@ -936,6 +1262,12 @@ export function posicaoDespesas(
   let provisionado = 0;
 
   for (const expense of expensesIn(months, aircraftId)) {
+    // Totais financeiros usam a NF; visão do sócio usa as fatias de consumo (sem double count).
+    if (partnerId) {
+      if (expense.origem === "abastecimento") continue;
+    } else if (expense.origem === "consumo-tanque") {
+      continue;
+    }
     const parte = partnerId ? valorDoParceiro(expense, partnerId) : expense.amount;
     if (parte <= 0) continue;
     total += parte;
@@ -1048,7 +1380,7 @@ export function contaCorrente(
 
 export function getKpis(months: MonthFilter, aircraftId: string): Kpis {
   const hours = hoursIn(months, aircraftId);
-  const expenses = expensesIn(months, aircraftId);
+  const expenses = expensesIn(months, aircraftId).filter(eDespesaFinanceira);
   const custoComprometido = expenses.reduce((sum, item) => sum + item.amount, 0);
   const custoRealizado = expenses
     .filter((item) => item.posting === "realizado")
@@ -1072,7 +1404,9 @@ export function getKpis(months: MonthFilter, aircraftId: string): Kpis {
   const previous = ativos?.length === 1 ? previousMonth(ativos[0] ?? "") : null;
   const previousHours = previous ? hoursIn([previous], aircraftId).voadas : null;
   const previousCost = previous
-    ? expensesIn([previous], aircraftId).reduce((sum, item) => sum + item.amount, 0)
+    ? expensesIn([previous], aircraftId)
+        .filter(eDespesaFinanceira)
+        .reduce((sum, item) => sum + item.amount, 0)
     : null;
 
   return {
@@ -1163,7 +1497,7 @@ export function getAlertas(months: MonthFilter, aircraftId: string): Alerta[] {
           days < 0
             ? "Documento vencido."
             : `Vence em ${days} dia${days === 1 ? "" : "s"}.`,
-        href: "/pessoal",
+        href: "/despesas?recorte=fixas",
       });
     }
   }
@@ -1178,7 +1512,7 @@ export function getAlertas(months: MonthFilter, aircraftId: string): Alerta[] {
         tone: days <= 60 ? "atencao" : "info",
         title: `Hangar de ${craft?.registration ?? hangar.icao}`,
         detail: `${hangar.name} · contrato até ${formatDate(hangar.contractUntil)}.`,
-        href: "/hangar",
+        href: "/despesas?recorte=fixas",
       });
     }
   }
