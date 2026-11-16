@@ -1,7 +1,8 @@
 "use client";
 
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   PageStack,
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
 import { useDados } from "@/hooks/use-dados";
-import { formatBRL, formatDateLista, formatHours } from "@/lib/format";
+import { cn, formatBRL, formatDate, formatHours } from "@/lib/format";
 import { corDoSocio } from "@/lib/labels";
 import {
   conferenciaPrestacao,
@@ -22,6 +23,24 @@ import {
   type ConferenciaNotaFatia,
 } from "@/services/conferencia";
 import { getAircraft, monthsLabel, partnerShort } from "@/services/operacao";
+
+type ColunaConferencia =
+  | "data"
+  | "trecho"
+  | "tempo"
+  | "litros"
+  | "socio"
+  | "combustivel"
+  | "nfVibra"
+  | "taxas"
+  | "nfTaxas";
+
+type Ordem = "asc" | "desc";
+
+type Ordenacao = {
+  coluna: ColunaConferencia;
+  ordem: Ordem;
+};
 
 function formatLitros(value: number): string {
   return `${new Intl.NumberFormat("pt-BR", {
@@ -31,6 +50,97 @@ function formatLitros(value: number): string {
 
 function centavos(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function compararTexto(left: string, right: string, ordem: Ordem): number {
+  const cmp = left.localeCompare(right, "pt-BR", { sensitivity: "base", numeric: true });
+  return ordem === "asc" ? cmp : -cmp;
+}
+
+function compararNumero(left: number, right: number, ordem: Ordem): number {
+  return ordem === "asc" ? left - right : right - left;
+}
+
+function rotuloSocioLinha(linha: ConferenciaLinha, filtroSocio: string | null): string {
+  if (linha.rateioParticipacao && !filtroSocio) return "Participação";
+  return partnerShort(linha.partnerId);
+}
+
+function primeiraNf(notas: ConferenciaNotaFatia[]): string {
+  return notas[0]?.numero ?? "";
+}
+
+function ordenarLinhas(
+  itens: ConferenciaLinha[],
+  ordenacao: Ordenacao,
+  filtroSocio: string | null,
+): ConferenciaLinha[] {
+  const { coluna, ordem } = ordenacao;
+  return [...itens].sort((left, right) => {
+    switch (coluna) {
+      case "data":
+        return (
+          compararTexto(left.date, right.date, ordem) ||
+          compararTexto(left.legId, right.legId, "asc")
+        );
+      case "trecho":
+        return compararTexto(left.route, right.route, ordem);
+      case "tempo":
+        return compararNumero(left.blockHours, right.blockHours, ordem);
+      case "litros":
+        return compararNumero(left.litros, right.litros, ordem);
+      case "socio":
+        return compararTexto(
+          rotuloSocioLinha(left, filtroSocio),
+          rotuloSocioLinha(right, filtroSocio),
+          ordem,
+        );
+      case "combustivel":
+        return compararNumero(left.combCalculo, right.combCalculo, ordem);
+      case "nfVibra":
+        return compararTexto(primeiraNf(left.combNotas), primeiraNf(right.combNotas), ordem);
+      case "taxas":
+        return compararNumero(left.taxasCalculo, right.taxasCalculo, ordem);
+      case "nfTaxas":
+        return compararTexto(primeiraNf(left.taxasNotas), primeiraNf(right.taxasNotas), ordem);
+      default:
+        return 0;
+    }
+  });
+}
+
+function CabecalhoOrdenavel({
+  coluna,
+  atual,
+  onOrdenar,
+  children,
+  className,
+}: {
+  coluna: ColunaConferencia;
+  atual: Ordenacao;
+  onOrdenar: (coluna: ColunaConferencia) => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  const ativo = atual.coluna === coluna;
+  const Icone = !ativo ? ArrowUpDown : atual.ordem === "asc" ? ArrowUp : ArrowDown;
+  const alinharDireita = className?.includes("text-right");
+  return (
+    <th className={cn(thClass, className)}>
+      <button
+        type="button"
+        onClick={() => onOrdenar(coluna)}
+        className={cn(
+          "inline-flex items-center gap-1 font-bold tracking-wide uppercase",
+          alinharDireita && "w-full justify-end",
+        )}
+        aria-sort={ativo ? (atual.ordem === "asc" ? "ascending" : "descending") : "none"}
+      >
+        {children}
+        <Icone className={cn("size-3.5", ativo ? "text-tse-olive" : "text-tse-muted")} aria-hidden />
+      </button>
+    </th>
+  );
 }
 
 function CelulaNotas({ notas, vazia = "—" }: { notas: ConferenciaNotaFatia[]; vazia?: string }) {
@@ -63,6 +173,10 @@ export function ConferenciaView() {
   useDados();
   const { aircraftId, months, partnerId } = useOperacao();
   const [filtroSocio, setFiltroSocio] = useState<string | null>(null);
+  const [ordenacao, setOrdenacao] = useState<Ordenacao>({
+    coluna: "data",
+    ordem: "asc",
+  });
 
   useEffect(() => {
     setFiltroSocio(null);
@@ -73,7 +187,7 @@ export function ConferenciaView() {
     [months, aircraftId, partnerId],
   );
 
-  const linhas = useMemo(() => {
+  const linhasFiltradas = useMemo(() => {
     if (!filtroSocio) return dados.linhas;
     const resultado: ConferenciaLinha[] = [];
     for (const linha of dados.linhas) {
@@ -96,6 +210,19 @@ export function ConferenciaView() {
     }
     return resultado;
   }, [dados.linhas, filtroSocio]);
+
+  const linhas = useMemo(
+    () => ordenarLinhas(linhasFiltradas, ordenacao, filtroSocio),
+    [linhasFiltradas, ordenacao, filtroSocio],
+  );
+
+  function alternarOrdenacao(coluna: ColunaConferencia): void {
+    setOrdenacao((atual) =>
+      atual.coluna === coluna
+        ? { coluna, ordem: atual.ordem === "asc" ? "desc" : "asc" }
+        : { coluna, ordem: coluna === "data" || coluna === "trecho" || coluna === "socio" || coluna === "nfVibra" || coluna === "nfTaxas" ? "asc" : "desc" },
+    );
+  }
 
   const totalCombTabela = useMemo(
     () =>
@@ -263,22 +390,60 @@ export function ConferenciaView() {
           <table className={`${tableClass} min-w-[1100px]`}>
             <thead className={theadClass}>
               <tr>
-                <th className={thClass}>Data</th>
-                <th className={thClass}>Trecho</th>
-                <th className={`${thClass} text-right`}>Tempo</th>
-                <th className={`${thClass} text-right`}>Litros</th>
-                <th className={thClass}>Sócio</th>
-                <th className={`${thClass} text-right`}>Combustível</th>
-                <th className={thClass}>NF Vibra</th>
-                <th className={`${thClass} text-right`}>Taxas</th>
-                <th className={thClass}>NF taxas</th>
+                <CabecalhoOrdenavel coluna="data" atual={ordenacao} onOrdenar={alternarOrdenacao}>
+                  Data
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel coluna="trecho" atual={ordenacao} onOrdenar={alternarOrdenacao}>
+                  Trecho
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel
+                  coluna="tempo"
+                  atual={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  className="text-right"
+                >
+                  Tempo
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel
+                  coluna="litros"
+                  atual={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  className="text-right"
+                >
+                  Litros
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel coluna="socio" atual={ordenacao} onOrdenar={alternarOrdenacao}>
+                  Sócio
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel
+                  coluna="combustivel"
+                  atual={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  className="text-right"
+                >
+                  Combustível
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel coluna="nfVibra" atual={ordenacao} onOrdenar={alternarOrdenacao}>
+                  NF Vibra
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel
+                  coluna="taxas"
+                  atual={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  className="text-right"
+                >
+                  Taxas
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel coluna="nfTaxas" atual={ordenacao} onOrdenar={alternarOrdenacao}>
+                  NF taxas
+                </CabecalhoOrdenavel>
               </tr>
             </thead>
             <tbody>
               {linhas.map((linha) => (
                 <tr key={linha.key} className={trClass}>
                   <td className={`${tdClass} whitespace-nowrap tabular-nums`}>
-                    {formatDateLista(linha.date)}
+                    {formatDate(linha.date)}
                   </td>
                   <td className={`${tdClass} min-w-[200px]`}>
                     <Link
