@@ -632,3 +632,198 @@ export function tituloVooConferencia(itineraryId: string): string {
   const trip = getItinerary(itineraryId);
   return trip?.title ?? itineraryId;
 }
+
+export type ConferenciaVibraTrecho = {
+  itineraryId: string;
+  legId: string;
+  route: string;
+  blockHours: number;
+  litros: number;
+  partnerId: string;
+  rateioParticipacao: boolean;
+};
+
+export type ConferenciaVibraStatus = "ok" | "sem_voo" | "atencao";
+
+/** Uma linha = uma NF Vibra casada com os trechos do mesmo dia do documento. */
+export type ConferenciaVibraLinha = {
+  key: string;
+  notaId: string;
+  numero: string;
+  date: string;
+  month: string;
+  aircraftId: string;
+  amount: number;
+  anexoUrl?: string;
+  anexoNome?: string;
+  trechos: ConferenciaVibraTrecho[];
+  tempoDia: number;
+  litrosDia: number;
+  /** Litros atribuídos a esta NF (proporcional ao valor no dia). */
+  litrosNf: number;
+  precoLitro: number | null;
+  status: ConferenciaVibraStatus;
+  detalhe: string;
+};
+
+export type ConferenciaVibraPorData = {
+  linhas: ConferenciaVibraLinha[];
+  totalNotas: number;
+  totalValor: number;
+  comVoo: number;
+  semVoo: number;
+  atencao: number;
+  precoLitroMediano: number | null;
+  litrosComVoo: number;
+};
+
+function mediana(valores: number[]): number | null {
+  if (valores.length === 0) return null;
+  const ordenados = [...valores].sort((a, b) => a - b);
+  const meio = Math.floor(ordenados.length / 2);
+  const a = ordenados[meio];
+  if (a == null) return null;
+  if (ordenados.length % 2 === 1) return a;
+  const b = ordenados[meio - 1];
+  if (b == null) return a;
+  return (a + b) / 2;
+}
+
+/**
+ * Conferência só combustível: data do documento Vibra × trechos voados no mesmo dia.
+ * Premissa: faturamento após abastecimento de cada voo.
+ */
+export function conferenciaVibraPorDataDoc(
+  months: MonthFilter,
+  aircraftId: string,
+): ConferenciaVibraPorData {
+  const notas = NOTAS_FISCAIS.filter(
+    (item) =>
+      item.origem === "vibra" &&
+      item.amount > 0 &&
+      matchesAircraft(item.aircraftId, aircraftId) &&
+      matchesMonth(item.month, months),
+  ).sort(
+    (left, right) =>
+      left.date.localeCompare(right.date) || left.numero.localeCompare(right.numero),
+  );
+
+  type TrechoDia = ConferenciaVibraTrecho & { date: string; aircraftId: string };
+  const trechosPorDia = new Map<string, TrechoDia[]>();
+
+  for (const trip of getBase().itineraries) {
+    if (trip.status === "cancelado") continue;
+    if (!matchesAircraft(trip.aircraftId, aircraftId)) continue;
+    for (const leg of trip.legs) {
+      if (!postingConsomeCombustivel(leg, trip)) continue;
+      const litros = litrosConsumidosTrecho(trip.aircraftId, leg.blockHours);
+      if (!(leg.blockHours > 0) && !(litros > 0)) continue;
+      const chave = `${trip.aircraftId}:${leg.date}`;
+      const lista = trechosPorDia.get(chave) ?? [];
+      lista.push({
+        itineraryId: trip.id,
+        legId: leg.id,
+        route: rotaTrecho(leg),
+        blockHours: leg.blockHours,
+        litros,
+        partnerId: trip.requestedBy,
+        rateioParticipacao: allocationDoVoo(trip) === "participacao",
+        date: leg.date,
+        aircraftId: trip.aircraftId,
+      });
+      trechosPorDia.set(chave, lista);
+    }
+  }
+
+  const valorNotasPorDia = new Map<string, number>();
+  for (const nota of notas) {
+    const chave = `${nota.aircraftId}:${nota.date}`;
+    valorNotasPorDia.set(chave, (valorNotasPorDia.get(chave) ?? 0) + nota.amount);
+  }
+
+  const precosBrutos: number[] = [];
+  const linhasBrutas: Omit<ConferenciaVibraLinha, "status" | "detalhe">[] = [];
+
+  for (const nota of notas) {
+    const chaveDia = `${nota.aircraftId}:${nota.date}`;
+    const trechosDia = trechosPorDia.get(chaveDia) ?? [];
+    const tempoDia = trechosDia.reduce((soma, item) => soma + item.blockHours, 0);
+    const litrosDia = trechosDia.reduce((soma, item) => soma + item.litros, 0);
+    const totalNotasDia = valorNotasPorDia.get(chaveDia) ?? nota.amount;
+    const fracao = totalNotasDia > 0 ? nota.amount / totalNotasDia : 1;
+    const litrosNf = litrosDia * fracao;
+    const precoLitro = litrosNf > 0 ? nota.amount / litrosNf : null;
+    if (precoLitro != null && precoLitro > 0) precosBrutos.push(precoLitro);
+
+    linhasBrutas.push({
+      key: nota.id,
+      notaId: nota.id,
+      numero: nota.numero,
+      date: nota.date,
+      month: nota.month,
+      aircraftId: nota.aircraftId,
+      amount: nota.amount,
+      anexoUrl: nota.anexoUrl,
+      anexoNome: nota.anexoNome,
+      trechos: trechosDia.map(({ date: _d, aircraftId: _a, ...trecho }) => trecho),
+      tempoDia,
+      litrosDia,
+      litrosNf,
+      precoLitro,
+    });
+  }
+
+  const precoLitroMediano = mediana(precosBrutos);
+  const linhas: ConferenciaVibraLinha[] = linhasBrutas.map((linha) => {
+    if (linha.trechos.length === 0) {
+      return {
+        ...linha,
+        status: "sem_voo",
+        detalhe: "Nenhum trecho na data do documento.",
+      };
+    }
+    if (precoLitroMediano != null && linha.precoLitro != null) {
+      const razao = linha.precoLitro / precoLitroMediano;
+      if (razao < 0.7 || razao > 1.35) {
+        return {
+          ...linha,
+          status: "atencao",
+          detalhe: `R$/L fora da faixa (mediana ${precoLitroMediano.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}).`,
+        };
+      }
+    }
+    const nNfDia = notas.filter(
+      (item) => item.aircraftId === linha.aircraftId && item.date === linha.date,
+    ).length;
+    if (nNfDia > 1 || linha.trechos.length > 1) {
+      return {
+        ...linha,
+        status: "ok",
+        detalhe:
+          nNfDia > 1 && linha.trechos.length > 1
+            ? `${nNfDia} NFs e ${linha.trechos.length} trechos no dia — litros rateados pelo valor.`
+            : nNfDia > 1
+              ? `${nNfDia} NFs no dia — litros rateados pelo valor.`
+              : `${linha.trechos.length} trechos no dia.`,
+      };
+    }
+    return {
+      ...linha,
+      status: "ok",
+      detalhe: "1 NF · 1 dia com trecho(s).",
+    };
+  });
+
+  return {
+    linhas,
+    totalNotas: linhas.length,
+    totalValor: centavos(linhas.reduce((soma, item) => soma + item.amount, 0)),
+    comVoo: linhas.filter((item) => item.trechos.length > 0).length,
+    semVoo: linhas.filter((item) => item.status === "sem_voo").length,
+    atencao: linhas.filter((item) => item.status === "atencao").length,
+    precoLitroMediano,
+    litrosComVoo: linhas
+      .filter((item) => item.trechos.length > 0)
+      .reduce((soma, item) => soma + item.litrosNf, 0),
+  };
+}

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ConferenciaView } from "@/components/conferencia/conferencia-view";
+import { ConferenciaShell } from "@/components/conferencia/conferencia-shell";
 
-export const metadata: Metadata = { title: "Prestação de contas" };
+export const metadata: Metadata = { title: "Conferência" };
 
 export default function ConferenciaPage() {
-  return <ConferenciaView />;
+  return <ConferenciaShell />;
 }
