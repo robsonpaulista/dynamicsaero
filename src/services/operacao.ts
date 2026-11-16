@@ -507,9 +507,14 @@ export function legPosting(leg: Leg, trip: Itinerary): Posting {
   return leg.date > HOJE ? "previsto" : "realizado";
 }
 
+/** Trechos do traslado de compra (Goiânia → base) — sempre em participação. */
+const TRECHOS_TRASLADO_COMPRA = new Set(["etapa-1", "etapa-2", "etapa-5"]);
+
 /** Rateio do voo: solicitante (padrão) ou participação de todos os sócios. */
 export function allocationDoVoo(trip: Itinerary): Allocation {
-  return trip.allocation === "participacao" ? "participacao" : "solicitante";
+  if (trip.allocation === "participacao") return "participacao";
+  if (trip.legs.some((leg) => TRECHOS_TRASLADO_COMPRA.has(leg.id))) return "participacao";
+  return "solicitante";
 }
 
 export function itineraryRoute(trip: Itinerary): string {

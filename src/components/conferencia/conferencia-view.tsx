@@ -61,8 +61,14 @@ function compararNumero(left: number, right: number, ordem: Ordem): number {
   return ordem === "asc" ? left - right : right - left;
 }
 
+function rotuloParticipacao(aircraftId: string): string {
+  const nomes =
+    getAircraft(aircraftId)?.ownership.map((item) => partnerShort(item.partnerId)) ?? [];
+  return nomes.length > 0 ? nomes.join("/") : "TODOS";
+}
+
 function rotuloSocioLinha(linha: ConferenciaLinha, filtroSocio: string | null): string {
-  if (linha.rateioParticipacao && !filtroSocio) return "Participação";
+  if (linha.rateioParticipacao && !filtroSocio) return rotuloParticipacao(linha.aircraftId);
   return partnerShort(linha.partnerId);
 }
 
@@ -461,11 +467,8 @@ export function ConferenciaView() {
                   </td>
                   <td className={tdClass}>
                     {linha.rateioParticipacao && !filtroSocio ? (
-                      <span className="font-semibold">
-                        Participação
-                        <span className="mt-0.5 block text-[11px] font-normal text-tse-muted">
-                          traslado · todos os sócios
-                        </span>
+                      <span className="font-semibold" title="Traslado · rateio entre todos os sócios">
+                        {rotuloParticipacao(linha.aircraftId)}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 font-semibold">

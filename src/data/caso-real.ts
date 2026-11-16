@@ -21,7 +21,7 @@ import type {
 export const CONTAS: ContaPlano[] = CONTAS_PADRAO;
 
 /** Marca do seed importado dos PDFs — troca força recarregar a base remota. */
-export const SEED_OPERACAO = "pdf-etapas-traslado-participacao-v3";
+export const SEED_OPERACAO = "pdf-etapas-traslado-participacao-v4";
 
 export const PARTNERS = caso.partners as Partner[];
 export const AIRCRAFT = caso.aircraft as Aircraft[];
