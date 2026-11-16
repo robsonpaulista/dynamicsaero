@@ -12,6 +12,7 @@ import { METODO_LABEL, POSTING_LABEL, ROLE_LABEL } from "@/lib/labels";
 import type {
   Aircraft,
   Alerta,
+  Allocation,
   Aporte,
   AporteAplicado,
   CategoryTotal,
@@ -124,8 +125,8 @@ function centavosValor(value: number): number {
 }
 
 /**
- * Consome o tanque da aeronave em FIFO: NFs de abastecimento × pernas realizadas.
- * Cada fatia rateia o valor da NF ao solicitante do voo pelos litros.
+ * Consome o tanque da aeronave em FIFO: abastecimentos do voo (ou NFs Vibra) × pernas realizadas.
+ * Cada fatia rateia o valor ao solicitante do voo pelos litros estimados (horas × gal/h).
  */
 export function alocarTanqueCombustivel(aircraftId?: string): FatiaTanque[] {
   const trips = getBase().itineraries.filter(
@@ -170,7 +171,9 @@ export function alocarTanqueCombustivel(aircraftId?: string): FatiaTanque[] {
   const demandas: Demanda[] = [];
   for (const trip of trips) {
     for (const leg of trip.legs) {
-      if (legPosting(leg, trip) !== "realizado") continue;
+      const posting = legPosting(leg, trip);
+      // Realizado e provisionado consomem o tanque; previsto fica de fora.
+      if (posting !== "realizado" && posting !== "provisionado") continue;
       const litros = litrosConsumidosTrecho(trip.aircraftId, leg.blockHours);
       if (litros <= 0) continue;
       demandas.push({ trip, leg, litros });
@@ -182,6 +185,46 @@ export function alocarTanqueCombustivel(aircraftId?: string): FatiaTanque[] {
       left.leg.depart.localeCompare(right.leg.depart) ||
       left.leg.id.localeCompare(right.leg.id),
   );
+
+  // Por aeronave sem lote de abastecimento no voo: NFs Vibra viram o tanque.
+  // Litros do lote = fração do valor × consumo total das etapas (as NFs não trazem litros).
+  const notasVibra = NOTAS_FISCAIS.filter(
+    (item) =>
+      item.origem === "vibra" &&
+      item.amount > 0 &&
+      (!aircraftId || matchesAircraft(item.aircraftId, aircraftId)),
+  ).sort(
+    (left, right) =>
+      left.date.localeCompare(right.date) || left.numero.localeCompare(right.numero),
+  );
+  const demandasPorAeronave = new Map<string, number>();
+  for (const demanda of demandas) {
+    demandasPorAeronave.set(
+      demanda.trip.aircraftId,
+      (demandasPorAeronave.get(demanda.trip.aircraftId) ?? 0) + demanda.litros,
+    );
+  }
+  const notasPorAeronave = new Map<string, NotaFiscal[]>();
+  for (const nota of notasVibra) {
+    const lista = notasPorAeronave.get(nota.aircraftId) ?? [];
+    lista.push(nota);
+    notasPorAeronave.set(nota.aircraftId, lista);
+  }
+  for (const [aeronave, totalLitros] of demandasPorAeronave) {
+    if ((lotesPorAeronave.get(aeronave) ?? []).length > 0) continue;
+    const lista = notasPorAeronave.get(aeronave) ?? [];
+    const totalValor = lista.reduce((soma, item) => soma + item.amount, 0);
+    if (!(totalValor > 0) || !(totalLitros > 0)) continue;
+    lotesPorAeronave.set(
+      aeronave,
+      lista.map((nota) => ({
+        abastecimentoId: nota.id,
+        aircraftId: aeronave,
+        litrosRestantes: (nota.amount / totalValor) * totalLitros,
+        valorRestantes: nota.amount,
+      })),
+    );
+  }
 
   const fatias: FatiaTanque[] = [];
   for (const demanda of demandas) {
@@ -235,6 +278,13 @@ export function statusTanqueAeronave(aircraftId: string): StatusTanque {
     if (!abast || !(abast.valor > 0) || !(abast.litros > 0)) continue;
     litrosComprados += abast.litros;
     valorComprado += abast.valor;
+  }
+  if (valorComprado <= 0) {
+    for (const nota of NOTAS_FISCAIS) {
+      if (nota.origem !== "vibra" || nota.aircraftId !== aircraftId || !(nota.amount > 0)) continue;
+      valorComprado += nota.amount;
+    }
+    litrosComprados = fatias.reduce((soma, item) => soma + item.litros, 0);
   }
   const litrosConsumidos = fatias.reduce((soma, item) => soma + item.litros, 0);
   const valorDistribuido = fatias.reduce((soma, item) => soma + item.amount, 0);
@@ -457,6 +507,11 @@ export function legPosting(leg: Leg, trip: Itinerary): Posting {
   return leg.date > HOJE ? "previsto" : "realizado";
 }
 
+/** Rateio do voo: solicitante (padrão) ou participação de todos os sócios. */
+export function allocationDoVoo(trip: Itinerary): Allocation {
+  return trip.allocation === "participacao" ? "participacao" : "solicitante";
+}
+
 export function itineraryRoute(trip: Itinerary): string {
   const first = trip.legs[0];
   if (!first) return "";
@@ -643,6 +698,7 @@ function buildExpenses(): Expense[] {
         },
       ];
 
+      const rateio = allocationDoVoo(trip);
       for (const item of items) {
         if (item.amount <= 0) continue;
         expenses.push({
@@ -656,8 +712,8 @@ function buildExpenses(): Expense[] {
           description: item.description,
           vendor: VENDORS[item.category],
           amount: item.amount,
-          allocation: "solicitante",
-          partnerId: trip.requestedBy,
+          allocation: rateio,
+          partnerId: rateio === "solicitante" ? trip.requestedBy : undefined,
           posting,
         });
       }
@@ -667,6 +723,8 @@ function buildExpenses(): Expense[] {
   for (const fatia of alocarTanqueCombustivel()) {
     const origem = aerodromoLabel(fatia.fromCity, fatia.fromIcao);
     const destino = aerodromoLabel(fatia.toCity, fatia.toIcao);
+    const trip = getBase().itineraries.find((item) => item.id === fatia.itineraryId);
+    const rateio = trip ? allocationDoVoo(trip) : "solicitante";
     expenses.push({
       id: `tanque-${fatia.legId}-${fatia.abastecimentoId}`,
       aircraftId: fatia.aircraftId,
@@ -678,8 +736,8 @@ function buildExpenses(): Expense[] {
       description: `Combustível (consumo) · ${origem} → ${destino} · ${fatia.litros.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L`,
       vendor: VENDORS.combustivel,
       amount: fatia.amount,
-      allocation: "solicitante",
-      partnerId: fatia.partnerId,
+      allocation: rateio,
+      partnerId: rateio === "solicitante" ? fatia.partnerId : undefined,
       posting: "realizado",
       origem: "consumo-tanque",
       abastecimentoId: fatia.abastecimentoId,
@@ -771,10 +829,11 @@ export function resolverRateioDespesa(expense: Expense): Expense {
     };
   }
 
+  const rateio = allocationDoVoo(casado.trip);
   return {
     ...expense,
-    allocation: "solicitante",
-    partnerId: casado.trip.requestedBy,
+    allocation: rateio,
+    partnerId: rateio === "solicitante" ? casado.trip.requestedBy : undefined,
     itineraryId: casado.trip.id,
     legId: casado.leg.id,
   };

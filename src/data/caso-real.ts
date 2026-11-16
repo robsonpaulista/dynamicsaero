@@ -1,5 +1,6 @@
 import caso from "@/data/caso-jsa.json";
 import notas from "@/data/notas-fiscais.json";
+import type { Aerodromo } from "@/data/aerodromos";
 import { CONTAS_PADRAO } from "@/data/plano-contas";
 import type {
   Aircraft,
@@ -19,6 +20,9 @@ import type {
 
 export const CONTAS: ContaPlano[] = CONTAS_PADRAO;
 
+/** Marca do seed importado dos PDFs — troca força recarregar a base remota. */
+export const SEED_OPERACAO = "pdf-etapas-traslado-participacao-v3";
+
 export const PARTNERS = caso.partners as Partner[];
 export const AIRCRAFT = caso.aircraft as Aircraft[];
 export const CREW = caso.crew as CrewMember[];
@@ -30,6 +34,16 @@ export const EXTRAS = caso.extras as Expense[];
 export const APORTES = caso.aportes as Aporte[];
 export const ROTAS = caso.rotas as Rota[];
 export const NOTAS_FISCAIS = notas as NotaFiscal[];
+
+const mapaAerodromosSeed =
+  caso.aerodromos && typeof caso.aerodromos === "object" && !Array.isArray(caso.aerodromos)
+    ? (caso.aerodromos as Record<string, string>)
+    : {};
+
+export const AERODROMOS_SEED: Aerodromo[] = Object.entries(mapaAerodromosSeed)
+  .map(([icao, cidade]) => ({ icao: icao.toUpperCase(), cidade: String(cidade) }))
+  .filter((item) => item.icao && item.cidade)
+  .sort((a, b) => a.icao.localeCompare(b.icao));
 
 /** Escala demo PS-JSA: terços do mês (Jadyel / Humberto / Ruan). */
 function escalasDemoPsjsa(): FaixaEscala[] {

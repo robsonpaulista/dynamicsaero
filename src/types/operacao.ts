@@ -171,6 +171,11 @@ export type Itinerary = {
   title: string;
   purpose: Purpose;
   requestedBy: string;
+  /**
+   * Como as despesas do voo entram no rateio.
+   * Padrão: solicitante (quem pediu). Use participação p/ traslado/frota comum.
+   */
+  allocation?: Allocation;
   passengers: string[];
   status: ItineraryStatus;
   note: string;

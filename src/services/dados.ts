@@ -1,4 +1,5 @@
 import {
+  AERODROMOS_SEED,
   AIRCRAFT,
   APORTES,
   CONTAS,
@@ -10,6 +11,7 @@ import {
   MAINTENANCE,
   PARTNERS,
   ROTAS,
+  SEED_OPERACAO,
   SEGUROS,
 } from "@/data/caso-real";
 import type { Aerodromo } from "@/data/aerodromos";
@@ -63,10 +65,11 @@ export const INITIAL_BASE: BaseDados = {
   escalas: ESCALAS,
   rotas: ROTAS,
   contas: CONTAS,
-  aerodromos: [],
+  aerodromos: AERODROMOS_SEED,
 };
 
 const STORAGE_KEY = "dynamics-aero-dados-v1";
+const SEED_KEY = "dynamics-aero-seed-v1";
 
 let current: BaseDados = INITIAL_BASE;
 let hidratado = false;
@@ -187,12 +190,20 @@ export async function hidratarBanco(): Promise<void> {
   if (typeof window === "undefined" || hidratado || carregando) return;
   carregando = true;
   try {
-    const remoto = lerBase(await carregarOperacao());
-    if (remoto && remoto.aircraft.length > 0) {
-      current = remoto;
-    } else {
+    const seedAtual = window.localStorage.getItem(SEED_KEY);
+    const seedNovo = seedAtual !== SEED_OPERACAO;
+    if (seedNovo) {
       current = INITIAL_BASE;
       await gravarOperacao(INITIAL_BASE);
+      window.localStorage.setItem(SEED_KEY, SEED_OPERACAO);
+    } else {
+      const remoto = lerBase(await carregarOperacao());
+      if (remoto && remoto.aircraft.length > 0) {
+        current = remoto;
+      } else {
+        current = INITIAL_BASE;
+        await gravarOperacao(INITIAL_BASE);
+      }
     }
     erroBanco = null;
     window.localStorage.removeItem(STORAGE_KEY);
@@ -208,6 +219,7 @@ export function restaurarDemonstracao(): void {
   current = INITIAL_BASE;
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.setItem(SEED_KEY, SEED_OPERACAO);
   }
   hidratado = true;
   persistir(current);

@@ -1,4 +1,5 @@
 import {
+  ClipboardCheck,
   LayoutDashboard,
   MessageCircle,
   PieChart,
@@ -24,6 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/itinerarios", title: "Voos", icon: Route },
   { href: "/rotas", title: "Rotas", icon: Signpost },
   { href: "/despesas", title: "Despesas", icon: Receipt },
+  { href: "/conferencia", title: "Conferência", icon: ClipboardCheck },
   { href: "/pessoal", title: "Sócios", icon: Users },
   { href: "/manutencao", title: "Manutenção", icon: Wrench },
   { href: "/rateio", title: "Rateio", icon: PieChart },
