@@ -74,13 +74,56 @@ export const INITIAL_BASE: BaseDados = {
 
 const STORAGE_KEY = "dynamics-aero-dados-v1";
 const SEED_KEY = "dynamics-aero-seed-v1";
+const ALOCACOES_VIBRA_KEY = "dynamics-aero-alocacoes-vibra-v1";
 
 let current: BaseDados = INITIAL_BASE;
 let hidratado = false;
 let carregando = false;
 let erroBanco: string | null = null;
 let geracao = 0;
+const pendenciasAntesHidratacao: Array<(atual: BaseDados) => BaseDados> = [];
 const listeners = new Set<() => void>();
+
+function salvarAlocacoesLocais(alocacoes: AlocacaoVibra[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ALOCACOES_VIBRA_KEY, JSON.stringify(alocacoes));
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function lerAlocacoesLocais(): AlocacaoVibra[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const bruto = window.localStorage.getItem(ALOCACOES_VIBRA_KEY);
+    if (!bruto) return [];
+    const parsed: unknown = JSON.parse(bruto);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        if (typeof item !== "object" || item === null) return null;
+        const registro = item as Record<string, unknown>;
+        const legId = String(registro.legId ?? "").trim();
+        const abastecimentoId = String(registro.abastecimentoId ?? "").trim();
+        if (!legId || !abastecimentoId) return null;
+        return { legId, abastecimentoId };
+      })
+      .filter((item): item is AlocacaoVibra => item != null);
+  } catch {
+    return [];
+  }
+}
+
+function mesclarAlocacoes(
+  primario: AlocacaoVibra[] | undefined,
+  secundario: AlocacaoVibra[] | undefined,
+): AlocacaoVibra[] {
+  const mapa = new Map<string, AlocacaoVibra>();
+  for (const item of secundario ?? []) mapa.set(item.legId, item);
+  for (const item of primario ?? []) mapa.set(item.legId, item);
+  return [...mapa.values()];
+}
 
 export function getPronto(): boolean {
   return hidratado;
@@ -114,6 +157,7 @@ function mensagem(error: unknown): string {
 }
 
 function persistir(next: BaseDados): void {
+  salvarAlocacoesLocais(next.alocacoesVibra ?? []);
   const marca = ++geracao;
   void gravarOperacao(next)
     .then(() => {
@@ -129,8 +173,15 @@ function persistir(next: BaseDados): void {
 }
 
 export function updateBase(recipe: (atual: BaseDados) => BaseDados): void {
+  if (!hidratado) {
+    pendenciasAntesHidratacao.push(recipe);
+    current = recipe(current);
+    salvarAlocacoesLocais(current.alocacoesVibra ?? []);
+    emit();
+    return;
+  }
   current = recipe(current);
-  if (hidratado) persistir(current);
+  persistir(current);
   emit();
 }
 
@@ -206,21 +257,46 @@ export async function hidratarBanco(): Promise<void> {
     const remotoBruto = await carregarOperacao().catch(() => null);
     const remoto = remotoBruto != null ? lerBase(remotoBruto) : null;
 
+    const alocacoesLocais = lerAlocacoesLocais();
     if (seedNovo) {
       // Novo seed de dados (itinerários etc.), mas preserva alocações manuais Vibra.
-      const alocacoesPreservadas = remoto?.alocacoesVibra ?? [];
+      const alocacoesPreservadas = mesclarAlocacoes(remoto?.alocacoesVibra, alocacoesLocais);
       current = {
         ...INITIAL_BASE,
         alocacoesVibra: alocacoesPreservadas,
       };
+      salvarAlocacoesLocais(alocacoesPreservadas);
       await gravarOperacao(current);
       window.localStorage.setItem(SEED_KEY, SEED_OPERACAO);
     } else if (remoto && remoto.aircraft.length > 0) {
-      current = remoto;
+      const alocacoesMescladas = mesclarAlocacoes(remoto.alocacoesVibra, alocacoesLocais);
+      current = {
+        ...remoto,
+        alocacoesVibra: alocacoesMescladas,
+      };
+      const remotoSerial = JSON.stringify(remoto.alocacoesVibra ?? []);
+      const mescladoSerial = JSON.stringify(alocacoesMescladas);
+      if (mescladoSerial !== remotoSerial) {
+        await gravarOperacao(current);
+      }
+      salvarAlocacoesLocais(alocacoesMescladas);
     } else {
-      current = INITIAL_BASE;
-      await gravarOperacao(INITIAL_BASE);
+      current = {
+        ...INITIAL_BASE,
+        alocacoesVibra: alocacoesLocais,
+      };
+      salvarAlocacoesLocais(alocacoesLocais);
+      await gravarOperacao(current);
     }
+
+    if (pendenciasAntesHidratacao.length > 0) {
+      for (const recipe of pendenciasAntesHidratacao.splice(0)) {
+        current = recipe(current);
+      }
+      salvarAlocacoesLocais(current.alocacoesVibra ?? []);
+      await gravarOperacao(current);
+    }
+
     erroBanco = null;
     window.localStorage.removeItem(STORAGE_KEY);
   } catch (error: unknown) {
@@ -235,6 +311,7 @@ export function restaurarDemonstracao(): void {
   current = INITIAL_BASE;
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(ALOCACOES_VIBRA_KEY);
     window.localStorage.setItem(SEED_KEY, SEED_OPERACAO);
   }
   hidratado = true;

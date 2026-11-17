@@ -4,9 +4,42 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useDados } from "@/hooks/use-dados";
 import { cn } from "@/lib/format";
-import { corDoSocio, STATUS_CLASS, STATUS_LABEL } from "@/lib/labels";
+import { corDoSocio, fundoCalendarioSocio, STATUS_CLASS, STATUS_LABEL } from "@/lib/labels";
 import { formatPercent } from "@/lib/format";
 import { getAircraft, partnerShort } from "@/services/operacao";
+
+export function PilulaSocio({
+  partnerId,
+  children,
+  title,
+}: {
+  partnerId?: string | null;
+  children?: ReactNode;
+  title?: string;
+}) {
+  if (!partnerId) {
+    return (
+      <span
+        title={title}
+        className="inline-flex items-center rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[12px] font-bold text-[#334155]"
+      >
+        {children ?? "—"}
+      </span>
+    );
+  }
+  return (
+    <span
+      title={title}
+      className="inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-bold"
+      style={{
+        background: fundoCalendarioSocio(partnerId),
+        color: corDoSocio(partnerId),
+      }}
+    >
+      {children ?? partnerShort(partnerId)}
+    </span>
+  );
+}
 
 export function PageStack({ children }: { children: ReactNode }) {
   return (

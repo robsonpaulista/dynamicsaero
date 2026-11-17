@@ -142,7 +142,13 @@ async function lerMembros(): Promise<UsuarioAcesso[]> {
 async function membroDoUsuario(userId: string): Promise<UsuarioAcesso | null> {
   const admin = clienteServico();
   const { data, error } = await admin.rpc("membro_por_usuario_aero", { uid: userId });
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(
+      /fetch failed|failed to fetch|network|timeout/i.test(error.message)
+        ? "Não foi possível falar com o banco agora. Tente de novo em instantes."
+        : error.message,
+    );
+  }
   return ehUsuario(data) ? data : null;
 }
 

@@ -1,6 +1,6 @@
 import { formatBRL, formatDate, formatHours } from "@/lib/format";
 import { HOJE } from "@/data/calendario";
-import { corDoSocio } from "@/lib/labels";
+import { corDoSocio, fundoCalendarioSocio } from "@/lib/labels";
 import type {
   ConferenciaLinha,
   ConferenciaPrestacao,
@@ -13,6 +13,21 @@ import type {
 import { getAircraft, monthsLabel, partnerShort, type MonthFilter } from "@/services/operacao";
 
 type JsPdf = import("jspdf").jsPDF;
+
+/** Paleta Evolux da aplicação (carvão + amarelo + cinzas). */
+const COR = {
+  carvao: [74, 74, 73] as [number, number, number],
+  amarelo: [245, 196, 0] as [number, number, number],
+  amareloForte: [255, 210, 74] as [number, number, number],
+  soft: [255, 248, 224] as [number, number, number],
+  bg: [247, 247, 245] as [number, number, number],
+  texto: [74, 74, 73] as [number, number, number],
+  muted: [112, 112, 112] as [number, number, number],
+  linha: [230, 230, 230] as [number, number, number],
+  branco: [255, 255, 255] as [number, number, number],
+};
+
+const ALTURA_CABECALHO = 16;
 
 function escopo(aircraftId: string): string {
   if (aircraftId === "todas") return "Toda a operação";
@@ -93,15 +108,30 @@ function rotuloStatus(status: ConferenciaVibraStatus): string {
 function corStatus(status: ConferenciaVibraStatus): [number, number, number] {
   switch (status) {
     case "sem_voo":
-      return [239, 68, 68];
+      return [185, 28, 28];
     case "sem_abast":
-      return [113, 113, 113];
+      return COR.muted;
     case "vizinho":
-      return [47, 111, 237];
+      return [29, 78, 216];
     case "atencao":
-      return [139, 94, 60];
+      return [194, 65, 12];
     default:
-      return [22, 128, 80];
+      return [21, 128, 61];
+  }
+}
+
+function fundoStatus(status: ConferenciaVibraStatus): [number, number, number] {
+  switch (status) {
+    case "sem_voo":
+      return [254, 242, 242];
+    case "sem_abast":
+      return [247, 248, 249];
+    case "vizinho":
+      return [239, 246, 255];
+    case "atencao":
+      return [255, 247, 237];
+    default:
+      return [236, 253, 243];
   }
 }
 
@@ -144,6 +174,8 @@ type LinhaCelula = {
   texto: string;
   bold?: boolean;
   cor?: [number, number, number];
+  fundo?: [number, number, number];
+  pill?: boolean;
   size?: number;
   /** Espaço extra abaixo desta linha (mm). */
   gapApos?: number;
@@ -172,24 +204,57 @@ async function criarDoc(): Promise<JsPdf> {
   return new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 }
 
+/** Marca “A” do wordmark (viewBox 32×32), alinhada ao shell. */
+function desenharLogo(doc: JsPdf, x: number, y: number, tamanho = 8): void {
+  const s = tamanho / 32;
+  const px = (vx: number) => x + vx * s;
+  const py = (vy: number) => y + vy * s;
+  const r = 8 * s;
+
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(px(0.75), py(0.75), 30.5 * s, 30.5 * s, r, r, "D");
+
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(Math.max(0.45, 1.7 * s));
+  doc.line(px(9.2), py(23.2), px(16), py(8.4));
+  doc.line(px(16), py(8.4), px(22.8), py(23.2));
+
+  doc.setDrawColor(...COR.amarelo);
+  doc.setLineWidth(Math.max(0.45, 1.7 * s));
+  doc.line(px(12), py(17.4), px(20), py(17.4));
+}
+
 function cabecalhoPagina(
   doc: JsPdf,
   tituloContinuidade: string | null,
   margem: number,
 ): void {
   const largura = doc.internal.pageSize.getWidth();
-  doc.setFillColor(235, 180, 2);
-  doc.rect(0, 0, largura, 14, "F");
+  doc.setFillColor(...COR.carvao);
+  doc.rect(0, 0, largura, ALTURA_CABECALHO, "F");
+  doc.setFillColor(...COR.amarelo);
+  doc.rect(0, ALTURA_CABECALHO - 1.1, largura, 1.1, "F");
+
+  const logoSize = 9;
+  const logoY = (ALTURA_CABECALHO - 1.1 - logoSize) / 2;
+  desenharLogo(doc, margem, logoY, logoSize);
+
+  const textoX = margem + logoSize + 3;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(7);
   doc.setTextColor(255, 255, 255);
-  doc.text("DYNAMICS AERO", margem, 9);
+  doc.text("DYNAMICS", textoX, 6.2);
+  doc.setFontSize(11);
+  doc.text("AERO", textoX, 11.2);
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text(limpar(tituloContinuidade ?? "Ventura Aviação"), largura - margem, 9, {
+  doc.setTextColor(255, 255, 255);
+  doc.text(limpar(tituloContinuidade ?? "Ventura Aviação"), largura - margem, 9.6, {
     align: "right",
   });
-  doc.setTextColor(51, 51, 51);
+  doc.setTextColor(...COR.texto);
 }
 
 function rodape(doc: JsPdf, margem: number): void {
@@ -198,13 +263,20 @@ function rodape(doc: JsPdf, margem: number): void {
   const paginas = doc.getNumberOfPages();
   for (let pagina = 1; pagina <= paginas; pagina += 1) {
     doc.setPage(pagina);
+    doc.setDrawColor(...COR.amarelo);
+    doc.setLineWidth(0.6);
+    doc.line(margem, altura - 9, largura - margem, altura - 9);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor(113, 113, 113);
-    doc.text(`Página ${pagina} de ${paginas}`, largura - margem, altura - 6, {
+    doc.setTextColor(...COR.muted);
+    doc.text(`Página ${pagina} de ${paginas}`, largura - margem, altura - 5, {
       align: "right",
     });
   }
+}
+
+function yAposCabecalho(): number {
+  return ALTURA_CABECALHO + 6;
 }
 
 function hexRgb(cor: string): [number, number, number] {
@@ -229,11 +301,13 @@ function desenharCards(
   const cardH = 22;
   cards.forEach((card, index) => {
     const x = margem + index * (cardW + gap);
-    doc.setFillColor(247, 248, 249);
-    doc.roundedRect(x, y, cardW, cardH, 2, 2, "F");
+    doc.setFillColor(...COR.bg);
+    doc.setDrawColor(...COR.linha);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(x, y, cardW, cardH, 2, 2, "FD");
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
-    doc.setTextColor(113, 113, 113);
+    doc.setTextColor(...COR.muted);
     doc.text(limpar(card.titulo), x + 3, y + 5.5);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
@@ -281,18 +355,18 @@ function desenharCardsSocios(
     if (y + necessario <= alturaPagina - 12) return y;
     doc.addPage();
     cabecalhoPagina(doc, tituloPagina, margem);
-    return 20;
+    return yAposCabecalho();
   };
 
   y = garantir(8);
-  doc.setDrawColor(238, 238, 238);
+  doc.setDrawColor(...COR.linha);
   doc.setLineWidth(0.3);
   doc.line(margem, y, margem + util, y);
   y += 5;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(113, 113, 113);
-  doc.text("TOTAIS POR SÓCIO", margem, y);
+  doc.setTextColor(...COR.muted);
+  doc.text("TOTAIS POR SOCIO", margem, y);
   y += 4;
 
   cards.forEach((item, index) => {
@@ -303,25 +377,27 @@ function desenharCardsSocios(
     const x = margem + col * (cardW + gap);
     const ativo = filtroSocio === item.partnerId;
     const rgb = hexRgb(corDoSocio(item.partnerId));
+    const soft = hexRgb(fundoCalendarioSocio(item.partnerId));
+    const nome = limpar(partnerShort(item.partnerId));
 
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(ativo ? rgb[0] : 238, ativo ? rgb[1] : 240, ativo ? rgb[2] : 243);
+    doc.setFillColor(...COR.branco);
+    doc.setDrawColor(ativo ? rgb[0] : COR.linha[0], ativo ? rgb[1] : COR.linha[1], ativo ? rgb[2] : COR.linha[2]);
     doc.setLineWidth(ativo ? 1.1 : 0.4);
     doc.roundedRect(x, y, cardW, cardH, 2, 2, "FD");
 
-    doc.setFillColor(rgb[0], rgb[1], rgb[2]);
-    doc.circle(x + 4.2, y + 5.2, 1.2, "F");
-
+    const pillW = Math.min(cardW * 0.42, doc.getTextWidth(nome) + 5);
+    doc.setFillColor(soft[0], soft[1], soft[2]);
+    doc.roundedRect(x + 2.5, y + 2.4, pillW, 5.2, 1.2, 1.2, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(33, 33, 33);
-    doc.text(limpar(partnerShort(item.partnerId)), x + 7, y + 6);
+    doc.setFontSize(8);
+    doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+    doc.text(nome, x + 4.2, y + 6);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.setTextColor(113, 113, 113);
+    doc.setTextColor(...COR.muted);
     doc.text(
-      limpar(`${item.trechos} trecho(s)${ativo ? " · filtrando" : ""}`),
+      limpar(`${item.trechos} trecho(s)${ativo ? " | filtrando" : ""}`),
       x + cardW - 3,
       y + 6,
       { align: "right" },
@@ -330,15 +406,15 @@ function desenharCardsSocios(
     item.linhas.forEach((linha, i) => {
       const py = y + 12 + i * 4.8;
       if (i === item.linhas.length - 1) {
-        doc.setDrawColor(238, 238, 238);
+        doc.setDrawColor(...COR.linha);
         doc.setLineWidth(0.3);
         doc.line(x + 3, py - 2.2, x + cardW - 3, py - 2.2);
       }
       doc.setFont("helvetica", linha.bold ? "bold" : "normal");
       doc.setFontSize(7.5);
-      doc.setTextColor(linha.bold ? 33 : 113, linha.bold ? 33 : 113, linha.bold ? 33 : 113);
+      doc.setTextColor(...(linha.bold ? COR.texto : COR.muted));
       doc.text(linha.label, x + 3, py);
-      doc.setTextColor(33, 33, 33);
+      doc.setTextColor(...COR.texto);
       doc.text(limpar(linha.valor), x + cardW - 3, py, { align: "right" });
     });
 
@@ -347,8 +423,8 @@ function desenharCardsSocios(
     }
   });
 
-  doc.setTextColor(51, 51, 51);
-  doc.setDrawColor(0);
+  doc.setTextColor(...COR.texto);
+  doc.setDrawColor(...COR.linha);
   doc.setLineWidth(0.2);
   return y + 2;
 }
@@ -401,11 +477,13 @@ function desenharCabecalhoTabela(
 ): number {
   const util = colunas.reduce((s, c) => s + c.largura, 0);
   const altura = alturaLinha + 3;
-  doc.setFillColor(255, 248, 214);
+  doc.setFillColor(...COR.soft);
   doc.rect(margem, y - 3.2, util, altura, "F");
+  doc.setFillColor(...COR.amarelo);
+  doc.rect(margem, y - 3.2 + altura - 0.7, util, 0.7, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
-  doc.setTextColor(51, 51, 51);
+  doc.setTextColor(...COR.texto);
   let x = margem;
   colunas.forEach((col) => {
     const texto = limpar(col.titulo);
@@ -444,8 +522,15 @@ function desenharLinhaTabela(
       const texto = limpar(linha.texto).trim();
       if (texto) {
         doc.setFont("helvetica", linha.bold ? "bold" : "normal");
-        doc.setFontSize(linha.size ?? 7.5);
-        const cor = linha.cor ?? [51, 51, 51];
+        const size = linha.size ?? 7.5;
+        doc.setFontSize(size);
+        const cor = linha.cor ?? COR.texto;
+        if (linha.pill && linha.fundo && col.align !== "right") {
+          const textoW = doc.getTextWidth(texto);
+          const pillH = Math.max(3.6, size * 0.55);
+          doc.setFillColor(linha.fundo[0], linha.fundo[1], linha.fundo[2]);
+          doc.roundedRect(x + pad - 0.6, py - pillH + 1.1, textoW + 2.4, pillH, 0.9, 0.9, "F");
+        }
         doc.setTextColor(cor[0], cor[1], cor[2]);
         if (col.align === "right") {
           doc.text(texto, x + col.largura - pad, py, { align: "right" });
@@ -474,7 +559,7 @@ function garantirEspaco(
   if (y + necessario <= altura - 12) return y;
   doc.addPage();
   cabecalhoPagina(doc, titulo, margem);
-  let ny = 20;
+  let ny = yAposCabecalho();
   ny = desenharCabecalhoTabela(doc, ny, margem, colunas, alturaLinha);
   return ny;
 }
@@ -516,19 +601,32 @@ function blocoVibra(linha: ConferenciaVibraLinha, colunas: ColunaPdf[], doc: JsP
       texto: rotuloStatusLinha(linha.status),
       bold: true,
       cor: corStatus(linha.status),
+      fundo: fundoStatus(linha.status),
+      pill: true,
       size: 7.5,
+      gapApos: 0.8,
     },
   ];
   if (linha.deltaLitrosGrupo != null) {
     checagem.push({
       texto: `D ${formatDelta(linha.deltaLitrosGrupo)} | calc. ${formatLitros(linha.litrosGrupoCalc)}`,
       size: 6.5,
-      cor: [113, 113, 113],
+      cor: COR.muted,
     });
   }
   for (const pedaco of quebrar(doc, linha.detalhe, (colunas[8]?.largura ?? 40) - 3, 3)) {
-    if (pedaco) checagem.push({ texto: pedaco, size: 6.5, cor: [113, 113, 113] });
+    if (pedaco) checagem.push({ texto: pedaco, size: 6.5, cor: COR.muted });
   }
+
+  const socioTexto = linha.rateioParticipacao
+    ? "Participacao"
+    : partnerShort(linha.partnerId);
+  const socioCor = linha.rateioParticipacao
+    ? COR.texto
+    : hexRgb(corDoSocio(linha.partnerId));
+  const socioFundo = linha.rateioParticipacao
+    ? COR.bg
+    : hexRgb(fundoCalendarioSocio(linha.partnerId));
 
   return [
     { linhas: [{ texto: formatDate(linha.date), bold: true }] },
@@ -551,17 +649,18 @@ function blocoVibra(linha: ConferenciaVibraLinha, colunas: ColunaPdf[], doc: JsP
       linhas: [
         {
           texto: linha.litrosCalc > 0 ? formatLitros(linha.litrosCalc) : "-",
-          cor: [113, 113, 113],
+          cor: COR.muted,
         },
       ],
     },
     {
       linhas: [
         {
-          texto: linha.rateioParticipacao
-            ? "Participacao"
-            : partnerShort(linha.partnerId),
+          texto: socioTexto,
           bold: true,
+          cor: socioCor,
+          fundo: socioFundo,
+          pill: true,
         },
       ],
     },
@@ -630,21 +729,21 @@ export async function baixarPdfConferenciaVibra(params: {
   ];
 
   cabecalhoPagina(doc, null, margem);
-  let y = 22;
+  let y = yAposCabecalho();
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.setTextColor(33, 33, 33);
+  doc.setTextColor(...COR.texto);
   doc.text(limpar(titulo), margem, y);
   y += 6;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(113, 113, 113);
+  doc.setTextColor(...COR.muted);
   doc.text(limpar(subtitulo), margem, y);
   y += 7;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(113, 113, 113);
+  doc.setTextColor(...COR.muted);
   doc.text("CHECAGEM | VOO x ABASTECIMENTO", margem, y);
   y += 4;
 
@@ -829,21 +928,21 @@ export async function baixarPdfConferenciaPrestacao(params: {
     Math.round(linhas.reduce((soma, linha) => soma + linha.taxasCalculo, 0) * 100) / 100;
 
   cabecalhoPagina(doc, null, margem);
-  let y = 22;
+  let y = yAposCabecalho();
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.setTextColor(33, 33, 33);
+  doc.setTextColor(...COR.texto);
   doc.text(limpar(titulo), margem, y);
   y += 6;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(113, 113, 113);
+  doc.setTextColor(...COR.muted);
   doc.text(limpar(subtitulo), margem, y);
   y += 7;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(113, 113, 113);
+  doc.setTextColor(...COR.muted);
   doc.text("DESPESAS | NOTAS x TRECHOS", margem, y);
   y += 4;
 
@@ -915,13 +1014,20 @@ export async function baixarPdfConferenciaPrestacao(params: {
     },
     {
       linhas: [
-        {
-          texto:
+        (() => {
+          const texto =
             linha.rateioParticipacao && !filtroSocio
               ? rotuloParticipacao(linha.aircraftId)
-              : `${partnerShort(linha.partnerId)}${linha.rateioParticipacao ? " · cota" : ""}`,
-          bold: true,
-        },
+              : `${partnerShort(linha.partnerId)}${linha.rateioParticipacao ? " | cota" : ""}`;
+          const comSocio = !(linha.rateioParticipacao && !filtroSocio);
+          return {
+            texto,
+            bold: true,
+            cor: comSocio ? hexRgb(corDoSocio(linha.partnerId)) : COR.texto,
+            fundo: comSocio ? hexRgb(fundoCalendarioSocio(linha.partnerId)) : COR.bg,
+            pill: true,
+          } satisfies LinhaCelula;
+        })(),
       ],
     },
     {

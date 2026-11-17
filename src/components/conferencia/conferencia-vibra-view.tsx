@@ -7,6 +7,7 @@ import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   PageStack,
+  PilulaSocio,
   TableWrap,
   tableClass,
   tdClass,
@@ -186,10 +187,23 @@ function linhaTemSocio(linha: ConferenciaVibraLinha, socioId: string): boolean {
   return linha.partnerId === socioId;
 }
 
+type FiltroAbastecimento = "todos" | "com" | "sem";
+
+const FILTROS_ABAST: { id: FiltroAbastecimento; rotulo: string }[] = [
+  { id: "todos", rotulo: "Todos" },
+  { id: "com", rotulo: "Com abastecimento" },
+  { id: "sem", rotulo: "Sem abastecimento" },
+];
+
+function linhaTemAbastecimento(linha: ConferenciaVibraLinha): boolean {
+  return linha.abastecimentoId != null;
+}
+
 export function ConferenciaVibraView() {
   const base = useDados();
   const { aircraftId, months, partnerId } = useOperacao();
   const [filtroSocio, setFiltroSocio] = useState<string | null>(null);
+  const [filtroAbast, setFiltroAbast] = useState<FiltroAbastecimento>("todos");
   const [ordenacao, setOrdenacao] = useState<Ordenacao>({ coluna: "data", ordem: "asc" });
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [modalAlocar, setModalAlocar] = useState<boolean>(false);
@@ -198,6 +212,7 @@ export function ConferenciaVibraView() {
 
   useEffect(() => {
     setFiltroSocio(null);
+    setFiltroAbast("todos");
     setSelecionados(new Set());
     setModalAlocar(false);
   }, [aircraftId, months, partnerId]);
@@ -226,9 +241,13 @@ export function ConferenciaVibraView() {
   );
 
   const linhasFiltradas = useMemo(() => {
-    if (!filtroSocio) return dados.linhas;
-    return dados.linhas.filter((linha) => linhaTemSocio(linha, filtroSocio));
-  }, [dados.linhas, filtroSocio]);
+    return dados.linhas.filter((linha) => {
+      if (filtroSocio && !linhaTemSocio(linha, filtroSocio)) return false;
+      if (filtroAbast === "com" && !linhaTemAbastecimento(linha)) return false;
+      if (filtroAbast === "sem" && linhaTemAbastecimento(linha)) return false;
+      return true;
+    });
+  }, [dados.linhas, filtroSocio, filtroAbast]);
 
   const linhas = useMemo(
     () => ordenarLinhas(linhasFiltradas, ordenacao),
@@ -473,13 +492,50 @@ export function ConferenciaVibraView() {
             })}
           </ul>
         ) : null}
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#EEEEEE] pt-4">
+          <p className="mr-1 text-[11px] font-bold tracking-wide text-tse-muted uppercase">
+            Abastecimento
+          </p>
+          {FILTROS_ABAST.map((item) => {
+            const ativo = filtroAbast === item.id;
+            const qtd =
+              item.id === "com"
+                ? alocados
+                : item.id === "sem"
+                  ? dados.semAbast
+                  : dados.linhas.length;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={ativo}
+                onClick={() => setFiltroAbast(item.id)}
+                className={`rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
+                  ativo
+                    ? "bg-tse-olive text-tse-text"
+                    : "bg-[#F2F2F2] text-tse-muted hover:text-tse-text"
+                }`}
+              >
+                {item.rotulo}
+                <span className="ml-1.5 tabular-nums opacity-70">{qtd}</span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       {linhas.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-tse-border bg-white px-4 py-8 text-center text-[13px] text-tse-muted">
-          {filtroSocio
-            ? `Nenhum trecho de ${partnerShort(filtroSocio)} neste recorte.`
-            : "Nenhum trecho neste recorte."}
+          {filtroSocio && filtroAbast !== "todos"
+            ? `Nenhum trecho ${filtroAbast === "com" ? "com" : "sem"} abastecimento de ${partnerShort(filtroSocio)} neste recorte.`
+            : filtroSocio
+              ? `Nenhum trecho de ${partnerShort(filtroSocio)} neste recorte.`
+              : filtroAbast === "com"
+                ? "Nenhum trecho com abastecimento neste recorte."
+                : filtroAbast === "sem"
+                  ? "Nenhum trecho sem abastecimento neste recorte."
+                  : "Nenhum trecho neste recorte."}
         </p>
       ) : (
         <TableWrap>
@@ -587,14 +643,13 @@ export function ConferenciaVibraView() {
                       {linha.litrosCalc > 0 ? formatLitros(linha.litrosCalc) : "—"}
                     </td>
                     <td className={tdClass}>
-                      <span className="inline-flex items-center gap-1.5 font-semibold">
-                        <span
-                          className="size-1.5 rounded-full"
-                          style={{ background: corDoSocio(linha.partnerId) }}
-                          aria-hidden
-                        />
-                        {rotuloSocio(linha)}
-                      </span>
+                      {linha.rateioParticipacao ? (
+                        <PilulaSocio title="Traslado · rateio entre todos os sócios">
+                          {rotuloSocio(linha)}
+                        </PilulaSocio>
+                      ) : (
+                        <PilulaSocio partnerId={linha.partnerId}>{rotuloSocio(linha)}</PilulaSocio>
+                      )}
                     </td>
                     <td className={tdClass}>
                       {linha.referencia ? (

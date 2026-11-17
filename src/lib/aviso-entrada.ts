@@ -8,6 +8,7 @@ const AVISOS: Record<string, string> = {
   vinculo: "Não foi possível vincular o acesso à operação.",
   uso: "Esse e-mail já está na operação. Entre com a senha.",
   localizar: "Esse e-mail já está em uso e não deu para localizar a conta.",
+  rede: "Não foi possível falar com o banco agora. Entre de novo em instantes.",
   geral: "Não foi possível concluir o acesso.",
 };
 
@@ -27,5 +28,8 @@ export function codigoAviso(falha: string): string {
   if (texto.includes("vincular")) return "vinculo";
   if (texto.includes("já está na operação")) return "uso";
   if (texto.includes("localizar")) return "localizar";
+  if (texto.includes("banco agora") || texto.includes("fetch failed") || texto.includes("rede")) {
+    return "rede";
+  }
   return "geral";
 }

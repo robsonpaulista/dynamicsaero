@@ -7,6 +7,7 @@ import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   PageStack,
+  PilulaSocio,
   TableWrap,
   tableClass,
   tdClass,
@@ -470,21 +471,17 @@ export function ConferenciaView() {
                   </td>
                   <td className={tdClass}>
                     {linha.rateioParticipacao && !filtroSocio ? (
-                      <span className="font-semibold" title="Traslado · rateio entre todos os sócios">
+                      <PilulaSocio title="Traslado · rateio entre todos os sócios">
                         {rotuloParticipacao(linha.aircraftId)}
-                      </span>
+                      </PilulaSocio>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 font-semibold">
-                        <span
-                          className="size-1.5 rounded-full"
-                          style={{ background: corDoSocio(linha.partnerId) }}
-                          aria-hidden
-                        />
+                      <PilulaSocio
+                        partnerId={linha.partnerId}
+                        title={linha.rateioParticipacao ? "Cota de participação" : undefined}
+                      >
                         {partnerShort(linha.partnerId)}
-                        {linha.rateioParticipacao ? (
-                          <span className="text-[11px] font-normal text-tse-muted">· cota</span>
-                        ) : null}
-                      </span>
+                        {linha.rateioParticipacao ? " · cota" : ""}
+                      </PilulaSocio>
                     )}
                   </td>
                   <td className={`${tdClass} text-right tabular-nums font-semibold`}>
