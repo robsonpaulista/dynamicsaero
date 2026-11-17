@@ -226,7 +226,7 @@ export function ItinerariosView() {
                   className={cn(
                     "rounded-full px-3.5 py-1.5 text-[13px] font-bold",
                     purpose === item.id
-                      ? "bg-[#6B5B95] text-white"
+                      ? "bg-tse-olive text-tse-text"
                       : "border border-[#EEF0F3] bg-white text-tse-muted",
                   )}
                 >

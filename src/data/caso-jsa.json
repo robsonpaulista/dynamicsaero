@@ -159,6 +159,7 @@
           "catering": 0,
           "commanderId": "humberto",
           "posting": "realizado",
+          "ordem": 1,
           "copilotId": "jadyel"
         }
       ],
@@ -190,6 +191,7 @@
           "catering": 0,
           "commanderId": "humberto",
           "posting": "realizado",
+          "ordem": 2,
           "copilotId": "jadyel"
         }
       ],
@@ -221,6 +223,7 @@
           "catering": 0,
           "commanderId": "humberto",
           "posting": "realizado",
+          "ordem": 3,
           "copilotId": "jadyel"
         }
       ],
@@ -252,6 +255,7 @@
           "catering": 0,
           "commanderId": "humberto",
           "posting": "realizado",
+          "ordem": 4,
           "copilotId": "jadyel"
         }
       ]
@@ -282,6 +286,7 @@
           "catering": 0,
           "commanderId": "humberto",
           "posting": "realizado",
+          "ordem": 5,
           "copilotId": "jadyel"
         }
       ]
@@ -312,6 +317,7 @@
           "catering": 0,
           "commanderId": "humberto",
           "posting": "realizado",
+          "ordem": 6,
           "copilotId": "jadyel"
         }
       ]
@@ -342,6 +348,7 @@
           "catering": 0,
           "commanderId": "humberto",
           "posting": "realizado",
+          "ordem": 7,
           "copilotId": "jadyel"
         }
       ]
@@ -371,7 +378,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 49
         }
       ]
     },
@@ -400,7 +408,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 50
         }
       ]
     },
@@ -429,7 +438,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 51
         }
       ]
     },
@@ -458,7 +468,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 52
         }
       ]
     },
@@ -487,7 +498,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 53
         }
       ]
     },
@@ -516,7 +528,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 8
         }
       ]
     },
@@ -545,7 +558,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 9
         }
       ]
     },
@@ -574,7 +588,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 10
         }
       ]
     },
@@ -603,7 +618,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 11
         }
       ]
     },
@@ -632,7 +648,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 12
         }
       ]
     },
@@ -661,7 +678,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 54
         }
       ]
     },
@@ -690,7 +708,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 55
         }
       ]
     },
@@ -719,36 +738,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-01-31-21",
-      "aircraftId": "psjsa",
-      "title": "Sebastião Leal → Teresina",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-21",
-          "date": "2026-01-31",
-          "depart": "08:00",
-          "arrive": "08:53",
-          "fromIcao": "SWUV",
-          "toIcao": "SBTE",
-          "fromCity": "Sebastião Leal",
-          "toCity": "Teresina",
-          "blockHours": 0.88,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 56
         }
       ]
     },
@@ -777,7 +768,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 13
         }
       ]
     },
@@ -806,7 +798,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 14
         }
       ]
     },
@@ -835,7 +828,38 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 15
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-01-31-21",
+      "aircraftId": "psjsa",
+      "title": "Sebastião Leal → Teresina",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-21",
+          "date": "2026-01-31",
+          "depart": "08:00",
+          "arrive": "08:53",
+          "fromIcao": "SWUV",
+          "toIcao": "SBTE",
+          "fromCity": "Sebastião Leal",
+          "toCity": "Teresina",
+          "blockHours": 0.88,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 57
         }
       ]
     },
@@ -864,7 +888,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 190
         }
       ]
     },
@@ -893,7 +918,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 191
         }
       ]
     },
@@ -922,7 +948,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 16
         }
       ]
     },
@@ -951,7 +978,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 17
         }
       ]
     },
@@ -980,65 +1008,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-02-06-30",
-      "aircraftId": "psjsa",
-      "title": "Jundiaí → Baixa Grande do Ribeiro",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-30",
-          "date": "2026-02-06",
-          "depart": "08:00",
-          "arrive": "12:07",
-          "fromIcao": "SBJD",
-          "toIcao": "SSIA",
-          "fromCity": "Jundiaí",
-          "toCity": "Baixa Grande do Ribeiro",
-          "blockHours": 4.12,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-02-06-31",
-      "aircraftId": "psjsa",
-      "title": "Baixa Grande do Ribeiro → Teresina",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-31",
-          "date": "2026-02-06",
-          "depart": "08:00",
-          "arrive": "09:16",
-          "fromIcao": "SSIA",
-          "toIcao": "SBTE",
-          "fromCity": "Baixa Grande do Ribeiro",
-          "toCity": "Teresina",
-          "blockHours": 1.27,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 58
         }
       ]
     },
@@ -1067,7 +1038,68 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 18
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-02-06-30",
+      "aircraftId": "psjsa",
+      "title": "Jundiaí → Baixa Grande do Ribeiro",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-30",
+          "date": "2026-02-06",
+          "depart": "08:00",
+          "arrive": "12:07",
+          "fromIcao": "SBJD",
+          "toIcao": "SSIA",
+          "fromCity": "Jundiaí",
+          "toCity": "Baixa Grande do Ribeiro",
+          "blockHours": 4.12,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 59
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-02-06-31",
+      "aircraftId": "psjsa",
+      "title": "Baixa Grande do Ribeiro → Teresina",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-31",
+          "date": "2026-02-06",
+          "depart": "08:00",
+          "arrive": "09:16",
+          "fromIcao": "SSIA",
+          "toIcao": "SBTE",
+          "fromCity": "Baixa Grande do Ribeiro",
+          "toCity": "Teresina",
+          "blockHours": 1.27,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 60
         }
       ]
     },
@@ -1096,36 +1128,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-02-13-34",
-      "aircraftId": "psjsa",
-      "title": "Teresina → Cajueiro da Praia",
-      "purpose": "negocios",
-      "requestedBy": "ruan",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-34",
-          "date": "2026-02-13",
-          "depart": "08:00",
-          "arrive": "08:47",
-          "fromIcao": "SBTE",
-          "toIcao": "SI8W",
-          "fromCity": "Teresina",
-          "toCity": "Cajueiro da Praia",
-          "blockHours": 0.78,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 19
         }
       ]
     },
@@ -1154,7 +1158,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 61
         }
       ]
     },
@@ -1183,7 +1188,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 62
         }
       ]
     },
@@ -1212,7 +1218,38 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 63
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-02-13-34",
+      "aircraftId": "psjsa",
+      "title": "Teresina → Cajueiro da Praia",
+      "purpose": "negocios",
+      "requestedBy": "ruan",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-34",
+          "date": "2026-02-13",
+          "depart": "08:00",
+          "arrive": "08:47",
+          "fromIcao": "SBTE",
+          "toIcao": "SI8W",
+          "fromCity": "Teresina",
+          "toCity": "Cajueiro da Praia",
+          "blockHours": 0.78,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "ruan",
+          "posting": "realizado",
+          "ordem": 192
         }
       ]
     },
@@ -1241,7 +1278,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 64
         }
       ]
     },
@@ -1270,7 +1308,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 65
         }
       ]
     },
@@ -1299,7 +1338,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 66
         }
       ]
     },
@@ -1328,7 +1368,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 67
         }
       ]
     },
@@ -1357,7 +1398,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 68
         }
       ]
     },
@@ -1386,7 +1428,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 69
         }
       ]
     },
@@ -1415,7 +1458,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 20
         }
       ]
     },
@@ -1444,7 +1488,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 70
         }
       ]
     },
@@ -1473,7 +1518,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 71
         }
       ]
     },
@@ -1502,7 +1548,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 72
         }
       ]
     },
@@ -1531,7 +1578,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 73
         }
       ]
     },
@@ -1560,7 +1608,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 74
         }
       ]
     },
@@ -1589,7 +1638,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 75
         }
       ]
     },
@@ -1618,7 +1668,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 76
         }
       ]
     },
@@ -1647,7 +1698,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 77
         }
       ]
     },
@@ -1676,7 +1728,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 78
         }
       ]
     },
@@ -1705,7 +1758,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 79
         }
       ]
     },
@@ -1734,7 +1788,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 80
         }
       ]
     },
@@ -1763,7 +1818,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 81
         }
       ]
     },
@@ -1792,65 +1848,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-03-02-58",
-      "aircraftId": "psjsa",
-      "title": "Teresina → Cajueiro da Praia",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-58",
-          "date": "2026-03-02",
-          "depart": "08:00",
-          "arrive": "08:43",
-          "fromIcao": "SBTE",
-          "toIcao": "SI8W",
-          "fromCity": "Teresina",
-          "toCity": "Cajueiro da Praia",
-          "blockHours": 0.72,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-03-02-59",
-      "aircraftId": "psjsa",
-      "title": "Cajueiro da Praia → Teresina",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-59",
-          "date": "2026-03-02",
-          "depart": "08:00",
-          "arrive": "08:41",
-          "fromIcao": "SI8W",
-          "toIcao": "SD7E",
-          "fromCity": "Cajueiro da Praia",
-          "toCity": "Teresina",
-          "blockHours": 0.68,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 82
         }
       ]
     },
@@ -1879,7 +1878,68 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 21
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-03-02-58",
+      "aircraftId": "psjsa",
+      "title": "Teresina → Cajueiro da Praia",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-58",
+          "date": "2026-03-02",
+          "depart": "08:00",
+          "arrive": "08:43",
+          "fromIcao": "SBTE",
+          "toIcao": "SI8W",
+          "fromCity": "Teresina",
+          "toCity": "Cajueiro da Praia",
+          "blockHours": 0.72,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 83
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-03-02-59",
+      "aircraftId": "psjsa",
+      "title": "Cajueiro da Praia → Teresina",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-59",
+          "date": "2026-03-02",
+          "depart": "08:00",
+          "arrive": "08:41",
+          "fromIcao": "SI8W",
+          "toIcao": "SD7E",
+          "fromCity": "Cajueiro da Praia",
+          "toCity": "Teresina",
+          "blockHours": 0.68,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 84
         }
       ]
     },
@@ -1908,7 +1968,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 22
         }
       ]
     },
@@ -1937,7 +1998,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 85
         }
       ]
     },
@@ -1966,7 +2028,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 86
         }
       ]
     },
@@ -1995,7 +2058,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 23
         }
       ]
     },
@@ -2024,36 +2088,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-03-12-65",
-      "aircraftId": "psjsa",
-      "title": "Parnaíba → Teresina",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-65",
-          "date": "2026-03-12",
-          "depart": "08:00",
-          "arrive": "08:42",
-          "fromIcao": "SBPB",
-          "toIcao": "SBTE",
-          "fromCity": "Parnaíba",
-          "toCity": "Teresina",
-          "blockHours": 0.7,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 24
         }
       ]
     },
@@ -2082,65 +2118,38 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 87
         }
       ]
     },
     {
-      "id": "voo-2026-03-14-66",
+      "id": "voo-2026-03-12-65",
       "aircraftId": "psjsa",
-      "title": "Teresina → Luzilandia",
+      "title": "Parnaíba → Teresina",
       "purpose": "negocios",
-      "requestedBy": "ruan",
+      "requestedBy": "jadyel",
       "passengers": [],
       "status": "concluido",
       "note": "Importado do relatório de etapas.",
       "legs": [
         {
-          "id": "etapa-66",
-          "date": "2026-03-14",
+          "id": "etapa-65",
+          "date": "2026-03-12",
           "depart": "08:00",
-          "arrive": "08:35",
-          "fromIcao": "SBTE",
-          "toIcao": "SDYW",
-          "fromCity": "Teresina",
-          "toCity": "Luzilandia",
-          "blockHours": 0.58,
+          "arrive": "08:42",
+          "fromIcao": "SBPB",
+          "toIcao": "SBTE",
+          "fromCity": "Parnaíba",
+          "toCity": "Teresina",
+          "blockHours": 0.7,
           "fuel": 0,
           "fees": 0,
           "handling": 0,
           "catering": 0,
-          "commanderId": "ruan",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-03-14-67",
-      "aircraftId": "psjsa",
-      "title": "Luzilandia → Parnaíba",
-      "purpose": "negocios",
-      "requestedBy": "ruan",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-67",
-          "date": "2026-03-14",
-          "depart": "08:00",
-          "arrive": "08:18",
-          "fromIcao": "SDYW",
-          "toIcao": "SBPB",
-          "fromCity": "Luzilandia",
-          "toCity": "Parnaíba",
-          "blockHours": 0.3,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "ruan",
-          "posting": "realizado"
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 88
         }
       ]
     },
@@ -2169,7 +2178,68 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 89
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-03-14-66",
+      "aircraftId": "psjsa",
+      "title": "Teresina → Luzilandia",
+      "purpose": "negocios",
+      "requestedBy": "ruan",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-66",
+          "date": "2026-03-14",
+          "depart": "08:00",
+          "arrive": "08:35",
+          "fromIcao": "SBTE",
+          "toIcao": "SDYW",
+          "fromCity": "Teresina",
+          "toCity": "Luzilandia",
+          "blockHours": 0.58,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "ruan",
+          "posting": "realizado",
+          "ordem": 193
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-03-14-67",
+      "aircraftId": "psjsa",
+      "title": "Luzilandia → Parnaíba",
+      "purpose": "negocios",
+      "requestedBy": "ruan",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-67",
+          "date": "2026-03-14",
+          "depart": "08:00",
+          "arrive": "08:18",
+          "fromIcao": "SDYW",
+          "toIcao": "SBPB",
+          "fromCity": "Luzilandia",
+          "toCity": "Parnaíba",
+          "blockHours": 0.3,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "ruan",
+          "posting": "realizado",
+          "ordem": 194
         }
       ]
     },
@@ -2198,7 +2268,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 90
         }
       ]
     },
@@ -2227,7 +2298,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 91
         }
       ]
     },
@@ -2256,7 +2328,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 92
         }
       ]
     },
@@ -2285,7 +2358,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 93
         }
       ]
     },
@@ -2314,7 +2388,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 94
         }
       ]
     },
@@ -2343,7 +2418,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 95
         }
       ]
     },
@@ -2372,7 +2448,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 96
         }
       ]
     },
@@ -2401,7 +2478,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 97
         }
       ]
     },
@@ -2430,7 +2508,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 98
         }
       ]
     },
@@ -2459,7 +2538,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 99
         }
       ]
     },
@@ -2488,7 +2568,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 100
         }
       ]
     },
@@ -2517,7 +2598,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 101
         }
       ]
     },
@@ -2546,7 +2628,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 102
         }
       ]
     },
@@ -2575,7 +2658,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 103
         }
       ]
     },
@@ -2604,7 +2688,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 104
         }
       ]
     },
@@ -2633,7 +2718,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 105
         }
       ]
     },
@@ -2662,7 +2748,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 106
         }
       ]
     },
@@ -2691,7 +2778,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 107
         }
       ]
     },
@@ -2720,7 +2808,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 108
         }
       ]
     },
@@ -2749,7 +2838,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 109
         }
       ]
     },
@@ -2778,7 +2868,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 25
         }
       ]
     },
@@ -2807,7 +2898,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 26
         }
       ]
     },
@@ -2836,7 +2928,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 195
         }
       ]
     },
@@ -2865,7 +2958,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 196
         }
       ]
     },
@@ -2894,7 +2988,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 110
         }
       ]
     },
@@ -2923,7 +3018,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 111
         }
       ]
     },
@@ -2952,7 +3048,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 112
         }
       ]
     },
@@ -2981,7 +3078,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 113
         }
       ]
     },
@@ -3010,7 +3108,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 114
         }
       ]
     },
@@ -3039,7 +3138,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 115
         }
       ]
     },
@@ -3068,7 +3168,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 116
         }
       ]
     },
@@ -3097,7 +3198,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 117
         }
       ]
     },
@@ -3126,7 +3228,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 118
         }
       ]
     },
@@ -3155,7 +3258,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 119
         }
       ]
     },
@@ -3184,7 +3288,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 27
         }
       ]
     },
@@ -3213,7 +3318,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 28
         }
       ]
     },
@@ -3242,36 +3348,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-04-10-110",
-      "aircraftId": "psjsa",
-      "title": "Teresina → Picos",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-110",
-          "date": "2026-04-10",
-          "depart": "08:00",
-          "arrive": "08:41",
-          "fromIcao": "SBTE",
-          "toIcao": "SNPC",
-          "fromCity": "Teresina",
-          "toCity": "Picos",
-          "blockHours": 0.68,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 29
         }
       ]
     },
@@ -3300,14 +3378,15 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 30
         }
       ]
     },
     {
-      "id": "voo-2026-04-10-112",
+      "id": "voo-2026-04-10-110",
       "aircraftId": "psjsa",
-      "title": "Fortaleza → Picos",
+      "title": "Teresina → Picos",
       "purpose": "negocios",
       "requestedBy": "jadyel",
       "passengers": [],
@@ -3315,21 +3394,22 @@
       "note": "Importado do relatório de etapas.",
       "legs": [
         {
-          "id": "etapa-112",
+          "id": "etapa-110",
           "date": "2026-04-10",
           "depart": "08:00",
-          "arrive": "09:14",
-          "fromIcao": "SBFZ",
+          "arrive": "08:41",
+          "fromIcao": "SBTE",
           "toIcao": "SNPC",
-          "fromCity": "Fortaleza",
+          "fromCity": "Teresina",
           "toCity": "Picos",
-          "blockHours": 1.23,
+          "blockHours": 0.68,
           "fuel": 0,
           "fees": 0,
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 120
         }
       ]
     },
@@ -3358,7 +3438,38 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 121
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-04-10-112",
+      "aircraftId": "psjsa",
+      "title": "Fortaleza → Picos",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-112",
+          "date": "2026-04-10",
+          "depart": "08:00",
+          "arrive": "09:14",
+          "fromIcao": "SBFZ",
+          "toIcao": "SNPC",
+          "fromCity": "Fortaleza",
+          "toCity": "Picos",
+          "blockHours": 1.23,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 122
         }
       ]
     },
@@ -3387,7 +3498,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 123
         }
       ]
     },
@@ -3416,7 +3528,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 124
         }
       ]
     },
@@ -3445,7 +3558,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 125
         }
       ]
     },
@@ -3474,7 +3588,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 126
         }
       ]
     },
@@ -3503,7 +3618,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 127
         }
       ]
     },
@@ -3532,7 +3648,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 31
         }
       ]
     },
@@ -3561,7 +3678,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 32
         }
       ]
     },
@@ -3590,7 +3708,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 128
         }
       ]
     },
@@ -3619,7 +3738,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 129
         }
       ]
     },
@@ -3648,7 +3768,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 130
         }
       ]
     },
@@ -3677,7 +3798,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 131
         }
       ]
     },
@@ -3706,7 +3828,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 197
         }
       ]
     },
@@ -3735,7 +3858,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 198
         }
       ]
     },
@@ -3764,7 +3888,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 199
         }
       ]
     },
@@ -3793,14 +3918,15 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 200
         }
       ]
     },
     {
       "id": "voo-2026-04-21-236",
       "aircraftId": "psjsa",
-      "title": "Teresina → Teresina",
+      "title": "Cruz → Teresina",
       "purpose": "negocios",
       "requestedBy": "ruan",
       "passengers": [],
@@ -3814,7 +3940,7 @@
           "arrive": "09:07",
           "fromIcao": "SBJE",
           "toIcao": "SBTE",
-          "fromCity": "Teresina",
+          "fromCity": "Cruz",
           "toCity": "Teresina",
           "blockHours": 1.12,
           "fuel": 0,
@@ -3822,7 +3948,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 201
         }
       ]
     },
@@ -3851,14 +3978,15 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 202
         }
       ]
     },
     {
       "id": "voo-2026-04-21-238",
       "aircraftId": "psjsa",
-      "title": "Teresina → Teresina",
+      "title": "Cruz → Teresina",
       "purpose": "negocios",
       "requestedBy": "ruan",
       "passengers": [],
@@ -3872,7 +4000,7 @@
           "arrive": "09:03",
           "fromIcao": "SBJE",
           "toIcao": "SBTE",
-          "fromCity": "Teresina",
+          "fromCity": "Cruz",
           "toCity": "Teresina",
           "blockHours": 1.05,
           "fuel": 0,
@@ -3880,7 +4008,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 203
         }
       ]
     },
@@ -3909,7 +4038,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 132
         }
       ]
     },
@@ -3938,7 +4068,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 133
         }
       ]
     },
@@ -3967,36 +4098,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-04-24-274",
-      "aircraftId": "psjsa",
-      "title": "Barras → Teresina",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-274",
-          "date": "2026-04-24",
-          "depart": "08:00",
-          "arrive": "08:27",
-          "fromIcao": "SJ4E",
-          "toIcao": "SBTE",
-          "fromCity": "Barras",
-          "toCity": "Teresina",
-          "blockHours": 0.45,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 134
         }
       ]
     },
@@ -4025,7 +4128,38 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 135
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-04-24-274",
+      "aircraftId": "psjsa",
+      "title": "Barras → Teresina",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-274",
+          "date": "2026-04-24",
+          "depart": "08:00",
+          "arrive": "08:27",
+          "fromIcao": "SJ4E",
+          "toIcao": "SBTE",
+          "fromCity": "Barras",
+          "toCity": "Teresina",
+          "blockHours": 0.45,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 136
         }
       ]
     },
@@ -4054,7 +4188,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 137
         }
       ]
     },
@@ -4083,7 +4218,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 138
         }
       ]
     },
@@ -4112,7 +4248,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 139
         }
       ]
     },
@@ -4141,7 +4278,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 140
         }
       ]
     },
@@ -4170,7 +4308,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 141
         }
       ]
     },
@@ -4199,7 +4338,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 142
         }
       ]
     },
@@ -4228,7 +4368,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 143
         }
       ]
     },
@@ -4257,7 +4398,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 144
         }
       ]
     },
@@ -4286,7 +4428,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 33
         }
       ]
     },
@@ -4315,7 +4458,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 34
         }
       ]
     },
@@ -4344,7 +4488,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 145
         }
       ]
     },
@@ -4373,7 +4518,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 146
         }
       ]
     },
@@ -4402,7 +4548,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 147
         }
       ]
     },
@@ -4431,7 +4578,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 148
         }
       ]
     },
@@ -4460,7 +4608,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 149
         }
       ]
     },
@@ -4489,7 +4638,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 150
         }
       ]
     },
@@ -4518,7 +4668,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 151
         }
       ]
     },
@@ -4547,7 +4698,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 35
         }
       ]
     },
@@ -4576,7 +4728,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 36
         }
       ]
     },
@@ -4605,7 +4758,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 37
         }
       ]
     },
@@ -4634,7 +4788,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 38
         }
       ]
     },
@@ -4663,7 +4818,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 39
         }
       ]
     },
@@ -4692,7 +4848,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 40
         }
       ]
     },
@@ -4721,7 +4878,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 41
         }
       ]
     },
@@ -4750,7 +4908,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 42
         }
       ]
     },
@@ -4779,7 +4938,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 43
         }
       ]
     },
@@ -4808,7 +4968,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 44
         }
       ]
     },
@@ -4837,36 +4998,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-05-09-305",
-      "aircraftId": "psjsa",
-      "title": "Altos → São João do Piauí",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-305",
-          "date": "2026-05-09",
-          "depart": "08:00",
-          "arrive": "08:56",
-          "fromIcao": "SSPF",
-          "toIcao": "SD9C",
-          "fromCity": "Altos",
-          "toCity": "São João do Piauí",
-          "blockHours": 0.93,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 152
         }
       ]
     },
@@ -4895,7 +5028,38 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 45
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-05-09-305",
+      "aircraftId": "psjsa",
+      "title": "Altos → São João do Piauí",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-305",
+          "date": "2026-05-09",
+          "depart": "08:00",
+          "arrive": "08:56",
+          "fromIcao": "SSPF",
+          "toIcao": "SD9C",
+          "fromCity": "Altos",
+          "toCity": "São João do Piauí",
+          "blockHours": 0.93,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 153
         }
       ]
     },
@@ -4924,7 +5088,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 154
         }
       ]
     },
@@ -4953,65 +5118,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-05-11-309",
-      "aircraftId": "psjsa",
-      "title": "Teresina → Piripiri",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-309",
-          "date": "2026-05-11",
-          "depart": "08:00",
-          "arrive": "08:26",
-          "fromIcao": "SD7E",
-          "toIcao": "SWAY",
-          "fromCity": "Teresina",
-          "toCity": "Piripiri",
-          "blockHours": 0.43,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-05-11-310",
-      "aircraftId": "psjsa",
-      "title": "Piripiri → Teresina",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-310",
-          "date": "2026-05-11",
-          "depart": "08:00",
-          "arrive": "08:23",
-          "fromIcao": "SWAY",
-          "toIcao": "SBTE",
-          "fromCity": "Piripiri",
-          "toCity": "Teresina",
-          "blockHours": 0.38,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 155
         }
       ]
     },
@@ -5040,7 +5148,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 46
         }
       ]
     },
@@ -5069,7 +5178,68 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "humberto",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 47
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-05-11-309",
+      "aircraftId": "psjsa",
+      "title": "Teresina → Piripiri",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-309",
+          "date": "2026-05-11",
+          "depart": "08:00",
+          "arrive": "08:26",
+          "fromIcao": "SD7E",
+          "toIcao": "SWAY",
+          "fromCity": "Teresina",
+          "toCity": "Piripiri",
+          "blockHours": 0.43,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 156
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-05-11-310",
+      "aircraftId": "psjsa",
+      "title": "Piripiri → Teresina",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-310",
+          "date": "2026-05-11",
+          "depart": "08:00",
+          "arrive": "08:23",
+          "fromIcao": "SWAY",
+          "toIcao": "SBTE",
+          "fromCity": "Piripiri",
+          "toCity": "Teresina",
+          "blockHours": 0.38,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 157
         }
       ]
     },
@@ -5098,7 +5268,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 158
         }
       ]
     },
@@ -5127,7 +5298,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 159
         }
       ]
     },
@@ -5156,7 +5328,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 160
         }
       ]
     },
@@ -5185,7 +5358,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 161
         }
       ]
     },
@@ -5214,7 +5388,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 162
         }
       ]
     },
@@ -5243,7 +5418,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 163
         }
       ]
     },
@@ -5272,7 +5448,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 164
         }
       ]
     },
@@ -5301,36 +5478,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-05-18-320",
-      "aircraftId": "psjsa",
-      "title": "Teresina → Brasília",
-      "purpose": "negocios",
-      "requestedBy": "jadyel",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-320",
-          "date": "2026-05-18",
-          "depart": "08:00",
-          "arrive": "11:00",
-          "fromIcao": "SBTE",
-          "toIcao": "SBBR",
-          "fromCity": "Teresina",
-          "toCity": "Brasília",
-          "blockHours": 3.0,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 165
         }
       ]
     },
@@ -5359,7 +5508,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 166
         }
       ]
     },
@@ -5388,7 +5538,38 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 167
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-05-18-320",
+      "aircraftId": "psjsa",
+      "title": "Teresina → Brasília",
+      "purpose": "negocios",
+      "requestedBy": "jadyel",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-320",
+          "date": "2026-05-18",
+          "depart": "08:00",
+          "arrive": "11:00",
+          "fromIcao": "SBTE",
+          "toIcao": "SBBR",
+          "fromCity": "Teresina",
+          "toCity": "Brasília",
+          "blockHours": 3.0,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "jadyel",
+          "posting": "realizado",
+          "ordem": 168
         }
       ]
     },
@@ -5417,7 +5598,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 169
         }
       ]
     },
@@ -5446,7 +5628,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 170
         }
       ]
     },
@@ -5475,7 +5658,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 171
         }
       ]
     },
@@ -5504,7 +5688,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 172
         }
       ]
     },
@@ -5533,7 +5718,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 173
         }
       ]
     },
@@ -5562,7 +5748,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 174
         }
       ]
     },
@@ -5591,7 +5778,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 175
         }
       ]
     },
@@ -5620,7 +5808,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 176
         }
       ]
     },
@@ -5649,7 +5838,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 177
         }
       ]
     },
@@ -5678,36 +5868,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
-        }
-      ]
-    },
-    {
-      "id": "voo-2026-05-29-407",
-      "aircraftId": "psjsa",
-      "title": "Teresina → Parnaíba",
-      "purpose": "negocios",
-      "requestedBy": "ruan",
-      "passengers": [],
-      "status": "concluido",
-      "note": "Importado do relatório de etapas.",
-      "legs": [
-        {
-          "id": "etapa-407",
-          "date": "2026-05-29",
-          "depart": "08:00",
-          "arrive": "08:46",
-          "fromIcao": "SBTE",
-          "toIcao": "SBPB",
-          "fromCity": "Teresina",
-          "toCity": "Parnaíba",
-          "blockHours": 0.77,
-          "fuel": 0,
-          "fees": 0,
-          "handling": 0,
-          "catering": 0,
-          "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 178
         }
       ]
     },
@@ -5736,7 +5898,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 179
         }
       ]
     },
@@ -5765,7 +5928,38 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 180
+        }
+      ]
+    },
+    {
+      "id": "voo-2026-05-29-407",
+      "aircraftId": "psjsa",
+      "title": "Teresina → Parnaíba",
+      "purpose": "negocios",
+      "requestedBy": "ruan",
+      "passengers": [],
+      "status": "concluido",
+      "note": "Importado do relatório de etapas.",
+      "legs": [
+        {
+          "id": "etapa-407",
+          "date": "2026-05-29",
+          "depart": "08:00",
+          "arrive": "08:46",
+          "fromIcao": "SBTE",
+          "toIcao": "SBPB",
+          "fromCity": "Teresina",
+          "toCity": "Parnaíba",
+          "blockHours": 0.77,
+          "fuel": 0,
+          "fees": 0,
+          "handling": 0,
+          "catering": 0,
+          "commanderId": "ruan",
+          "posting": "realizado",
+          "ordem": 204
         }
       ]
     },
@@ -5794,7 +5988,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 181
         }
       ]
     },
@@ -5823,7 +6018,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 182
         }
       ]
     },
@@ -5852,7 +6048,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 183
         }
       ]
     },
@@ -5881,7 +6078,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 184
         }
       ]
     },
@@ -5910,7 +6108,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 185
         }
       ]
     },
@@ -5939,7 +6138,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 186
         }
       ]
     },
@@ -5968,7 +6168,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 187
         }
       ]
     },
@@ -5997,7 +6198,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 205
         }
       ]
     },
@@ -6026,7 +6228,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "ruan",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 206
         }
       ]
     },
@@ -6055,7 +6258,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 188
         }
       ]
     },
@@ -6084,7 +6288,8 @@
           "handling": 0,
           "catering": 0,
           "commanderId": "jadyel",
-          "posting": "realizado"
+          "posting": "realizado",
+          "ordem": 189
         }
       ]
     },
@@ -6114,6 +6319,7 @@
           "catering": 0,
           "commanderId": "humberto",
           "posting": "realizado",
+          "ordem": 48,
           "copilotId": "jadyel"
         }
       ]
@@ -6779,20 +6985,20 @@
     },
     {
       "id": "sbje-sbte",
-      "nome": "Teresina → Teresina",
+      "nome": "Cruz → Teresina",
       "fromIcao": "SBJE",
       "toIcao": "SBTE",
-      "fromCity": "Teresina",
+      "fromCity": "Cruz",
       "toCity": "Teresina",
       "blockHours": 1.08,
       "note": "2 etapa(s) nos relatórios"
     },
     {
       "id": "sbje-si8w",
-      "nome": "Teresina → Cajueiro da Praia",
+      "nome": "Cruz → Cajueiro da Praia",
       "fromIcao": "SBJE",
       "toIcao": "SI8W",
-      "fromCity": "Teresina",
+      "fromCity": "Cruz",
       "toCity": "Cajueiro da Praia",
       "blockHours": 0.37,
       "note": "1 etapa(s) nos relatórios"
@@ -6959,11 +7165,11 @@
     },
     {
       "id": "sbte-sbje",
-      "nome": "Teresina → Teresina",
+      "nome": "Teresina → Cruz",
       "fromIcao": "SBTE",
       "toIcao": "SBJE",
       "fromCity": "Teresina",
-      "toCity": "Teresina",
+      "toCity": "Cruz",
       "blockHours": 0.97,
       "note": "3 etapa(s) nos relatórios"
     },
@@ -7779,8 +7985,8 @@
     "SBKG": "Campina Grande",
     "SNOE": "Oeiras",
     "SIME": "Davinópolis",
-    "SDYW": "Luzilandia",
     "SSPF": "Altos",
+    "SDYW": "Luzilandia",
     "SDKE": "Valença do Piauí",
     "SWKQ": "São Raimundo Nonato",
     "SDX4": "Canto do Buriti",
@@ -7788,7 +7994,7 @@
     "SD9C": "São João do Piauí",
     "SIXE": "Eldorado do Sul",
     "SJ4E": "Barras",
-    "SBJE": "Teresina",
+    "SBJE": "Cruz",
     "SJOJ": "Açailândia",
     "SNOZ": "Paço do Lumiar",
     "SSRS": "Barreirinhas",

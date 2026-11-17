@@ -10,32 +10,34 @@ export function ConferenciaShell() {
   const [modo, setModo] = useState<Modo>("prestacao");
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setModo("prestacao")}
-          aria-pressed={modo === "prestacao"}
-          className={`rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
-            modo === "prestacao"
-              ? "bg-tse-olive text-white"
-              : "bg-[#F0F2F4] text-tse-muted hover:text-tse-text"
-          }`}
-        >
-          Prestação · FIFO + taxas
-        </button>
-        <button
-          type="button"
-          onClick={() => setModo("vibra-data")}
-          aria-pressed={modo === "vibra-data"}
-          className={`rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
-            modo === "vibra-data"
-              ? "bg-tse-olive text-white"
-              : "bg-[#F0F2F4] text-tse-muted hover:text-tse-text"
-          }`}
-        >
-          Vibra · data do documento
-        </button>
+    <div className="space-y-0">
+      <div className="mx-auto w-full max-w-[1600px] px-4 pt-5 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setModo("prestacao")}
+            aria-pressed={modo === "prestacao"}
+            className={`rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
+              modo === "prestacao"
+                ? "bg-tse-olive text-tse-text"
+                : "bg-[#F2F2F2] text-tse-muted hover:text-tse-text"
+            }`}
+          >
+            Prestação · FIFO + taxas
+          </button>
+          <button
+            type="button"
+            onClick={() => setModo("vibra-data")}
+            aria-pressed={modo === "vibra-data"}
+            className={`rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
+              modo === "vibra-data"
+                ? "bg-tse-olive text-tse-text"
+                : "bg-[#F2F2F2] text-tse-muted hover:text-tse-text"
+            }`}
+          >
+            Vibra · abastecimentos
+          </button>
+        </div>
       </div>
       {modo === "prestacao" ? <ConferenciaView /> : <ConferenciaVibraView />}
     </div>

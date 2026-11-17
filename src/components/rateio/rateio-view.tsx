@@ -450,7 +450,7 @@ function ResumoBloco({
     >
       <span className="flex items-start justify-between gap-2">
         <span className="text-[13px] font-semibold text-tse-muted">{titulo}</span>
-        <ChevronRight className="mt-0.5 size-4 shrink-0 text-[#6B5B95]" aria-hidden />
+        <ChevronRight className="mt-0.5 size-4 shrink-0 text-[#F5C400]" aria-hidden />
       </span>
       <span className="mt-1 block text-[22px] font-bold tracking-tight tabular-nums">{valor}</span>
       <span className="mt-0.5 block text-[12px] text-tse-muted">{detalhe}</span>

@@ -128,7 +128,7 @@ const ABAS_POSICAO: { id: FiltroPosicao; label: string }[] = [
 
 const POSICAO_TOM: Record<Posting, string> = {
   realizado: "bg-pos-faturado-soft text-[#3F6B4A]",
-  previsto: "bg-pos-previsto-soft text-[#4F4270]",
+  previsto: "bg-pos-previsto-soft text-[#3D3D3C]",
   provisionado: "bg-pos-provisionado-soft text-[#8B5E3C]",
 };
 
@@ -667,7 +667,7 @@ export function DespesasView() {
             <button
               type="button"
               onClick={alternarFiltroRapido}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#E8E4F5] px-3 py-1.5 text-[12px] font-bold text-[#6B5B95]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF8E0] px-3 py-1.5 text-[12px] font-bold text-[#F5C400]"
               aria-label="Alternar ordenação dos lançamentos"
             >
               <SlidersHorizontal className="size-3.5" aria-hidden />
@@ -691,7 +691,7 @@ export function DespesasView() {
               </div>
 
               {/* Mobile: no máximo 2 linhas */}
-              <section className="overflow-hidden rounded-2xl border border-[#E8E4F5] bg-white shadow-sm md:hidden">
+              <section className="overflow-hidden rounded-2xl border border-[#FFF8E0] bg-white shadow-sm md:hidden">
                 <ul className="divide-y divide-[#EEEEEE]">
                   {grupo.itens.map((item) => {
                     const trajeto = trajetoDaDespesa(item);
@@ -719,7 +719,7 @@ export function DespesasView() {
                               <span className="truncate text-[13px] font-bold text-tse-text">
                                 {CATEGORY_LABEL[item.category]}
                               </span>
-                              <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#4F4270]">
+                              <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#3D3D3C]">
                                 {formatBRL(valorExibido(item, socioAtivo))}
                               </span>
                             </span>
@@ -737,7 +737,7 @@ export function DespesasView() {
                               </span>
                             </span>
                           </span>
-                          <ChevronRight className="size-4 shrink-0 text-[#6B5B95]" aria-hidden />
+                          <ChevronRight className="size-4 shrink-0 text-[#F5C400]" aria-hidden />
                         </button>
                       </li>
                     );

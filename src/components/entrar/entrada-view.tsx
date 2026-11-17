@@ -68,7 +68,7 @@ function MarcaEntrada({ animada, compacta }: { animada: boolean; compacta: boole
         <path
           d="M12 17.4h8"
           fill="none"
-          stroke="#6B5B95"
+          stroke="#F5C400"
           strokeWidth="1.7"
           strokeLinecap="round"
           className={animada ? "aero-barra" : undefined}
@@ -184,8 +184,8 @@ export function EntradaView({
   }
 
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#0F172A] px-6 text-white [color-scheme:dark]">
-      <div className="aero-brilho pointer-events-none absolute size-[34rem] rounded-full bg-[#6B5B95]/25 blur-3xl" />
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-tse-text px-6 text-white [color-scheme:dark]">
+      <div className="aero-brilho pointer-events-none absolute size-[34rem] rounded-full bg-[#F5C400]/25 blur-3xl" />
       <div className="aero-varredura pointer-events-none absolute inset-0" />
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center">
         <MarcaEntrada animada={fase === "splash"} compacta={fase === "form"} />
@@ -228,7 +228,7 @@ export function EntradaView({
                     value={nome}
                     readOnly={enviando}
                     onChange={(event) => setNome(event.target.value)}
-                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95] read-only:cursor-wait"
+                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#F5C400] read-only:cursor-wait"
                   />
                 </label>
               ) : null}
@@ -244,7 +244,7 @@ export function EntradaView({
                   value={email}
                   readOnly={enviando}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95] read-only:cursor-wait"
+                  className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#F5C400] read-only:cursor-wait"
                 />
               </label>
               <label>
@@ -261,7 +261,7 @@ export function EntradaView({
                     value={senha}
                     readOnly={enviando}
                     onChange={(event) => setSenha(event.target.value)}
-                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 pr-11 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#6B5B95] read-only:cursor-wait"
+                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 pr-11 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#F5C400] read-only:cursor-wait"
                   />
                   <button
                     type="button"
@@ -289,7 +289,7 @@ export function EntradaView({
                     setLembrar(marcado);
                     if (!marcado) setUsarBiometria(false);
                   }}
-                  className="size-4 accent-[#6B5B95]"
+                  className="size-4 accent-[#F5C400]"
                 />
                 Lembrar-me neste aparelho
               </label>
@@ -300,7 +300,7 @@ export function EntradaView({
                     checked={lembrar && usarBiometria}
                     disabled={!lembrar || enviando}
                     onChange={(event) => setUsarBiometria(event.target.checked)}
-                    className="mt-0.5 size-4 accent-[#6B5B95]"
+                    className="mt-0.5 size-4 accent-[#F5C400]"
                   />
                   <span>
                     {rotuloBio.replace("Entrar com ", "Ativar ")}
@@ -327,7 +327,7 @@ export function EntradaView({
             <button
               type="submit"
               disabled={enviando}
-              className="mt-7 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#6B5B95] text-[15px] font-bold text-white transition-colors hover:bg-[#8A7BB0] disabled:cursor-wait disabled:opacity-80"
+              className="mt-7 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F5C400] text-[15px] font-bold text-[#4A4A49] transition-colors hover:bg-[#FFD24A] disabled:cursor-wait disabled:opacity-80"
             >
               {enviando ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : null}
               {enviando ? "Entrando…" : primeiroAcesso ? "Criar e entrar" : "Entrar"}
@@ -339,7 +339,7 @@ export function EntradaView({
                 onClick={() => {
                   void aoUsarBiometria();
                 }}
-                className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/25 text-[15px] font-bold text-white hover:border-[#6B5B95] disabled:cursor-wait disabled:opacity-60"
+                className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/25 text-[15px] font-bold text-white hover:border-[#F5C400] disabled:cursor-wait disabled:opacity-60"
               >
                 {enviando ? (
                   <LoaderCircle className="size-4 animate-spin" aria-hidden />

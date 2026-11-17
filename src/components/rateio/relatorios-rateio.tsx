@@ -132,7 +132,7 @@ function Botao({
       type="button"
       onClick={onClick}
       className={`inline-flex h-8 items-center rounded-md px-3 text-[13px] font-bold ${
-        claro ? "bg-white text-tse-text hover:bg-[#F4F4F2]" : "bg-tse-olive text-white hover:bg-[#1E293B]"
+        claro ? "bg-white text-tse-text hover:bg-[#F2F2F2]" : "bg-tse-olive text-tse-text hover:bg-tse-yellow-strong"
       }`}
     >
       {children}

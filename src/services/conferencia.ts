@@ -1,4 +1,5 @@
-import { NOTAS_FISCAIS } from "@/data/caso-real";
+import { ABASTECIMENTOS_VIBRA, FATURAMENTO_VIBRA, NOTAS_FISCAIS } from "@/data/caso-real";
+import { validarOrigemAbastecimentoVibra } from "@/services/alocacoes-vibra";
 import { getBase } from "@/services/dados";
 import {
   aerodromoLabel,
@@ -637,44 +638,122 @@ export type ConferenciaVibraTrecho = {
   itineraryId: string;
   legId: string;
   route: string;
+  date: string;
   blockHours: number;
   litros: number;
   partnerId: string;
   rateioParticipacao: boolean;
+  /** Trecho em dia diferente do abastecimento (janela vizinha). */
+  diaVizinho: boolean;
+  /** Diferença em dias vs data do abastecimento (negativo = antes). */
+  deltaDias: number;
+  /**
+   * Elo intermediário: não passa pelo aeroporto do abastecimento,
+   * mas fecha a sequência entre trechos que passam (ex.: SBTE→SJ4Z … SJ4Z→SNPC … SNPC→SBTE).
+   */
+  eloFora: boolean;
 };
 
-export type ConferenciaVibraStatus = "ok" | "sem_voo" | "atencao";
+export type ConferenciaVibraStatus = "ok" | "sem_voo" | "atencao" | "vizinho" | "sem_abast";
 
-/** Uma linha = uma NF Vibra casada com os trechos do mesmo dia do documento. */
+export type ConferenciaVibraMatchTipo = "mesmo_dia" | "vizinho" | "elo" | "sem_abast";
+
+/**
+ * Uma linha = um trecho do relatório de voos (ordem original).
+ * Colunas de abastecimento vêm do match (podem repetir o mesmo comprovante no grupo).
+ */
 export type ConferenciaVibraLinha = {
   key: string;
-  notaId: string;
-  numero: string;
+  itineraryId: string;
+  legId: string;
+  /** Sequência operacional (arquivo importado / encadeamento pela base). */
+  ordem: number;
   date: string;
   month: string;
   aircraftId: string;
-  amount: number;
+  partnerId: string;
+  rateioParticipacao: boolean;
+  route: string;
+  fromIcao: string;
+  toIcao: string;
+  blockHours: number;
+  litrosCalc: number;
+  abastecimentoId: string | null;
+  referencia: string | null;
+  abastDate: string | null;
+  icao: string | null;
+  cidade: string | null;
+  /** Litros/valor do comprovante (repetidos em todos os trechos do grupo). */
+  litrosAbast: number | null;
+  amount: number | null;
+  notaNumero: string | null;
+  notaDate: string | null;
   anexoUrl?: string;
-  anexoNome?: string;
-  trechos: ConferenciaVibraTrecho[];
-  tempoDia: number;
-  litrosDia: number;
-  /** Litros atribuídos a esta NF (proporcional ao valor no dia). */
-  litrosNf: number;
   precoLitro: number | null;
+  matchTipo: ConferenciaVibraMatchTipo;
+  deltaDias: number;
+  primeiroDoGrupo: boolean;
+  grupoTrechos: number;
+  litrosGrupoCalc: number;
+  deltaLitrosGrupo: number | null;
+  /** Litros que ainda restam na NF após consumir este trecho (saldo cumulativo). */
+  saldoAposTrecho: number | null;
   status: ConferenciaVibraStatus;
   detalhe: string;
 };
 
+/** Comprovante Vibra sem trecho casado. */
+export type ConferenciaVibraOrfa = {
+  key: string;
+  abastecimentoId: string;
+  referencia: string;
+  date: string;
+  icao: string;
+  cidade: string | null;
+  litros: number;
+  amount: number | null;
+  notaNumero: string | null;
+  notaDate: string | null;
+  anexoUrl?: string;
+  precoLitro: number | null;
+  detalhe: string;
+};
+
+export type ConferenciaVibraNotaOrfa = {
+  numero: string;
+  date: string;
+  amount: number;
+  referencia: string | null;
+};
+
+/** Totais Vibra por sócio (valor da NF rateado pelos trechos ligados). */
+export type ConferenciaVibraSolicitante = {
+  partnerId: string;
+  combustivel: number;
+  litros: number;
+  trechos: number;
+  abastecimentos: number;
+};
+
 export type ConferenciaVibraPorData = {
+  /** Trechos na ordem dos voos importados. */
   linhas: ConferenciaVibraLinha[];
-  totalNotas: number;
+  /** Abastecimentos sem trecho casado. */
+  orfaos: ConferenciaVibraOrfa[];
+  totalAbastecimentos: number;
   totalValor: number;
+  totalLitros: number;
   comVoo: number;
   semVoo: number;
   atencao: number;
+  semAbast: number;
   precoLitroMediano: number | null;
-  litrosComVoo: number;
+  /** Total das NFs Vibra do período (faturamento). */
+  totalFaturadoPeriodo: number;
+  /** NFs Vibra do período sem comprovante individual. */
+  notasSemComprovante: ConferenciaVibraNotaOrfa[];
+  /** Rateio do valor dos comprovantes por sócio dos trechos. */
+  porSolicitante: ConferenciaVibraSolicitante[];
 };
 
 function mediana(valores: number[]): number | null {
@@ -689,141 +768,696 @@ function mediana(valores: number[]): number | null {
   return (a + b) / 2;
 }
 
+type GrupoAbastMatch = {
+  abastecimentoId: string;
+  referencia: string;
+  abastDate: string;
+  icao: string;
+  cidade: string | null;
+  litros: number;
+  amount: number | null;
+  notaNumero: string | null;
+  notaDate: string | null;
+  anexoUrl?: string;
+  precoLitro: number | null;
+  trechosVizinhos: boolean;
+  trechos: ConferenciaVibraTrecho[];
+  litrosCalc: number;
+  deltaLitros: number | null;
+  status: ConferenciaVibraStatus;
+  detalhe: string;
+};
+
+/** Rateia o valor de cada comprovante pelos trechos ligados (peso = litros). */
+function agregarSolicitantesVibra(
+  grupos: GrupoAbastMatch[],
+  aircraftIdFallback: string,
+): ConferenciaVibraSolicitante[] {
+  const mapa = new Map<
+    string,
+    ConferenciaVibraSolicitante & { abasts: Set<string> }
+  >();
+  const garantir = (partnerId: string) => {
+    const atual = mapa.get(partnerId) ?? {
+      partnerId,
+      combustivel: 0,
+      litros: 0,
+      trechos: 0,
+      abastecimentos: 0,
+      abasts: new Set<string>(),
+    };
+    mapa.set(partnerId, atual);
+    return atual;
+  };
+
+  const creditar = (
+    partnerId: string,
+    combustivel: number,
+    litros: number,
+    abastecimentoId: string,
+  ) => {
+    const atual = garantir(partnerId);
+    atual.combustivel = centavos(atual.combustivel + combustivel);
+    atual.litros += litros;
+    atual.trechos += 1;
+    atual.abasts.add(abastecimentoId);
+  };
+
+  for (const grupo of grupos) {
+    if (grupo.trechos.length === 0) continue;
+    const amount = grupo.amount ?? 0;
+    const somaLitrosTrechos = grupo.trechos.reduce((soma, item) => soma + item.litros, 0);
+
+    for (const trecho of grupo.trechos) {
+      const trip = getItinerary(trecho.itineraryId);
+      const aircraftId = trip?.aircraftId ?? aircraftIdFallback;
+      const peso =
+        somaLitrosTrechos > 0
+          ? trecho.litros / somaLitrosTrechos
+          : 1 / grupo.trechos.length;
+      const valorTrecho = amount * peso;
+      const litrosTrecho =
+        somaLitrosTrechos > 0 ? trecho.litros : grupo.litros * peso;
+
+      if (trecho.rateioParticipacao) {
+        const ownership = getAircraft(aircraftId)?.ownership ?? [];
+        if (ownership.length === 0) {
+          creditar(trecho.partnerId, valorTrecho, litrosTrecho, grupo.abastecimentoId);
+          continue;
+        }
+        for (const owner of ownership) {
+          creditar(
+            owner.partnerId,
+            valorTrecho * owner.share,
+            litrosTrecho * owner.share,
+            grupo.abastecimentoId,
+          );
+        }
+        continue;
+      }
+      creditar(trecho.partnerId, valorTrecho, litrosTrecho, grupo.abastecimentoId);
+    }
+  }
+
+  return [...mapa.values()]
+    .map(({ abasts, ...item }) => ({
+      ...item,
+      abastecimentos: abasts.size,
+    }))
+    .sort(
+      (left, right) =>
+        right.combustivel - left.combustivel ||
+        partnerShort(left.partnerId).localeCompare(partnerShort(right.partnerId)),
+    );
+}
+
+function parseIsoDay(iso: string): number {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1) / 86_400_000;
+}
+
+function deltaDiasEntre(a: string, b: string): number {
+  return parseIsoDay(a) - parseIsoDay(b);
+}
+
+type TrechoComIcao = ConferenciaVibraTrecho & {
+  fromIcao: string;
+  toIcao: string;
+  ordem: number;
+};
+
+const BASE_OPERACAO_ICAO = "SBTE";
+
 /**
- * Conferência só combustível: data do documento Vibra × trechos voados no mesmo dia.
- * Premissa: faturamento após abastecimento de cada voo.
+ * Ordena trechos na sequência real de voo (ordem do arquivo / encadeamento pela base).
+ */
+function ordenarTrechosPorSequencia<T extends TrechoComIcao>(trechos: T[]): T[] {
+  if (trechos.length <= 1) return [...trechos];
+
+  const porData = new Map<string, T[]>();
+  for (const trecho of trechos) {
+    const lista = porData.get(trecho.date) ?? [];
+    lista.push(trecho);
+    porData.set(trecho.date, lista);
+  }
+
+  const saida: T[] = [];
+  for (const date of [...porData.keys()].sort()) {
+    saida.push(...encadearTrechosDoDia(porData.get(date) ?? []));
+  }
+  return saida;
+}
+
+function elosContinuos(trechos: TrechoComIcao[]): number {
+  let score = 0;
+  for (let i = 1; i < trechos.length; i += 1) {
+    if (trechos[i - 1]?.toIcao === trechos[i]?.fromIcao) score += 1;
+  }
+  return score;
+}
+
+function encadearTrechosDoDia<T extends TrechoComIcao>(trechos: T[]): T[] {
+  if (trechos.length <= 1) return [...trechos];
+
+  const porArquivo = [...trechos].sort(
+    (left, right) =>
+      left.ordem - right.ordem ||
+      left.legId.localeCompare(right.legId, undefined, { numeric: true }),
+  );
+  if (elosContinuos(porArquivo) === porArquivo.length - 1) return porArquivo;
+
+  let melhor = porArquivo;
+  let melhorScore = -1;
+  for (let start = 0; start < trechos.length; start += 1) {
+    const remaining = [...trechos];
+    const ordered: T[] = [remaining.splice(start, 1)[0]!];
+    while (remaining.length > 0) {
+      const pos = ordered[ordered.length - 1]?.toIcao;
+      let idx = remaining.findIndex((item) => item.fromIcao === pos);
+      if (idx < 0) {
+        idx = remaining.findIndex((item) => item.fromIcao === BASE_OPERACAO_ICAO);
+      }
+      if (idx < 0) idx = 0;
+      ordered.push(remaining.splice(idx, 1)[0]!);
+    }
+    let score = elosContinuos(ordered);
+    if (ordered[0]?.fromIcao === BASE_OPERACAO_ICAO) score += 0.5;
+    if (ordered[ordered.length - 1]?.toIcao === BASE_OPERACAO_ICAO) score += 0.25;
+    if (score > melhorScore) {
+      melhorScore = score;
+      melhor = ordered;
+    }
+  }
+  return melhor;
+}
+
+function listarTrechosVibra(aircraftFilter: string): TrechoComIcao[] {
+  const trechos: TrechoComIcao[] = [];
+  for (const trip of getBase().itineraries) {
+    if (trip.status === "cancelado") continue;
+    if (!matchesAircraft(trip.aircraftId, aircraftFilter)) continue;
+    for (const leg of trip.legs) {
+      if (!postingConsomeCombustivel(leg, trip)) continue;
+      const litros = litrosConsumidosTrecho(trip.aircraftId, leg.blockHours);
+      if (!(leg.blockHours > 0) && !(litros > 0)) continue;
+      trechos.push({
+        itineraryId: trip.id,
+        legId: leg.id,
+        route: rotaTrecho(leg),
+        date: leg.date,
+        blockHours: leg.blockHours,
+        litros,
+        partnerId: trip.requestedBy,
+        rateioParticipacao: allocationDoVoo(trip) === "participacao",
+        diaVizinho: false,
+        deltaDias: 0,
+        eloFora: false,
+        fromIcao: leg.fromIcao,
+        toIcao: leg.toIcao,
+        ordem: leg.ordem ?? (Number.parseInt(leg.id.replace(/\D+/g, ""), 10) || 0),
+      });
+    }
+  }
+  const ordenados = ordenarTrechosPorSequencia(trechos);
+  ordenados.forEach((trecho, index) => {
+    trecho.ordem = index + 1;
+  });
+  return ordenados;
+}
+
+export type NotaVibraProxima = {
+  abastecimentoId: string;
+  referencia: string;
+  date: string;
+  icao: string;
+  cidade: string | null;
+  litros: number;
+  amount: number | null;
+  precoLitro: number | null;
+  anexoUrl?: string;
+  notaNumero: string | null;
+  deltaDiasMin: number;
+  mesmoIcao: boolean;
+  /** 1º trecho do conjunto (existentes + seleção) parte do ICAO do abast. */
+  origemCompativel: boolean;
+  motivoIncompativel: string | null;
+  trechosJaAlocados: number;
+  litrosConsumoAlocados: number;
+};
+
+/**
+ * NFs Vibra na janela ±7 dias do intervalo dos trechos selecionados.
+ * Destaca mesmo ICAO de algum trecho selecionado.
+ */
+export function notasProximasVibra(
+  months: MonthFilter,
+  aircraftId: string,
+  legIds: string[],
+): NotaVibraProxima[] {
+  const aircraftFilter = aircraftId === "todas" ? "psjsa" : aircraftId;
+  const trechos = listarTrechosVibra(aircraftFilter).filter(
+    (item) => matchesMonth(item.date.slice(0, 7), months) || legIds.includes(item.legId),
+  );
+  const selecionados = trechos.filter((item) => legIds.includes(item.legId));
+  if (selecionados.length === 0) return [];
+
+  const datas = selecionados.map((item) => item.date).sort();
+  const inicio = datas[0]!;
+  const fim = datas[datas.length - 1]!;
+  const icaos = new Set(
+    selecionados.flatMap((item) => [item.fromIcao, item.toIcao]),
+  );
+
+  const alocacoes = getBase().alocacoesVibra ?? [];
+  const litrosPorLeg = new Map(trechos.map((item) => [item.legId, item.litros]));
+  const porAbast = new Map<string, { trechos: number; litros: number }>();
+  for (const aloc of alocacoes) {
+    const atual = porAbast.get(aloc.abastecimentoId) ?? { trechos: 0, litros: 0 };
+    atual.trechos += 1;
+    atual.litros += litrosPorLeg.get(aloc.legId) ?? 0;
+    porAbast.set(aloc.abastecimentoId, atual);
+  }
+
+  return ABASTECIMENTOS_VIBRA.filter((abast) => {
+    if (!matchesMonth(abast.date.slice(0, 7), months)) {
+      // ainda inclui se cair na janela dos trechos selecionados
+      const deltaIni = deltaDiasEntre(abast.date, inicio);
+      const deltaFim = deltaDiasEntre(abast.date, fim);
+      if (deltaIni < -7 || deltaFim > 7) return false;
+    }
+    const distInicio = Math.abs(deltaDiasEntre(abast.date, inicio));
+    const distFim = Math.abs(deltaDiasEntre(abast.date, fim));
+    return Math.min(distInicio, distFim) <= 7 || matchesMonth(abast.date.slice(0, 7), months);
+  })
+    .map((abast) => {
+      const deltas = selecionados.map((item) => Math.abs(deltaDiasEntre(abast.date, item.date)));
+      const deltaDiasMin = Math.min(...deltas);
+      const amount = abast.notaAmount;
+      const uso = porAbast.get(abast.id) ?? { trechos: 0, litros: 0 };
+      const validacao = validarOrigemAbastecimentoVibra(legIds, abast.id, aircraftFilter);
+      return {
+        abastecimentoId: abast.id,
+        referencia: abast.referencia,
+        date: abast.date,
+        icao: abast.icao,
+        cidade: abast.cidade,
+        litros: abast.litros,
+        amount,
+        precoLitro: amount != null && abast.litros > 0 ? amount / abast.litros : null,
+        anexoUrl: abast.anexoUrl,
+        notaNumero: abast.notaNumero,
+        deltaDiasMin,
+        mesmoIcao: icaos.has(abast.icao),
+        origemCompativel: validacao.ok,
+        motivoIncompativel: validacao.ok ? null : validacao.motivo,
+        trechosJaAlocados: uso.trechos,
+        litrosConsumoAlocados: uso.litros,
+      };
+    })
+    .filter((item) => item.deltaDiasMin <= 7)
+    .sort(
+      (left, right) =>
+        (left.origemCompativel === right.origemCompativel ? 0 : left.origemCompativel ? -1 : 1) ||
+        (left.mesmoIcao === right.mesmoIcao ? 0 : left.mesmoIcao ? -1 : 1) ||
+        left.deltaDiasMin - right.deltaDiasMin ||
+        left.date.localeCompare(right.date) ||
+        left.referencia.localeCompare(right.referencia),
+    );
+}
+
+/** Trechos da saída contínua (mesmo dia, destino→origem) a partir de um leg. */
+export function legIdsSaidaContinua(
+  linhas: ConferenciaVibraLinha[],
+  legId: string,
+): string[] {
+  const ordenadas = [...linhas].sort(
+    (left, right) =>
+      left.date.localeCompare(right.date) ||
+      left.ordem - right.ordem ||
+      left.legId.localeCompare(right.legId, undefined, { numeric: true }),
+  );
+  const idx = ordenadas.findIndex((item) => item.legId === legId);
+  if (idx < 0) return [legId];
+  const base = ordenadas[idx]!;
+  let inicio = idx;
+  let fim = idx;
+  while (
+    inicio > 0 &&
+    ordenadas[inicio - 1]?.date === base.date &&
+    ordenadas[inicio - 1]?.toIcao === ordenadas[inicio]?.fromIcao
+  ) {
+    inicio -= 1;
+  }
+  while (
+    fim + 1 < ordenadas.length &&
+    ordenadas[fim + 1]?.date === base.date &&
+    ordenadas[fim]?.toIcao === ordenadas[fim + 1]?.fromIcao
+  ) {
+    fim += 1;
+  }
+  return ordenadas.slice(inicio, fim + 1).map((item) => item.legId);
+}
+
+/**
+ * Conferência Vibra por alocação manual (sem match automático).
+ * Alias estável usado pela UI/PDF/Excel.
+ */
+export function conferenciaVibraManual(
+  months: MonthFilter,
+  aircraftId: string,
+): ConferenciaVibraPorData {
+  return conferenciaVibraPorDataDoc(months, aircraftId);
+}
+
+/**
+ * Conferência Vibra: lista de trechos + alocações manuais persistidas.
  */
 export function conferenciaVibraPorDataDoc(
   months: MonthFilter,
   aircraftId: string,
 ): ConferenciaVibraPorData {
-  const notas = NOTAS_FISCAIS.filter(
-    (item) =>
-      item.origem === "vibra" &&
-      item.amount > 0 &&
-      matchesAircraft(item.aircraftId, aircraftId) &&
-      matchesMonth(item.month, months),
-  ).sort(
-    (left, right) =>
-      left.date.localeCompare(right.date) || left.numero.localeCompare(right.numero),
+  const aircraftFilter = aircraftId === "todas" ? "psjsa" : aircraftId;
+  const trechos = listarTrechosVibra(aircraftFilter).filter((trecho) =>
+    matchesMonth(trecho.date.slice(0, 7), months),
   );
 
-  type TrechoDia = ConferenciaVibraTrecho & { date: string; aircraftId: string };
-  const trechosPorDia = new Map<string, TrechoDia[]>();
+  const alocPorLeg = new Map(
+    (getBase().alocacoesVibra ?? []).map((item) => [item.legId, item.abastecimentoId]),
+  );
+  const abastPorId = new Map(ABASTECIMENTOS_VIBRA.map((item) => [item.id, item]));
 
-  for (const trip of getBase().itineraries) {
-    if (trip.status === "cancelado") continue;
-    if (!matchesAircraft(trip.aircraftId, aircraftId)) continue;
-    for (const leg of trip.legs) {
-      if (!postingConsomeCombustivel(leg, trip)) continue;
-      const litros = litrosConsumidosTrecho(trip.aircraftId, leg.blockHours);
-      if (!(leg.blockHours > 0) && !(litros > 0)) continue;
-      const chave = `${trip.aircraftId}:${leg.date}`;
-      const lista = trechosPorDia.get(chave) ?? [];
-      lista.push({
-        itineraryId: trip.id,
-        legId: leg.id,
-        route: rotaTrecho(leg),
-        blockHours: leg.blockHours,
-        litros,
-        partnerId: trip.requestedBy,
-        rateioParticipacao: allocationDoVoo(trip) === "participacao",
-        date: leg.date,
-        aircraftId: trip.aircraftId,
-      });
-      trechosPorDia.set(chave, lista);
+  type GrupoManual = GrupoAbastMatch;
+  const gruposMap = new Map<string, GrupoManual>();
+
+  for (const trecho of trechos) {
+    const abastecimentoId = alocPorLeg.get(trecho.legId);
+    if (!abastecimentoId) continue;
+    const abast = abastPorId.get(abastecimentoId);
+    if (!abast) continue;
+
+    let grupo = gruposMap.get(abastecimentoId);
+    if (!grupo) {
+      const amount = abast.notaAmount;
+      grupo = {
+        abastecimentoId: abast.id,
+        referencia: abast.referencia,
+        abastDate: abast.date,
+        icao: abast.icao,
+        cidade: abast.cidade,
+        litros: abast.litros,
+        amount,
+        notaNumero: abast.notaNumero,
+        notaDate: abast.notaDate,
+        anexoUrl: abast.anexoUrl,
+        precoLitro: amount != null && abast.litros > 0 ? amount / abast.litros : null,
+        trechosVizinhos: false,
+        trechos: [],
+        litrosCalc: 0,
+        deltaLitros: null,
+        status: "ok",
+        detalhe: "",
+      };
+      gruposMap.set(abastecimentoId, grupo);
+    }
+
+    const delta = deltaDiasEntre(trecho.date, abast.date);
+    if (delta !== 0) grupo.trechosVizinhos = true;
+    grupo.trechos.push({
+      itineraryId: trecho.itineraryId,
+      legId: trecho.legId,
+      route: trecho.route,
+      date: trecho.date,
+      blockHours: trecho.blockHours,
+      litros: trecho.litros,
+      partnerId: trecho.partnerId,
+      rateioParticipacao: trecho.rateioParticipacao,
+      diaVizinho: delta !== 0,
+      deltaDias: delta,
+      eloFora: !(trecho.fromIcao === abast.icao || trecho.toIcao === abast.icao),
+    });
+    grupo.litrosCalc += trecho.litros;
+  }
+
+  const fromPorLeg = new Map(trechos.map((item) => [item.legId, item.fromIcao]));
+
+  const precos = [...gruposMap.values()]
+    .map((item) => item.precoLitro)
+    .filter((item): item is number => item != null && item > 0);
+  const precoLitroMediano = mediana(precos);
+
+  const ordemPorLeg = new Map(trechos.map((item) => [item.legId, item.ordem]));
+
+  for (const grupo of gruposMap.values()) {
+    grupo.deltaLitros = centavos(grupo.litros - grupo.litrosCalc);
+    const delta = grupo.deltaLitros ?? 0;
+    const foraFaixaPreco =
+      precoLitroMediano != null &&
+      grupo.precoLitro != null &&
+      (grupo.precoLitro / precoLitroMediano < 0.75 ||
+        grupo.precoLitro / precoLitroMediano > 1.4);
+    const litrosFolgados = Math.abs(delta) > Math.max(80, grupo.litrosCalc * 0.45);
+
+    if (litrosFolgados || foraFaixaPreco) {
+      grupo.status = "atencao";
+      grupo.detalhe = litrosFolgados
+        ? `NF ${grupo.litros.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} L vs consumo ${grupo.litrosCalc.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} L.`
+        : `R$/L fora da faixa (mediana ${precoLitroMediano?.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}).`;
+    } else if (grupo.trechosVizinhos) {
+      grupo.status = "vizinho";
+      grupo.detalhe = `Trechos em data diferente do abast. ${grupo.abastDate.slice(8, 10)}/${grupo.abastDate.slice(5, 7)}.`;
+    } else {
+      grupo.status = "ok";
+      grupo.detalhe = `${grupo.trechos.length} trecho(s) alocado(s).`;
     }
   }
 
-  const valorNotasPorDia = new Map<string, number>();
-  for (const nota of notas) {
-    const chave = `${nota.aircraftId}:${nota.date}`;
-    valorNotasPorDia.set(chave, (valorNotasPorDia.get(chave) ?? 0) + nota.amount);
-  }
+  type HitLeg = {
+    grupo: GrupoManual;
+    trecho: ConferenciaVibraTrecho;
+    primeiroDoGrupo: boolean;
+    saldoAposTrecho: number;
+    status: ConferenciaVibraStatus;
+    detalhe: string;
+  };
 
-  const precosBrutos: number[] = [];
-  const linhasBrutas: Omit<ConferenciaVibraLinha, "status" | "detalhe">[] = [];
-
-  for (const nota of notas) {
-    const chaveDia = `${nota.aircraftId}:${nota.date}`;
-    const trechosDia = trechosPorDia.get(chaveDia) ?? [];
-    const tempoDia = trechosDia.reduce((soma, item) => soma + item.blockHours, 0);
-    const litrosDia = trechosDia.reduce((soma, item) => soma + item.litros, 0);
-    const totalNotasDia = valorNotasPorDia.get(chaveDia) ?? nota.amount;
-    const fracao = totalNotasDia > 0 ? nota.amount / totalNotasDia : 1;
-    const litrosNf = litrosDia * fracao;
-    const precoLitro = litrosNf > 0 ? nota.amount / litrosNf : null;
-    if (precoLitro != null && precoLitro > 0) precosBrutos.push(precoLitro);
-
-    linhasBrutas.push({
-      key: nota.id,
-      notaId: nota.id,
-      numero: nota.numero,
-      date: nota.date,
-      month: nota.month,
-      aircraftId: nota.aircraftId,
-      amount: nota.amount,
-      anexoUrl: nota.anexoUrl,
-      anexoNome: nota.anexoNome,
-      trechos: trechosDia.map(({ date: _d, aircraftId: _a, ...trecho }) => trecho),
-      tempoDia,
-      litrosDia,
-      litrosNf,
-      precoLitro,
+  const grupos = [...gruposMap.values()];
+  const porLeg = new Map<string, HitLeg>();
+  for (const grupo of grupos) {
+    const ordenados = [...grupo.trechos].sort(
+      (left, right) =>
+        left.date.localeCompare(right.date) ||
+        (ordemPorLeg.get(left.legId) ?? 0) - (ordemPorLeg.get(right.legId) ?? 0) ||
+        left.legId.localeCompare(right.legId, undefined, { numeric: true }),
+    );
+    const primeiro = ordenados[0];
+    const origemPrimeiro = primeiro ? fromPorLeg.get(primeiro.legId) : undefined;
+    const origemInvalida = Boolean(origemPrimeiro && origemPrimeiro !== grupo.icao);
+    let saldo = grupo.litros;
+    ordenados.forEach((trecho, index) => {
+      const consumo = trecho.litros;
+      let detalhe: string;
+      let status: ConferenciaVibraStatus = "ok";
+      if (origemInvalida && index === 0) {
+        detalhe = `Origem incompatível: NF em ${grupo.icao}, mas o 1º trecho parte de ${origemPrimeiro}. Não apagado — revise a alocação.`;
+        status = "atencao";
+        saldo = centavos(Math.max(0, saldo - consumo));
+      } else if (saldo >= consumo - 0.05) {
+        saldo = centavos(saldo - consumo);
+        detalhe =
+          saldo > 1
+            ? `Cobre este trecho (${consumo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L) · sobram ${saldo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L`
+            : `Cobre este trecho (${consumo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L) · NF encerrada`;
+        if (origemInvalida) {
+          status = "atencao";
+          detalhe = `Saldo após origem inválida · ${detalhe}`;
+        } else {
+          const sobraGrande =
+            index === ordenados.length - 1 &&
+            saldo > Math.max(80, grupo.litrosCalc * 0.45);
+          if (sobraGrande) status = "atencao";
+          else if (grupo.trechosVizinhos) status = "vizinho";
+          else status = "ok";
+        }
+      } else if (saldo > 1) {
+        const falta = centavos(consumo - saldo);
+        detalhe = `Cobre parcialmente (${saldo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L de ${consumo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L) · faltam ${falta.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L`;
+        saldo = 0;
+        status = "atencao";
+      } else {
+        detalhe = `Sem saldo da NF · precisa ${consumo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} L`;
+        saldo = 0;
+        status = "atencao";
+      }
+      porLeg.set(trecho.legId, {
+        grupo,
+        trecho,
+        primeiroDoGrupo: index === 0,
+        saldoAposTrecho: saldo,
+        status,
+        detalhe,
+      });
     });
   }
 
-  const precoLitroMediano = mediana(precosBrutos);
-  const linhas: ConferenciaVibraLinha[] = linhasBrutas.map((linha) => {
-    if (linha.trechos.length === 0) {
+  const linhas: ConferenciaVibraLinha[] = trechos.map((base) => {
+    const trip = getItinerary(base.itineraryId);
+    const acId = trip?.aircraftId ?? aircraftFilter;
+    const hit = porLeg.get(base.legId);
+    if (!hit) {
       return {
-        ...linha,
-        status: "sem_voo",
-        detalhe: "Nenhum trecho na data do documento.",
+        key: base.legId,
+        itineraryId: base.itineraryId,
+        legId: base.legId,
+        ordem: base.ordem,
+        date: base.date,
+        month: base.date.slice(0, 7),
+        aircraftId: acId,
+        partnerId: base.partnerId,
+        rateioParticipacao: base.rateioParticipacao,
+        route: base.route,
+        fromIcao: base.fromIcao,
+        toIcao: base.toIcao,
+        blockHours: base.blockHours,
+        litrosCalc: base.litros,
+        abastecimentoId: null,
+        referencia: null,
+        abastDate: null,
+        icao: null,
+        cidade: null,
+        litrosAbast: null,
+        amount: null,
+        notaNumero: null,
+        notaDate: null,
+        precoLitro: null,
+        matchTipo: "sem_abast",
+        deltaDias: 0,
+        primeiroDoGrupo: false,
+        grupoTrechos: 0,
+        litrosGrupoCalc: 0,
+        deltaLitrosGrupo: null,
+        saldoAposTrecho: null,
+        status: "sem_abast",
+        detalhe: "Sem NF alocada — selecione o trecho e escolha um comprovante.",
       };
     }
-    if (precoLitroMediano != null && linha.precoLitro != null) {
-      const razao = linha.precoLitro / precoLitroMediano;
-      if (razao < 0.7 || razao > 1.35) {
-        return {
-          ...linha,
-          status: "atencao",
-          detalhe: `R$/L fora da faixa (mediana ${precoLitroMediano.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}).`,
-        };
-      }
-    }
-    const nNfDia = notas.filter(
-      (item) => item.aircraftId === linha.aircraftId && item.date === linha.date,
-    ).length;
-    if (nNfDia > 1 || linha.trechos.length > 1) {
-      return {
-        ...linha,
-        status: "ok",
-        detalhe:
-          nNfDia > 1 && linha.trechos.length > 1
-            ? `${nNfDia} NFs e ${linha.trechos.length} trechos no dia — litros rateados pelo valor.`
-            : nNfDia > 1
-              ? `${nNfDia} NFs no dia — litros rateados pelo valor.`
-              : `${linha.trechos.length} trechos no dia.`,
-      };
-    }
+
+    const { grupo, trecho, primeiroDoGrupo, saldoAposTrecho, status, detalhe } = hit;
+    const matchTipo: ConferenciaVibraMatchTipo = trecho.eloFora
+      ? "elo"
+      : trecho.diaVizinho
+        ? "vizinho"
+        : "mesmo_dia";
+
     return {
-      ...linha,
-      status: "ok",
-      detalhe: "1 NF · 1 dia com trecho(s).",
+      key: base.legId,
+      itineraryId: base.itineraryId,
+      legId: base.legId,
+      ordem: base.ordem,
+      date: base.date,
+      month: base.date.slice(0, 7),
+      aircraftId: acId,
+      partnerId: base.partnerId,
+      rateioParticipacao: base.rateioParticipacao,
+      route: base.route,
+      fromIcao: base.fromIcao,
+      toIcao: base.toIcao,
+      blockHours: base.blockHours,
+      litrosCalc: base.litros,
+      abastecimentoId: grupo.abastecimentoId,
+      referencia: grupo.referencia,
+      abastDate: grupo.abastDate,
+      icao: grupo.icao,
+      cidade: grupo.cidade,
+      litrosAbast: grupo.litros,
+      amount: grupo.amount,
+      notaNumero: grupo.notaNumero,
+      notaDate: grupo.notaDate,
+      anexoUrl: grupo.anexoUrl,
+      precoLitro: grupo.precoLitro,
+      matchTipo,
+      deltaDias: trecho.deltaDias,
+      primeiroDoGrupo,
+      grupoTrechos: grupo.trechos.length,
+      litrosGrupoCalc: grupo.litrosCalc,
+      deltaLitrosGrupo: grupo.deltaLitros,
+      saldoAposTrecho,
+      status,
+      detalhe,
     };
   });
 
+  const alocadosIds = new Set(alocPorLeg.values());
+  const orfaos: ConferenciaVibraOrfa[] = ABASTECIMENTOS_VIBRA.filter(
+    (abast) => matchesMonth(abast.date.slice(0, 7), months) && !alocadosIds.has(abast.id),
+  ).map((abast) => {
+    const amount = abast.notaAmount;
+    return {
+      key: abast.id,
+      abastecimentoId: abast.id,
+      referencia: abast.referencia,
+      date: abast.date,
+      icao: abast.icao,
+      cidade: abast.cidade,
+      litros: abast.litros,
+      amount,
+      notaNumero: abast.notaNumero,
+      notaDate: abast.notaDate,
+      anexoUrl: abast.anexoUrl,
+      precoLitro: amount != null && abast.litros > 0 ? amount / abast.litros : null,
+      detalhe: "Comprovante ainda sem trechos alocados.",
+    };
+  });
+
+  const numsComprovante = new Set(
+    ABASTECIMENTOS_VIBRA.map((item) => item.notaNumero).filter(
+      (item): item is string => Boolean(item),
+    ),
+  );
+  const notasPeriodo = NOTAS_FISCAIS.filter(
+    (item) =>
+      item.origem === "vibra" &&
+      item.amount > 0 &&
+      matchesAircraft(item.aircraftId, aircraftFilter) &&
+      matchesMonth(item.month, months),
+  );
+  const refPorNumero = new Map(
+    FATURAMENTO_VIBRA.map((item) => [item.numero, item.referencia]),
+  );
+  const notasSemComprovante: ConferenciaVibraNotaOrfa[] = notasPeriodo
+    .filter((item) => !numsComprovante.has(item.numero))
+    .map((item) => ({
+      numero: item.numero,
+      date: item.date,
+      amount: item.amount,
+      referencia: refPorNumero.get(item.numero) ?? null,
+    }))
+    .sort(
+      (left, right) =>
+        left.date.localeCompare(right.date) || left.numero.localeCompare(right.numero),
+    );
+
+  const abastsNoPeriodo = ABASTECIMENTOS_VIBRA.filter((item) =>
+    matchesMonth(item.date.slice(0, 7), months),
+  );
+  const comMatch = grupos.filter((item) => item.trechos.length > 0);
+
   return {
     linhas,
-    totalNotas: linhas.length,
-    totalValor: centavos(linhas.reduce((soma, item) => soma + item.amount, 0)),
-    comVoo: linhas.filter((item) => item.trechos.length > 0).length,
-    semVoo: linhas.filter((item) => item.status === "sem_voo").length,
-    atencao: linhas.filter((item) => item.status === "atencao").length,
+    orfaos,
+    totalAbastecimentos: abastsNoPeriodo.length,
+    totalValor: centavos(
+      abastsNoPeriodo.reduce((soma, item) => soma + (item.notaAmount ?? 0), 0),
+    ),
+    totalLitros: abastsNoPeriodo.reduce((soma, item) => soma + item.litros, 0),
+    comVoo: comMatch.length,
+    semVoo: orfaos.length,
+    atencao: grupos.filter((item) => item.status === "atencao").length,
+    semAbast: linhas.filter((item) => item.status === "sem_abast").length,
     precoLitroMediano,
-    litrosComVoo: linhas
-      .filter((item) => item.trechos.length > 0)
-      .reduce((soma, item) => soma + item.litrosNf, 0),
+    totalFaturadoPeriodo: centavos(
+      notasPeriodo.reduce((soma, item) => soma + item.amount, 0),
+    ),
+    notasSemComprovante,
+    porSolicitante: agregarSolicitantesVibra(comMatch, aircraftFilter),
   };
 }

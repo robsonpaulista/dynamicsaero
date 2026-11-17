@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { AcoesRelatorio } from "@/components/relatorios/acoes-relatorio";
 import { FiltrosOperacao } from "@/components/shell/filtros-operacao";
 import {
   PageStack,
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/tse";
 import { useOperacao } from "@/context/operacao-context";
 import { useDados } from "@/hooks/use-dados";
+import { baixarPdfConferenciaPrestacao } from "@/lib/baixar-pdf-conferencia";
 import { cn, formatBRL, formatDate, formatHours } from "@/lib/format";
 import { corDoSocio } from "@/lib/labels";
 import {
@@ -23,6 +25,7 @@ import {
   type ConferenciaNotaFatia,
 } from "@/services/conferencia";
 import { getAircraft, monthsLabel, partnerShort } from "@/services/operacao";
+import { relatorioConferenciaPrestacao } from "@/services/relatorios-conferencia";
 
 type ColunaConferencia =
   | "data"
@@ -518,6 +521,23 @@ export function ConferenciaView() {
           </table>
         </TableWrap>
       )}
+
+      <AcoesRelatorio
+        titulo="Relatório desta tela"
+        texto="PDF no layout da tela (cards + tabela). Excel com a mesma tabela."
+        gerar={() =>
+          relatorioConferenciaPrestacao(months, aircraftId, dados, linhas, filtroSocio)
+        }
+        gerarPdf={() =>
+          baixarPdfConferenciaPrestacao({
+            months,
+            aircraftId,
+            dados,
+            linhas,
+            filtroSocio,
+          })
+        }
+      />
     </PageStack>
   );
 }

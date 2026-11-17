@@ -1,4 +1,6 @@
+import abastecimentos from "@/data/abastecimentos-vibra.json";
 import caso from "@/data/caso-jsa.json";
+import faturamentoVibra from "@/data/faturamento-vibra.json";
 import notas from "@/data/notas-fiscais.json";
 import type { Aerodromo } from "@/data/aerodromos";
 import { CONTAS_PADRAO } from "@/data/plano-contas";
@@ -18,10 +20,28 @@ import type {
   Rota,
 } from "@/types/operacao";
 
+export type AbastecimentoVibra = {
+  id: string;
+  referencia: string;
+  numeroEntrega: string | null;
+  date: string;
+  icao: string;
+  cidade: string | null;
+  destinoIcao: string | null;
+  litros: number;
+  densidade: number | null;
+  arquivo: string;
+  anexoUrl: string;
+  notaNumero: string | null;
+  notaDate: string | null;
+  notaAmount: number | null;
+  notaAtribuicao: string | null;
+};
+
 export const CONTAS: ContaPlano[] = CONTAS_PADRAO;
 
 /** Marca do seed importado dos PDFs — troca força recarregar a base remota. */
-export const SEED_OPERACAO = "pdf-etapas-traslado-participacao-v4";
+export const SEED_OPERACAO = "pdf-etapas-sbje-cruz-v5";
 
 export const PARTNERS = caso.partners as Partner[];
 export const AIRCRAFT = caso.aircraft as Aircraft[];
@@ -34,6 +54,13 @@ export const EXTRAS = caso.extras as Expense[];
 export const APORTES = caso.aportes as Aporte[];
 export const ROTAS = caso.rotas as Rota[];
 export const NOTAS_FISCAIS = notas as NotaFiscal[];
+export const ABASTECIMENTOS_VIBRA = abastecimentos as AbastecimentoVibra[];
+export const FATURAMENTO_VIBRA = faturamentoVibra as Array<{
+  referencia: string;
+  numero: string;
+  date: string;
+  amount: number;
+}>;
 
 const mapaAerodromosSeed =
   caso.aerodromos && typeof caso.aerodromos === "object" && !Array.isArray(caso.aerodromos)

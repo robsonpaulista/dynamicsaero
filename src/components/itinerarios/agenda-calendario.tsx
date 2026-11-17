@@ -170,7 +170,7 @@ export function AgendaCalendario({
                 className={cn(
                   "relative flex min-h-[44px] flex-col rounded-lg px-1 py-1 text-left transition sm:min-h-[56px] sm:rounded-xl sm:px-1.5 sm:py-1.5",
                   !temPosse && "bg-[#F7F7F5]",
-                  selecionado && "ring-2 ring-[#6B5B95] ring-offset-1",
+                  selecionado && "ring-2 ring-[#F5C400] ring-offset-1",
                 )}
                 style={
                   temPosse && celula.partnerId
@@ -189,7 +189,7 @@ export function AgendaCalendario({
                       title={`Voo de ${partnerShort(marcadorOutro)}`}
                     />
                   ) : temVoo ? (
-                    <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[#6B5B95]/40 sm:size-2" />
+                    <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[#F5C400]/40 sm:size-2" />
                   ) : null}
                 </span>
                 {temPosse && celula.partnerId ? (
@@ -244,7 +244,7 @@ export function AgendaCalendario({
             <button
               type="button"
               onClick={() => setEditandoEscala((atual) => !atual)}
-              className="inline-flex items-center gap-1 text-[12px] font-bold text-[#6B5B95]"
+              className="inline-flex items-center gap-1 text-[12px] font-bold text-[#F5C400]"
             >
               <Pencil className="size-3.5" aria-hidden />
               {editandoEscala ? "Fechar escala" : "Editar escala"}
@@ -450,8 +450,8 @@ function EditorEscala({
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-[#E8E4F5] bg-[#F7F5FB] p-3">
-      <p className="text-[12px] font-bold text-[#6B5B95]">
+    <div className="mt-3 rounded-xl border border-[#FFF8E0] bg-[#F7F5FB] p-3">
+      <p className="text-[12px] font-bold text-[#F5C400]">
         Escala · {craft?.registration ?? aircraftId} · {month}
       </p>
       <p className="mt-0.5 text-[11px] text-tse-muted">
@@ -460,7 +460,7 @@ function EditorEscala({
       </p>
 
       {faixas.length > 0 ? (
-        <ul className="mt-2 divide-y divide-[#E8E4F5]">
+        <ul className="mt-2 divide-y divide-[#FFF8E0]">
           {faixas.map((faixa) => (
             <li key={faixa.id} className="flex items-center justify-between gap-2 py-2">
               <span className="inline-flex min-w-0 items-center gap-2 text-[13px]">
@@ -496,7 +496,7 @@ function EditorEscala({
           <select
             value={partnerId}
             onChange={(event) => setPartnerId(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-[#E8E4F5] bg-white px-2 py-1.5 text-[13px] text-tse-text"
+            className="mt-1 w-full rounded-lg border border-[#FFF8E0] bg-white px-2 py-1.5 text-[13px] text-tse-text"
           >
             {base.partners.map((item) => (
               <option key={item.id} value={item.id}>
@@ -513,7 +513,7 @@ function EditorEscala({
             max={ultimo}
             value={inicio}
             onChange={(event) => setInicio(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-[#E8E4F5] bg-white px-2 py-1.5 text-[13px] tabular-nums text-tse-text"
+            className="mt-1 w-full rounded-lg border border-[#FFF8E0] bg-white px-2 py-1.5 text-[13px] tabular-nums text-tse-text"
           />
         </label>
         <label className="block text-[11px] font-semibold text-tse-muted">
@@ -524,14 +524,14 @@ function EditorEscala({
             max={ultimo}
             value={fim}
             onChange={(event) => setFim(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-[#E8E4F5] bg-white px-2 py-1.5 text-[13px] tabular-nums text-tse-text"
+            className="mt-1 w-full rounded-lg border border-[#FFF8E0] bg-white px-2 py-1.5 text-[13px] tabular-nums text-tse-text"
           />
         </label>
         <div className="col-span-2 flex items-end sm:col-span-1">
           <button
             type="button"
             onClick={adicionar}
-            className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-[#6B5B95] px-3 py-1.5 text-[12px] font-bold text-white"
+            className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-tse-olive px-3 py-1.5 text-[12px] font-bold text-tse-text"
           >
             <Plus className="size-3.5" aria-hidden />
             Incluir

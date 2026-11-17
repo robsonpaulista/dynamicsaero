@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
-/* Paleta alinhada ao calendário da agenda (Humberto / Ruan / Jadyel). */
+/*
+  Paleta Dynamics Aero — alinhada ao padrão Evolux (amarelo ouro + carvão + cinzas).
+  Sócios no calendário mantêm diferenciação em ouro / verde / ardósia.
+*/
 :root {
-  --agenda-humberto: #c4843a;
-  --agenda-humberto-soft: #f3e6d8;
+  --agenda-humberto: #c9a227;
+  --agenda-humberto-soft: #fff4d6;
   --agenda-ruan: #5b8a5e;
   --agenda-ruan-soft: #e4f0e3;
-  --agenda-jadyel: #6b5b95;
-  --agenda-jadyel-soft: #e8e4f5;
+  --agenda-jadyel: #5c6670;
+  --agenda-jadyel-soft: #eef0f2;
 
   --pos-faturado: var(--agenda-ruan);
   --pos-faturado-soft: var(--agenda-ruan-soft);
@@ -16,38 +19,38 @@
   --pos-provisionado: var(--agenda-humberto);
   --pos-provisionado-soft: var(--agenda-humberto-soft);
 
-  --tse-yellow: #6b5b95;
-  --tse-yellow-strong: #e8e4f5;
-  --tse-soft: #e8e4f5;
-  --tse-gold: #c4843a;
-  --tse-olive: #6b5b95;
-  --tse-bg: #f6f3ee;
-  --tse-text: #333333;
-  --tse-muted: #717171;
+  --tse-yellow: #f5c400;
+  --tse-yellow-strong: #ffd24a;
+  --tse-soft: #fff8e0;
+  --tse-gold: #d4a017;
+  --tse-olive: #f5c400;
+  --tse-bg: #f7f7f5;
+  --tse-text: #4a4a49;
+  --tse-muted: #707070;
   color-scheme: light;
-  accent-color: #6b5b95;
+  accent-color: #f5c400;
 }
 
 @theme inline {
-  --color-tse-yellow: #6b5b95;
-  --color-tse-yellow-strong: #e8e4f5;
-  --color-tse-soft: #e8e4f5;
-  --color-tse-gold: #c4843a;
-  --color-tse-olive: #6b5b95;
+  --color-tse-yellow: #f5c400;
+  --color-tse-yellow-strong: #ffd24a;
+  --color-tse-soft: #fff8e0;
+  --color-tse-gold: #d4a017;
+  --color-tse-olive: #f5c400;
   --color-tse-green: #5b8a5e;
-  --color-tse-bg: #f6f3ee;
-  --color-tse-bar: #faf8f5;
-  --color-tse-text: #333333;
-  --color-tse-muted: #717171;
-  --color-tse-line: #ebe6df;
-  --color-tse-border: #ddd6cc;
-  --color-tse-top-line: #6b5b95;
+  --color-tse-bg: #f7f7f5;
+  --color-tse-bar: #ffffff;
+  --color-tse-text: #4a4a49;
+  --color-tse-muted: #707070;
+  --color-tse-line: #ebebeb;
+  --color-tse-border: #e6e6e6;
+  --color-tse-top-line: #f5c400;
   --color-pos-faturado: #5b8a5e;
   --color-pos-faturado-soft: #e4f0e3;
-  --color-pos-previsto: #6b5b95;
-  --color-pos-previsto-soft: #e8e4f5;
-  --color-pos-provisionado: #c4843a;
-  --color-pos-provisionado-soft: #f3e6d8;
+  --color-pos-previsto: #5c6670;
+  --color-pos-previsto-soft: #eef0f2;
+  --color-pos-provisionado: #c9a227;
+  --color-pos-provisionado-soft: #fff4d6;
   --font-sans: var(--font-source), "Source Sans 3", sans-serif;
   --font-display: var(--font-michroma), sans-serif;
 }
@@ -58,11 +61,11 @@ body {
 }
 
 ::selection {
-  background: #e8e4f5;
+  background: #fff8e0;
 }
 
 :focus-visible {
-  outline: 2px solid #6b5b95;
+  outline: 2px solid #f5c400;
   outline-offset: 2px;
 }
 
@@ -175,7 +178,7 @@ body {
 }
 
 .aero-varredura {
-  background: linear-gradient(to bottom, transparent, rgba(107, 91, 149, 0.18), transparent);
+  background: linear-gradient(to bottom, transparent, rgba(245, 196, 0, 0.22), transparent);
   animation: aero-varredura 1.6s ease-out 0.15s forwards;
 }
 
@@ -188,7 +191,7 @@ body {
 .aero-campo:-webkit-autofill:focus {
   -webkit-text-fill-color: #fff;
   caret-color: #fff;
-  box-shadow: 0 0 0 1000px #2f2744 inset;
+  box-shadow: 0 0 0 1000px #3d3d3c inset;
   transition: background-color 9999s ease-out;
 }
 

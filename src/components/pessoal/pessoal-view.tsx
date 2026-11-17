@@ -110,7 +110,7 @@ export function PessoalView() {
         </div>
         <p className="mt-2 text-[12px] text-tse-muted">
           Tripulação, gestão e demais custos de pessoal vão em{" "}
-          <Link href="/despesas?recorte=fixas" className="font-bold text-[#6B5B95]">
+          <Link href="/despesas?recorte=fixas" className="font-bold text-[#F5C400]">
             Despesas fixas
           </Link>
           .

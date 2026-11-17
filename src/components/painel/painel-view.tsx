@@ -141,7 +141,7 @@ function PainelSocio({
       <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-[15px] font-bold tracking-tight">Horas voadas × participação</h2>
-          <Link href="/itinerarios" className="text-[12px] font-bold text-[#6B5B95]">
+          <Link href="/itinerarios" className="text-[12px] font-bold text-[#F5C400]">
             Ver detalhe
           </Link>
         </div>
@@ -203,7 +203,7 @@ function PainelSocio({
       <section className="rounded-2xl border border-[#EEF0F3] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-[15px] font-bold tracking-tight">Rateio de custos</h2>
-          <Link href="/despesas" className="text-[12px] font-bold text-[#6B5B95]">
+          <Link href="/despesas" className="text-[12px] font-bold text-[#F5C400]">
             Ver detalhe
           </Link>
         </div>
@@ -217,7 +217,7 @@ function PainelSocio({
                 key={item.partnerId}
                 className={cn(
                   "rounded-xl border border-[#EEF0F3] px-3 py-2.5",
-                  souEu && "border-[#E8E4F5] bg-[#F7F5FB]",
+                  souEu && "border-[#FFF8E0] bg-[#F7F5FB]",
                 )}
               >
                 <p className="flex items-center gap-2 text-[13px] font-bold">
@@ -257,7 +257,7 @@ function PainelSocio({
               </li>
             );
           })}
-          <li className="rounded-xl bg-[#F6F3EE] px-3 py-2.5">
+          <li className="rounded-xl bg-[#F2F2F2] px-3 py-2.5">
             <p className="text-[13px] font-bold">Total</p>
             <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
               <div className="flex justify-between gap-2">
@@ -446,8 +446,8 @@ function PainelAdmin({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#E8E4F5] bg-white p-5 shadow-sm">
-        <p className="text-[13px] font-semibold text-[#6B5B95]">Situação dos sócios</p>
+      <section className="rounded-2xl border border-[#FFF8E0] bg-white p-5 shadow-sm">
+        <p className="text-[13px] font-semibold text-[#F5C400]">Situação dos sócios</p>
         <ul className="mt-3 divide-y divide-[#EEEEEE]">
           {partners.map((item) => {
             const width = item.total > 0 ? Math.min(100, (item.pago / item.total) * 100) : 0;
@@ -600,7 +600,7 @@ function LinkAcao({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 rounded-full bg-[#E8E4F5] px-3 py-1.5 text-[12px] font-bold text-[#6B5B95]"
+      className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF8E0] px-3 py-1.5 text-[12px] font-bold text-[#F5C400]"
     >
       {Icone ? <Icone className="size-4 shrink-0" aria-hidden /> : null}
       {children}

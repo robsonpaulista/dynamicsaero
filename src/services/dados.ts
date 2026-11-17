@@ -28,6 +28,7 @@ import type {
   Insurance,
   Itinerary,
   MaintenanceItem,
+  AlocacaoVibra,
   Partner,
   Rota,
 } from "@/types/operacao";
@@ -50,6 +51,8 @@ export type BaseDados = {
   contas: ContaPlano[];
   /** Aeródromos cadastrados na operação (além do catálogo estático). */
   aerodromos: Aerodromo[];
+  /** Alocação manual Vibra: trecho → comprovante. */
+  alocacoesVibra: AlocacaoVibra[];
 };
 
 export const INITIAL_BASE: BaseDados = {
@@ -66,6 +69,7 @@ export const INITIAL_BASE: BaseDados = {
   rotas: ROTAS,
   contas: CONTAS,
   aerodromos: AERODROMOS_SEED,
+  alocacoesVibra: [],
 };
 
 const STORAGE_KEY = "dynamics-aero-dados-v1";
@@ -160,6 +164,12 @@ function lerBase(parsed: unknown): BaseDados | null {
       cidade: String(item.cidade ?? "").trim(),
     }))
     .filter((item) => item.icao && item.cidade);
+  const alocacoesVibra = (asArray<AlocacaoVibra>(parsed.alocacoesVibra) ?? [])
+    .map((item) => ({
+      legId: String(item.legId ?? "").trim(),
+      abastecimentoId: String(item.abastecimentoId ?? "").trim(),
+    }))
+    .filter((item) => item.legId && item.abastecimentoId);
   if (!aircraft || !partners || !crew || !hangars || !seguros || !itineraries || !maintenance) {
     return null;
   }
@@ -177,6 +187,7 @@ function lerBase(parsed: unknown): BaseDados | null {
     rotas,
     contas,
     aerodromos,
+    alocacoesVibra,
   };
 }
 
@@ -192,18 +203,23 @@ export async function hidratarBanco(): Promise<void> {
   try {
     const seedAtual = window.localStorage.getItem(SEED_KEY);
     const seedNovo = seedAtual !== SEED_OPERACAO;
+    const remotoBruto = await carregarOperacao().catch(() => null);
+    const remoto = remotoBruto != null ? lerBase(remotoBruto) : null;
+
     if (seedNovo) {
+      // Novo seed de dados (itinerários etc.), mas preserva alocações manuais Vibra.
+      const alocacoesPreservadas = remoto?.alocacoesVibra ?? [];
+      current = {
+        ...INITIAL_BASE,
+        alocacoesVibra: alocacoesPreservadas,
+      };
+      await gravarOperacao(current);
+      window.localStorage.setItem(SEED_KEY, SEED_OPERACAO);
+    } else if (remoto && remoto.aircraft.length > 0) {
+      current = remoto;
+    } else {
       current = INITIAL_BASE;
       await gravarOperacao(INITIAL_BASE);
-      window.localStorage.setItem(SEED_KEY, SEED_OPERACAO);
-    } else {
-      const remoto = lerBase(await carregarOperacao());
-      if (remoto && remoto.aircraft.length > 0) {
-        current = remoto;
-      } else {
-        current = INITIAL_BASE;
-        await gravarOperacao(INITIAL_BASE);
-      }
     }
     erroBanco = null;
     window.localStorage.removeItem(STORAGE_KEY);

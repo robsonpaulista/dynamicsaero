@@ -152,6 +152,8 @@ export type Leg = {
   commanderId: string;
   copilotId?: string;
   posting?: Posting;
+  /** Ordem da linha no relatório de etapas (sequência real de voo). */
+  ordem?: number;
 };
 
 /** NF de abastecimento registrada no voo — despesa financeira da operação; tanque FIFO da aeronave. */
@@ -339,6 +341,12 @@ export type Rateio = {
   previsto: number;
   provisionado: number;
   fecha: boolean;
+};
+
+/** Ligação manual trecho ↔ comprovante Vibra (conferência de combustível). */
+export type AlocacaoVibra = {
+  legId: string;
+  abastecimentoId: string;
 };
 
 export type Kpis = {

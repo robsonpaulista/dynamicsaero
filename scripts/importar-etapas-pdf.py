@@ -32,8 +32,19 @@ PAT = re.compile(
 PARTNER_RANK = {"humberto": 0, "ruan": 1, "jadyel": 2}
 
 
+# ICAO → cidade canônica (corrige digitação do PDF, ex.: SBJE como Teresina).
+CIDADE_POR_ICAO = {
+    "SBJE": "Cruz",
+    "SBTE": "Teresina",
+}
+
+
 def limpar_cidade(texto: str) -> str:
     return re.sub(r"\s*-\s*[A-Z]{2}$", "", texto.strip()).strip()
+
+
+def cidade_icao(icao: str, cidade_pdf: str) -> str:
+    return CIDADE_POR_ICAO.get(icao, limpar_cidade(cidade_pdf))
 
 
 def tempo_para_horas(tempo: str) -> float:
@@ -53,9 +64,15 @@ def escolher_solicitante(partners: list[str]) -> str:
 
 
 def ler_pdfs() -> tuple[dict, dict]:
-    """Retorna meta por id de etapa e partners por id."""
+    """Retorna meta por id de etapa e partners por id.
+
+    `ordemArquivo` segue a ordem das linhas no PDF (não o nº da etapa):
+    no relatório o índice às vezes vem fora de ordem, mas a sequência
+    impressa é a rota real (ex.: 273, 275, 274 = SBTE→SJOJ→SJ4E→SBTE).
+    """
     meta: dict[str, dict] = {}
     owners: dict[str, list[str]] = defaultdict(list)
+    ordem_arquivo = 0
 
     for nome_arquivo, partner_id, _nome in PDFS:
         path = PDF_DIR / nome_arquivo
@@ -77,12 +94,14 @@ def ler_pdfs() -> tuple[dict, dict]:
             date_iso = f"{y}-{mo}-{d}"
             hours = tempo_para_horas(tempo)
             if lid not in meta:
+                ordem_arquivo += 1
                 meta[lid] = {
                     "sourceId": lid,
+                    "ordemArquivo": ordem_arquivo,
                     "fromIcao": from_icao,
                     "toIcao": to_icao,
-                    "fromCity": limpar_cidade(from_city),
-                    "toCity": limpar_cidade(to_city),
+                    "fromCity": cidade_icao(from_icao, from_city),
+                    "toCity": cidade_icao(to_icao, to_city),
                     "date": date_iso,
                     "blockHours": hours,
                     "tempo": tempo,
@@ -202,7 +221,10 @@ def main() -> None:
     itineraries: list[dict] = []
     legs_index: dict[str, dict] = {}
 
-    for lid, info in sorted(meta.items(), key=lambda kv: (kv[1]["date"], int(kv[0]))):
+    for lid, info in sorted(
+        meta.items(),
+        key=lambda kv: (kv[1]["date"], kv[1].get("ordemArquivo", int(kv[0]))),
+    ):
         partners = owners.get(lid, ["jadyel"])
         requested = escolher_solicitante(partners)
         commander = requested
@@ -232,6 +254,7 @@ def main() -> None:
             "catering": 0,
             "commanderId": commander,
             "posting": "realizado",
+            "ordem": info.get("ordemArquivo"),
             "requestedBy": requested,
             "itineraryId": itinerary_id,
         }

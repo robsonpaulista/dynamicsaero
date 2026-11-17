@@ -12,12 +12,12 @@ import type {
 
 /** Cores sólidas e suaves do calendário — base visual do cockpit. */
 export const CORES_AGENDA = {
-  humberto: "#C4843A",
-  humbertoSoft: "#F3E6D8",
+  humberto: "#C9A227",
+  humbertoSoft: "#FFF4D6",
   ruan: "#5B8A5E",
   ruanSoft: "#E4F0E3",
-  jadyel: "#6B5B95",
-  jadyelSoft: "#E8E4F5",
+  jadyel: "#5C6670",
+  jadyelSoft: "#EEF0F2",
 } as const;
 
 /** Posição da despesa: faturado=Ruan, previsto=Jadyel, provisionado=Humberto. */
@@ -27,10 +27,10 @@ export const CORES_POSICAO = {
   faturadoTexto: "#3F6B4A",
   previsto: CORES_AGENDA.jadyel,
   previstoSoft: CORES_AGENDA.jadyelSoft,
-  previstoTexto: "#4F4270",
+  previstoTexto: "#3D3D3C",
   provisionado: CORES_AGENDA.humberto,
   provisionadoSoft: CORES_AGENDA.humbertoSoft,
-  provisionadoTexto: "#8B5E3C",
+  provisionadoTexto: "#8B6914",
 } as const;
 
 export const PARTNER_COLOR: Record<string, string> = {
@@ -206,27 +206,27 @@ export function categoryBarColor(category: ExpenseCategory): string {
 
 export const STATUS_CLASS: Record<string, string> = {
   disponivel: "bg-[#E4F0E3] text-[#3F6B4A]",
-  em_voo: "bg-[#E8E4F5] text-[#4F4270]",
+  em_voo: "bg-[#FFF8E0] text-[#3D3D3C]",
   manutencao: "bg-[#F3E6D8] text-[#8B5E3C]",
   concluido: "bg-[#E4F0E3] text-[#3F6B4A]",
-  confirmado: "bg-[#E8E4F5] text-[#4F4270]",
-  previsto: "bg-[#E8E4F5] text-[#4F4270]",
+  confirmado: "bg-[#FFF8E0] text-[#3D3D3C]",
+  previsto: "bg-[#FFF8E0] text-[#3D3D3C]",
   cancelado: "bg-[#F4F4F2] text-[#717171]",
   em_dia: "bg-[#E4F0E3] text-[#3F6B4A]",
-  proxima: "bg-[#E8E4F5] text-[#4F4270]",
+  proxima: "bg-[#FFF8E0] text-[#3D3D3C]",
   em_execucao: "bg-[#F3E6D8] text-[#8B5E3C]",
   regular: "bg-[#E4F0E3] text-[#3F6B4A]",
-  renovacao: "bg-[#E8E4F5] text-[#4F4270]",
+  renovacao: "bg-[#FFF8E0] text-[#3D3D3C]",
   ativo: "bg-[#E4F0E3] text-[#3F6B4A]",
   ferias: "bg-[#F4F4F2] text-[#717171]",
-  treinamento: "bg-[#E8E4F5] text-[#4F4270]",
+  treinamento: "bg-[#FFF8E0] text-[#3D3D3C]",
   realizado: "bg-[#E4F0E3] text-[#3F6B4A]",
-  previsto_posting: "bg-[#E8E4F5] text-[#4F4270]",
+  previsto_posting: "bg-[#FFF8E0] text-[#3D3D3C]",
   provisionado: "bg-[#F3E6D8] text-[#8B5E3C]",
   critico: "bg-[#F3E6D8] text-[#8B5E3C]",
-  atencao: "bg-[#E8E4F5] text-[#4F4270]",
+  atencao: "bg-[#FFF8E0] text-[#3D3D3C]",
   info: "bg-[#F4F4F2] text-[#333333]",
-  negocios: "bg-[#E8E4F5] text-[#4F4270]",
+  negocios: "bg-[#FFF8E0] text-[#3D3D3C]",
   pessoal: "bg-[#F3E6D8] text-[#8B5E3C]",
   preventiva: "bg-[#E4F0E3] text-[#3F6B4A]",
   corretiva: "bg-[#F3E6D8] text-[#8B5E3C]",
