@@ -726,11 +726,14 @@ export type ConferenciaVibraNotaOrfa = {
   referencia: string | null;
 };
 
-/** Totais Vibra por sócio (valor da NF rateado pelos trechos ligados). */
+/** Totais Vibra por sócio (litros e valor da NF rateados pelos trechos ligados). */
 export type ConferenciaVibraSolicitante = {
   partnerId: string;
   combustivel: number;
+  /** Litros da NF rateados (não o consumo previsto). */
   litros: number;
+  /** combustivel / litros — preço médio efetivo da cota. */
+  precoLitroMedio: number | null;
   trechos: number;
   abastecimentos: number;
 };
@@ -788,14 +791,19 @@ type GrupoAbastMatch = {
   detalhe: string;
 };
 
-/** Rateia o valor de cada comprovante pelos trechos ligados (peso = litros). */
+/**
+ * Rateia litros e valor de cada NF pelos trechos ligados.
+ * Peso = consumo previsto do trecho; litros creditados = cota da NF (não o consumo).
+ */
 function agregarSolicitantesVibra(
   grupos: GrupoAbastMatch[],
   aircraftIdFallback: string,
 ): ConferenciaVibraSolicitante[] {
   const mapa = new Map<
     string,
-    ConferenciaVibraSolicitante & { abasts: Set<string> }
+    Omit<ConferenciaVibraSolicitante, "precoLitroMedio" | "abastecimentos"> & {
+      abasts: Set<string>;
+    }
   >();
   const garantir = (partnerId: string) => {
     const atual = mapa.get(partnerId) ?? {
@@ -803,7 +811,6 @@ function agregarSolicitantesVibra(
       combustivel: 0,
       litros: 0,
       trechos: 0,
-      abastecimentos: 0,
       abasts: new Set<string>(),
     };
     mapa.set(partnerId, atual);
@@ -836,26 +843,25 @@ function agregarSolicitantesVibra(
           ? trecho.litros / somaLitrosTrechos
           : 1 / grupo.trechos.length;
       const valorTrecho = amount * peso;
-      const litrosTrecho =
-        somaLitrosTrechos > 0 ? trecho.litros : grupo.litros * peso;
+      const litrosNfTrecho = grupo.litros * peso;
 
       if (trecho.rateioParticipacao) {
         const ownership = getAircraft(aircraftId)?.ownership ?? [];
         if (ownership.length === 0) {
-          creditar(trecho.partnerId, valorTrecho, litrosTrecho, grupo.abastecimentoId);
+          creditar(trecho.partnerId, valorTrecho, litrosNfTrecho, grupo.abastecimentoId);
           continue;
         }
         for (const owner of ownership) {
           creditar(
             owner.partnerId,
             valorTrecho * owner.share,
-            litrosTrecho * owner.share,
+            litrosNfTrecho * owner.share,
             grupo.abastecimentoId,
           );
         }
         continue;
       }
-      creditar(trecho.partnerId, valorTrecho, litrosTrecho, grupo.abastecimentoId);
+      creditar(trecho.partnerId, valorTrecho, litrosNfTrecho, grupo.abastecimentoId);
     }
   }
 
@@ -863,6 +869,8 @@ function agregarSolicitantesVibra(
     .map(({ abasts, ...item }) => ({
       ...item,
       abastecimentos: abasts.size,
+      precoLitroMedio:
+        item.litros > 0 ? centavos(item.combustivel / item.litros) : null,
     }))
     .sort(
       (left, right) =>

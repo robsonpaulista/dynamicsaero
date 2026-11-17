@@ -8,7 +8,6 @@ import type {
   ConferenciaVibraLinha,
   ConferenciaVibraPorData,
   ConferenciaVibraSolicitante,
-  ConferenciaVibraStatus,
 } from "@/services/conferencia";
 import { getAircraft, monthsLabel, partnerShort, type MonthFilter } from "@/services/operacao";
 
@@ -82,51 +81,6 @@ function formatPrecoLitro(value: number | null): string {
     maximumFractionDigits: 2,
   }).format(value);
   return `${limpar(texto)}/L`;
-}
-
-function rotuloStatusLinha(status: ConferenciaVibraStatus): string {
-  switch (status) {
-    case "sem_voo":
-      return "Sem voo";
-    case "sem_abast":
-      return "Sem abast.";
-    case "vizinho":
-      return "Outro dia";
-    case "atencao":
-      return "Atencao";
-    default:
-      return "Alocado";
-  }
-}
-
-function corStatus(status: ConferenciaVibraStatus): [number, number, number] {
-  switch (status) {
-    case "sem_voo":
-      return [185, 28, 28];
-    case "sem_abast":
-      return COR.muted;
-    case "vizinho":
-      return [29, 78, 216];
-    case "atencao":
-      return [194, 65, 12];
-    default:
-      return [21, 128, 61];
-  }
-}
-
-function fundoStatus(status: ConferenciaVibraStatus): [number, number, number] {
-  switch (status) {
-    case "sem_voo":
-      return [254, 242, 242];
-    case "sem_abast":
-      return [247, 248, 249];
-    case "vizinho":
-      return [239, 246, 255];
-    case "atencao":
-      return [255, 247, 237];
-    default:
-      return [236, 253, 243];
-  }
 }
 
 function rotuloParticipacao(aircraftId: string): string {
@@ -628,8 +582,8 @@ function cardsSociosVibra(
     trechos: item.trechos,
     total: item.combustivel,
     linhas: [
-      { label: "Combustível", valor: formatBRL(item.combustivel) },
-      { label: "Litros", valor: formatLitros(item.litros) },
+      { label: "Litros NF", valor: formatLitros(item.litros) },
+      { label: "R$/L medio", valor: formatPrecoLitro(item.precoLitroMedio) },
       { label: "Total", valor: formatBRL(item.combustivel), bold: true },
     ],
   }));
@@ -784,31 +738,6 @@ function blocoVibra(linha: ConferenciaVibraLinha, colunas: ColunaPdf[], doc: JsP
     size: index === 0 ? 7.5 : 6.8,
   }));
 
-  const checagem: LinhaCelula[] = [
-    {
-      texto: rotuloStatusLinha(linha.status),
-      bold: true,
-      cor: corStatus(linha.status),
-      fundo: fundoStatus(linha.status),
-      pill: true,
-      size: 7.5,
-      gapApos: 0.6,
-    },
-  ];
-  if (linha.saldoAposTrecho != null) {
-    checagem.push({
-      texto:
-        linha.saldoAposTrecho > 1
-          ? `Sobram ${formatLitros(linha.saldoAposTrecho)}`
-          : "NF sem saldo",
-      size: 6.5,
-      cor: COR.muted,
-    });
-  }
-  for (const pedaco of quebrar(doc, linha.detalhe, (colunas[9]?.largura ?? 32) - 3, 2)) {
-    if (pedaco) checagem.push({ texto: pedaco, size: 6.5, cor: COR.muted });
-  }
-
   return [
     { linhas: [{ texto: formatDate(linha.date), bold: true }] },
     { linhas: trechoLinhas.length > 0 ? trechoLinhas : [{ texto: "-", bold: true }] },
@@ -882,7 +811,6 @@ function blocoVibra(linha: ConferenciaVibraLinha, colunas: ColunaPdf[], doc: JsP
             ]
           : [{ texto: "-", cor: COR.muted }],
     },
-    { linhas: checagem },
   ];
 }
 
@@ -902,16 +830,15 @@ export async function baixarPdfConferenciaVibra(params: {
   const subtitulo = `${monthsLabel(months)} · ${escopo(aircraftId)} · posição em ${formatDate(HOJE)}`;
 
   const colunas: ColunaPdf[] = [
-    { titulo: "Data", largura: util * 0.06 },
-    { titulo: "Trecho", largura: util * 0.17 },
-    { titulo: "Tempo de Voo", largura: util * 0.07, align: "right" },
-    { titulo: "Consumo Previsto (LT)", largura: util * 0.09, align: "center" },
-    { titulo: "Socio", largura: util * 0.07, align: "center" },
-    { titulo: "Abastecido?", largura: util * 0.08, align: "center" },
-    { titulo: "NF alocada", largura: util * 0.1, align: "center" },
-    { titulo: "Litros NF", largura: util * 0.08, align: "right" },
-    { titulo: "Valor NF", largura: util * 0.1, align: "right" },
-    { titulo: "Checagem", largura: util * 0.18 },
+    { titulo: "Data", largura: util * 0.07 },
+    { titulo: "Trecho", largura: util * 0.2 },
+    { titulo: "Tempo de Voo", largura: util * 0.09, align: "right" },
+    { titulo: "Consumo Previsto (LT)", largura: util * 0.11, align: "center" },
+    { titulo: "Socio", largura: util * 0.09, align: "center" },
+    { titulo: "Abastecido?", largura: util * 0.09, align: "center" },
+    { titulo: "NF alocada", largura: util * 0.13, align: "center" },
+    { titulo: "Litros NF", largura: util * 0.1, align: "right" },
+    { titulo: "Valor NF", largura: util * 0.12, align: "right" },
   ];
 
   cabecalhoPagina(doc, null, margem);
@@ -1074,7 +1001,6 @@ export async function baixarPdfConferenciaVibra(params: {
         {
           linhas: [{ texto: formatBRL(valorNf), bold: true }],
         },
-        { linhas: [{ texto: "" }] },
       ],
       alturaLinha,
       [244, 244, 242],

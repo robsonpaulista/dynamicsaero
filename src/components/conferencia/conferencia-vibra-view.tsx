@@ -513,12 +513,16 @@ export function ConferenciaVibraView() {
                     </div>
                     <dl className="mt-2 space-y-1 tabular-nums">
                       <div className="flex items-baseline justify-between gap-2">
-                        <dt className="text-tse-muted">Combustível</dt>
-                        <dd>{formatBRL(item.combustivel)}</dd>
+                        <dt className="text-tse-muted">Litros NF</dt>
+                        <dd>{formatLitros(item.litros)}</dd>
                       </div>
                       <div className="flex items-baseline justify-between gap-2">
-                        <dt className="text-tse-muted">Litros</dt>
-                        <dd>{formatLitros(item.litros)}</dd>
+                        <dt className="text-tse-muted">R$/L médio</dt>
+                        <dd>{formatPrecoLitro(item.precoLitroMedio)}</dd>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-2 border-t border-[#F0F1F3] pt-1 font-semibold">
+                        <dt>Total</dt>
+                        <dd>{formatBRL(item.combustivel)}</dd>
                       </div>
                     </dl>
                   </button>

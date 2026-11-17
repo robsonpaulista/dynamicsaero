@@ -184,18 +184,21 @@ export function relatorioConferenciaVibra(
 
   const porSocio: Planilha = {
     nome: "Por socio",
-    titulo: "Totais por sócio · valor rateado pelos trechos",
+    titulo: "Totais por sócio · litros e valor da NF rateados pelos trechos",
     notas: notasCab,
-    colunas: ["Sócio", "Trechos", "Abastecimentos", "Litros", "Combustível"],
+    colunas: ["Sócio", "Trechos", "Abastecimentos", "Litros NF", "R$/L médio", "Total"],
     linhas: dados.porSolicitante.map((item) => [
       partnerShort(item.partnerId),
       item.trechos,
       item.abastecimentos,
       formatLitros(item.litros),
+      item.precoLitroMedio != null
+        ? Number(item.precoLitroMedio.toFixed(2))
+        : "—",
       item.combustivel,
     ]),
-    alinhamento: ["inicio", "fim", "fim", "fim", "fim"],
-    larguras: [28, 14, 18, 18, 22],
+    alinhamento: ["inicio", "fim", "fim", "fim", "fim", "fim"],
+    larguras: [24, 12, 16, 14, 14, 20],
   };
 
   return {

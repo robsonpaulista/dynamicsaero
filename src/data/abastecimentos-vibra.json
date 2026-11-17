@@ -17,6 +17,23 @@
     "notaAtribuicao": "1009533755"
   },
   {
+    "id": "abast-37593",
+    "referencia": "37593",
+    "numeroEntrega": "589473697",
+    "date": "2026-04-17",
+    "icao": "SBTE",
+    "cidade": "Teresina",
+    "destinoIcao": null,
+    "litros": 641,
+    "densidade": 0.7825,
+    "arquivo": "NF 37593 - SBTE - PSJSA.pdf",
+    "anexoUrl": "/anexos/abastecimentos/NF 37593 - SBTE - PSJSA.pdf",
+    "notaNumero": "1000056988",
+    "notaDate": "2026-04-20",
+    "notaAmount": 6695.82,
+    "notaAtribuicao": "1009335554"
+  },
+  {
     "id": "abast-37595",
     "referencia": "37595",
     "numeroEntrega": "589474697",
@@ -119,6 +136,23 @@
     "notaAtribuicao": "1009429895"
   },
   {
+    "id": "abast-37700",
+    "referencia": "37700",
+    "numeroEntrega": "516484694",
+    "date": "2026-04-28",
+    "icao": "SBTE",
+    "cidade": "Teresina",
+    "destinoIcao": null,
+    "litros": 517,
+    "densidade": 0.7855,
+    "arquivo": "NF 37700 - SBTE - PSJSA.pdf",
+    "anexoUrl": "/anexos/abastecimentos/NF 37700 - SBTE - PSJSA.pdf",
+    "notaNumero": "1000063111",
+    "notaDate": "2026-04-29",
+    "notaAmount": 5400.53,
+    "notaAtribuicao": "1009446454"
+  },
+  {
     "id": "abast-37755",
     "referencia": "37755",
     "numeroEntrega": "516488692",
@@ -219,6 +253,23 @@
     "notaDate": "2026-05-14",
     "notaAmount": 10338.59,
     "notaAtribuicao": "1009638545"
+  },
+  {
+    "id": "abast-37851",
+    "referencia": "37851",
+    "numeroEntrega": "516500691",
+    "date": "2026-05-14",
+    "icao": "SBTE",
+    "cidade": "Teresina",
+    "destinoIcao": null,
+    "litros": 805,
+    "densidade": 0.786,
+    "arquivo": "NF 37851 - SBTE - PSJSA.pdf",
+    "anexoUrl": "/anexos/abastecimentos/NF 37851 - SBTE - PSJSA.pdf",
+    "notaNumero": "1000073199",
+    "notaDate": "2026-05-15",
+    "notaAmount": 9545.05,
+    "notaAtribuicao": "1009654784"
   },
   {
     "id": "abast-37877",
