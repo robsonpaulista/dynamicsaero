@@ -185,8 +185,6 @@ export function EntradaView({
 
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-tse-text px-6 text-white [color-scheme:dark]">
-      <div className="aero-brilho pointer-events-none absolute size-[34rem] rounded-full bg-[#F5C400]/25 blur-3xl" />
-      <div className="aero-varredura pointer-events-none absolute inset-0" />
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center">
         <MarcaEntrada animada={fase === "splash"} compacta={fase === "form"} />
         {fase === "form" ? (
