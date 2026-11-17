@@ -34,6 +34,9 @@ function guardarEmail(valor: string, lembrar: boolean): void {
 
 type FaseEntrada = "splash" | "form";
 
+const CAMPO_ENTRADA =
+  "aero-campo h-11 w-full rounded-xl border border-white/20 bg-[#3D3D3C] px-3 text-[15px] text-white shadow-none outline-none ring-0 transition-colors placeholder:text-white/35 focus:border-tse-yellow focus:shadow-none focus:ring-0 focus:outline-none read-only:cursor-wait";
+
 function MarcaEntrada({ animada, compacta }: { animada: boolean; compacta: boolean }) {
   return (
     <div className="flex flex-col items-center">
@@ -184,7 +187,7 @@ export function EntradaView({
   }
 
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-tse-text px-6 text-white [color-scheme:dark]">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-tse-text px-6 text-white">
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center">
         <MarcaEntrada animada={fase === "splash"} compacta={fase === "form"} />
         {fase === "form" ? (
@@ -226,7 +229,7 @@ export function EntradaView({
                     value={nome}
                     readOnly={enviando}
                     onChange={(event) => setNome(event.target.value)}
-                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#F5C400] read-only:cursor-wait"
+                    className={CAMPO_ENTRADA}
                   />
                 </label>
               ) : null}
@@ -242,7 +245,7 @@ export function EntradaView({
                   value={email}
                   readOnly={enviando}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#F5C400] read-only:cursor-wait"
+                  className={CAMPO_ENTRADA}
                 />
               </label>
               <label>
@@ -259,7 +262,7 @@ export function EntradaView({
                     value={senha}
                     readOnly={enviando}
                     onChange={(event) => setSenha(event.target.value)}
-                    className="aero-campo h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3 pr-11 text-[15px] text-white outline-none transition-colors placeholder:text-white/35 focus:border-[#F5C400] read-only:cursor-wait"
+                    className={`${CAMPO_ENTRADA} pr-11`}
                   />
                   <button
                     type="button"
@@ -325,7 +328,7 @@ export function EntradaView({
             <button
               type="submit"
               disabled={enviando}
-              className="mt-7 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F5C400] text-[15px] font-bold text-[#4A4A49] transition-colors hover:bg-[#FFD24A] disabled:cursor-wait disabled:opacity-80"
+              className="mt-7 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-tse-yellow text-[15px] font-bold text-tse-text shadow-none outline-none ring-0 transition-colors hover:bg-tse-yellow-strong focus-visible:outline-none disabled:cursor-wait disabled:opacity-80"
             >
               {enviando ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : null}
               {enviando ? "Entrando…" : primeiroAcesso ? "Criar e entrar" : "Entrar"}

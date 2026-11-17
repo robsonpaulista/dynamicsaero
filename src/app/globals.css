@@ -186,13 +186,24 @@ body {
   animation: aero-sobe 0.7s ease-out both;
 }
 
+.aero-campo {
+  background-color: #3d3d3c;
+  color: #fff;
+  caret-color: #fff;
+}
+
 .aero-campo:-webkit-autofill,
 .aero-campo:-webkit-autofill:hover,
-.aero-campo:-webkit-autofill:focus {
-  -webkit-text-fill-color: #fff;
+.aero-campo:-webkit-autofill:focus,
+.aero-campo:-webkit-autofill:active {
+  -webkit-text-fill-color: #fff !important;
   caret-color: #fff;
-  box-shadow: 0 0 0 1000px #3d3d3c inset;
-  transition: background-color 9999s ease-out;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background-color: #3d3d3c !important;
+  background-image: none !important;
+  box-shadow: 0 0 0 1000px #3d3d3c inset !important;
+  filter: none;
+  transition: background-color 99999s ease-in-out 0s;
 }
 
 @media (prefers-reduced-motion: reduce) {
