@@ -42,6 +42,7 @@ type Coluna =
   | "tempo"
   | "litros"
   | "socio"
+  | "abastecido"
   | "abast"
   | "litrosAbast"
   | "valor"
@@ -105,6 +106,11 @@ function ordenarLinhas(itens: ConferenciaVibraLinha[], ordenacao: Ordenacao): Co
         return compararNumero(left.litrosCalc, right.litrosCalc, ordem);
       case "socio":
         return compararTexto(rotuloSocio(left), rotuloSocio(right), ordem);
+      case "abastecido": {
+        const a = left.abastecimentoId != null ? 1 : 0;
+        const b = right.abastecimentoId != null ? 1 : 0;
+        return ordem === "asc" ? a - b : b - a;
+      }
       case "abast":
         return compararTexto(left.referencia, right.referencia, ordem);
       case "litrosAbast":
@@ -153,6 +159,13 @@ function CabecalhoOrdenavel({
   );
 }
 
+function rotuloStatusLinha(status: ConferenciaVibraLinha["status"]): string {
+  if (status === "sem_abast") return "Sem abast.";
+  if (status === "atencao") return "Atenção";
+  if (status === "vizinho") return "Outro dia";
+  return "Alocado";
+}
+
 function BadgeStatus({ status }: { status: ConferenciaVibraLinha["status"] }) {
   if (status === "sem_abast") {
     return (
@@ -180,6 +193,28 @@ function BadgeStatus({ status }: { status: ConferenciaVibraLinha["status"] }) {
       Alocado
     </span>
   );
+}
+
+function hintValorNf(linha: ConferenciaVibraLinha): string | undefined {
+  if (linha.amount == null) return undefined;
+  const partes: string[] = [];
+  const preco = formatPrecoLitro(linha.precoLitro);
+  if (preco !== "—") partes.push(preco);
+  if (linha.notaNumero) partes.push(`NF ${linha.notaNumero}`);
+  return partes.length > 0 ? partes.join(" · ") : undefined;
+}
+
+function textoChecagemResumo(linha: ConferenciaVibraLinha): string | null {
+  if (linha.saldoAposTrecho == null) return null;
+  return linha.saldoAposTrecho > 1
+    ? `Sobram ${formatLitros(linha.saldoAposTrecho)} na NF`
+    : "NF sem saldo após este trecho";
+}
+
+function hintChecagem(linha: ConferenciaVibraLinha): string | undefined {
+  const partes: string[] = [rotuloStatusLinha(linha.status)];
+  if (linha.detalhe) partes.push(linha.detalhe);
+  return partes.filter(Boolean).join(" · ") || undefined;
 }
 
 function linhaTemSocio(linha: ConferenciaVibraLinha, socioId: string): boolean {
@@ -562,20 +597,38 @@ export function ConferenciaVibraView() {
                   onOrdenar={alternarOrdenacao}
                   className="text-right"
                 >
-                  Tempo
+                  Tempo de Voo
                 </CabecalhoOrdenavel>
                 <CabecalhoOrdenavel
                   coluna="litros"
                   atual={ordenacao}
                   onOrdenar={alternarOrdenacao}
-                  className="text-right"
+                  className="text-center"
                 >
-                  Litros
+                  Consumo Previsto (LT)
                 </CabecalhoOrdenavel>
-                <CabecalhoOrdenavel coluna="socio" atual={ordenacao} onOrdenar={alternarOrdenacao}>
+                <CabecalhoOrdenavel
+                  coluna="socio"
+                  atual={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  className="text-center"
+                >
                   Sócio
                 </CabecalhoOrdenavel>
-                <CabecalhoOrdenavel coluna="abast" atual={ordenacao} onOrdenar={alternarOrdenacao}>
+                <CabecalhoOrdenavel
+                  coluna="abastecido"
+                  atual={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  className="text-center"
+                >
+                  Abastecido?
+                </CabecalhoOrdenavel>
+                <CabecalhoOrdenavel
+                  coluna="abast"
+                  atual={ordenacao}
+                  onOrdenar={alternarOrdenacao}
+                  className="text-center"
+                >
                   NF alocada
                 </CabecalhoOrdenavel>
                 <CabecalhoOrdenavel
@@ -602,6 +655,7 @@ export function ConferenciaVibraView() {
             <tbody>
               {linhas.map((linha) => {
                 const marcada = selecionados.has(linha.legId);
+                const checagemResumo = textoChecagemResumo(linha);
                 return (
                   <tr
                     key={linha.key}
@@ -639,10 +693,10 @@ export function ConferenciaVibraView() {
                     <td className={`${tdClass} text-right tabular-nums`}>
                       {linha.blockHours > 0 ? formatHours(linha.blockHours) : "—"}
                     </td>
-                    <td className={`${tdClass} text-right tabular-nums text-tse-muted`}>
+                    <td className={`${tdClass} text-center tabular-nums text-tse-muted`}>
                       {linha.litrosCalc > 0 ? formatLitros(linha.litrosCalc) : "—"}
                     </td>
-                    <td className={tdClass}>
+                    <td className={`${tdClass} text-center`}>
                       {linha.rateioParticipacao ? (
                         <PilulaSocio title="Traslado · rateio entre todos os sócios">
                           {rotuloSocio(linha)}
@@ -651,7 +705,18 @@ export function ConferenciaVibraView() {
                         <PilulaSocio partnerId={linha.partnerId}>{rotuloSocio(linha)}</PilulaSocio>
                       )}
                     </td>
-                    <td className={tdClass}>
+                    <td className={`${tdClass} text-center`}>
+                      {linha.abastecimentoId != null ? (
+                        <span className="inline-flex rounded-md bg-[#ECFDF3] px-2 py-0.5 text-[11px] font-bold text-[#15803D]">
+                          Sim
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-md bg-[#F7F8F9] px-2 py-0.5 text-[11px] font-bold text-tse-muted">
+                          Não
+                        </span>
+                      )}
+                    </td>
+                    <td className={`${tdClass} text-center`}>
                       {linha.referencia ? (
                         <>
                           {linha.anexoUrl ? (
@@ -696,29 +761,20 @@ export function ConferenciaVibraView() {
                     <td className={`${tdClass} text-right tabular-nums font-semibold`}>
                       {linha.litrosAbast != null ? formatLitros(linha.litrosAbast) : "—"}
                     </td>
-                    <td className={`${tdClass} text-right tabular-nums`}>
-                      {linha.amount != null ? (
-                        <>
-                          <p className="font-semibold">{formatBRL(linha.amount)}</p>
-                          <p className="text-[11px] text-tse-muted">
-                            {formatPrecoLitro(linha.precoLitro)}
-                            {linha.notaNumero ? ` · NF ${linha.notaNumero}` : ""}
-                          </p>
-                        </>
-                      ) : (
-                        "—"
-                      )}
+                    <td
+                      className={`${tdClass} text-right tabular-nums font-semibold`}
+                      title={hintValorNf(linha)}
+                    >
+                      {linha.amount != null ? formatBRL(linha.amount) : "—"}
                     </td>
-                    <td className={tdClass}>
-                      <BadgeStatus status={linha.status} />
-                      {linha.saldoAposTrecho != null ? (
-                        <p className="mt-1 text-[11px] tabular-nums text-tse-muted">
-                          {linha.saldoAposTrecho > 1
-                            ? `Sobram ${formatLitros(linha.saldoAposTrecho)} na NF`
-                            : "NF sem saldo após este trecho"}
-                        </p>
-                      ) : null}
-                      <p className="mt-1 text-[11px] text-tse-muted">{linha.detalhe}</p>
+                    <td className={tdClass} title={hintChecagem(linha)}>
+                      {checagemResumo ? (
+                        <span className="text-[12px] tabular-nums text-tse-muted">
+                          {checagemResumo}
+                        </span>
+                      ) : (
+                        <BadgeStatus status={linha.status} />
+                      )}
                     </td>
                   </tr>
                 );
@@ -726,7 +782,7 @@ export function ConferenciaVibraView() {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-tse-border bg-tse-bg">
-                <td className={`${tdClass} font-bold`} colSpan={6}>
+                <td className={`${tdClass} font-bold`} colSpan={7}>
                   Total · {linhas.length} trecho(s)
                   {socioFiltro ? ` · ${socioFiltro}` : ""}
                 </td>

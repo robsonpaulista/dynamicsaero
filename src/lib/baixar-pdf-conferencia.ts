@@ -84,13 +84,7 @@ function formatPrecoLitro(value: number | null): string {
   return `${limpar(texto)}/L`;
 }
 
-function formatDelta(value: number | null): string {
-  if (value == null) return "-";
-  const sinal = value > 0 ? "+" : "";
-  return `${sinal}${formatLitros(value)}`;
-}
-
-function rotuloStatus(status: ConferenciaVibraStatus): string {
+function rotuloStatusLinha(status: ConferenciaVibraStatus): string {
   switch (status) {
     case "sem_voo":
       return "Sem voo";
@@ -99,7 +93,7 @@ function rotuloStatus(status: ConferenciaVibraStatus): string {
     case "vizinho":
       return "Outro dia";
     case "atencao":
-      return "Atenção";
+      return "Atencao";
     default:
       return "Alocado";
   }
@@ -135,11 +129,6 @@ function fundoStatus(status: ConferenciaVibraStatus): [number, number, number] {
   }
 }
 
-function rotuloDeltaDia(delta: number): string {
-  if (delta === 0) return "mesmo dia";
-  return delta > 0 ? `d+${delta}` : `d${delta}`;
-}
-
 function rotuloParticipacao(aircraftId: string): string {
   const nomes =
     getAircraft(aircraftId)?.ownership.map((item) => partnerShort(item.partnerId)) ?? [];
@@ -153,6 +142,190 @@ function baixarBlob(nome: string, blob: Blob): void {
   link.download = nome;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+type AnexoVibraPdf = {
+  chave: string;
+  referencia: string;
+  icao: string | null;
+  data: string | null;
+  url: string;
+};
+
+/** Ordem = sequência da tabela (1ª aparição de cada NF alocada). */
+function listarAnexosVibra(linhas: ConferenciaVibraLinha[]): AnexoVibraPdf[] {
+  const mapa = new Map<string, AnexoVibraPdf>();
+  for (const linha of linhas) {
+    const url = linha.anexoUrl?.trim();
+    if (!url || !linha.abastecimentoId) continue;
+    const chave = linha.abastecimentoId;
+    if (mapa.has(chave)) continue;
+    mapa.set(chave, {
+      chave,
+      referencia: linha.referencia ?? chave,
+      icao: linha.icao,
+      data: linha.abastDate,
+      url,
+    });
+  }
+  return [...mapa.values()];
+}
+
+async function carregarPdfBytes(url: string): Promise<Uint8Array | null> {
+  try {
+    const resposta = await fetch(url);
+    if (!resposta.ok) return null;
+    return new Uint8Array(await resposta.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+async function mesclarComAnexosVibra(
+  relatorio: Uint8Array,
+  anexos: AnexoVibraPdf[],
+): Promise<Blob> {
+  const { PDFDocument, rgb, StandardFonts } = await import("pdf-lib");
+
+  const final = await PDFDocument.create();
+  const base = await PDFDocument.load(relatorio);
+  const paginasBase = await final.copyPages(base, base.getPageIndices());
+  for (const pagina of paginasBase) final.addPage(pagina);
+
+  if (anexos.length === 0) {
+    const bytes = await final.save();
+    return new Blob([bytes.slice()], { type: "application/pdf" });
+  }
+
+  type PrintAnexo = {
+    anexo: AnexoVibraPdf;
+    pagina: Awaited<ReturnType<typeof final.embedPage>>;
+    indice: number;
+  };
+
+  const prints: PrintAnexo[] = [];
+  let indice = 1;
+  for (const anexo of anexos) {
+    const bytes = await carregarPdfBytes(anexo.url);
+    if (!bytes) continue;
+    try {
+      const docAnexo = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const origem = docAnexo.getPages()[0];
+      if (!origem) continue;
+      const embutida = await final.embedPage(origem);
+      prints.push({ anexo, pagina: embutida, indice });
+      indice += 1;
+    } catch {
+      // ignora comprovante ilegível e segue com os demais
+    }
+  }
+
+  if (prints.length === 0) {
+    const bytes = await final.save();
+    return new Blob([bytes.slice()], { type: "application/pdf" });
+  }
+
+  const fonte = await final.embedFont(StandardFonts.HelveticaBold);
+  const fonteNormal = await final.embedFont(StandardFonts.Helvetica);
+  const pageW = 841.89;
+  const pageH = 595.28;
+  const margem = 16;
+  const headerH = 36;
+  const labelH = 12;
+  const gapX = 10;
+  const gapY = 10;
+  const cols = 4;
+  const rows = 2;
+  const porPagina = cols * rows;
+  const areaW = pageW - margem * 2;
+  const areaH = pageH - headerH - 3 - margem * 2;
+  const slotW = (areaW - gapX * (cols - 1)) / cols;
+  const slotH = (areaH - gapY * (rows - 1)) / rows;
+
+  for (let i = 0; i < prints.length; i += porPagina) {
+    const lote = prints.slice(i, i + porPagina);
+    const pagina = final.addPage([pageW, pageH]);
+
+    pagina.drawRectangle({
+      x: 0,
+      y: pageH - headerH,
+      width: pageW,
+      height: headerH,
+      color: rgb(74 / 255, 74 / 255, 73 / 255),
+    });
+    pagina.drawRectangle({
+      x: 0,
+      y: pageH - headerH - 3,
+      width: pageW,
+      height: 3,
+      color: rgb(245 / 255, 196 / 255, 0 / 255),
+    });
+    pagina.drawText("ANEXOS · comprovantes de abastecimento", {
+      x: margem,
+      y: pageH - 22,
+      size: 11,
+      font: fonte,
+      color: rgb(1, 1, 1),
+    });
+    const faixa = `Página ${Math.floor(i / porPagina) + 1} · ${prints.length} comprovante(s)`;
+    pagina.drawText(faixa, {
+      x: pageW - margem - fonteNormal.widthOfTextAtSize(faixa, 8),
+      y: pageH - 22,
+      size: 8,
+      font: fonteNormal,
+      color: rgb(1, 1, 1),
+    });
+
+    lote.forEach((item, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x0 = margem + col * (slotW + gapX);
+      const y0 = pageH - headerH - 3 - margem - (row + 1) * slotH - row * gapY;
+
+      const detalhe = limpar(
+        [`${item.indice}. Ref. ${item.anexo.referencia}`, item.anexo.icao]
+          .filter(Boolean)
+          .join(" · "),
+      );
+      pagina.drawText(detalhe, {
+        x: x0,
+        y: y0 + slotH - 9,
+        size: 7,
+        font: fonte,
+        color: rgb(74 / 255, 74 / 255, 73 / 255),
+        maxWidth: slotW,
+      });
+
+      const boxW = slotW;
+      const boxH = slotH - labelH;
+      const origemW = item.pagina.width;
+      const origemH = item.pagina.height;
+      const escala = Math.min(boxW / origemW, boxH / origemH);
+      const desenhoW = origemW * escala;
+      const desenhoH = origemH * escala;
+      const x = x0 + (boxW - desenhoW) / 2;
+      const y = y0 + (boxH - desenhoH) / 2;
+
+      pagina.drawRectangle({
+        x: x0,
+        y: y0,
+        width: boxW,
+        height: boxH,
+        borderColor: rgb(230 / 255, 230 / 255, 230 / 255),
+        borderWidth: 0.6,
+        color: rgb(1, 1, 1),
+      });
+      pagina.drawPage(item.pagina, {
+        x,
+        y,
+        width: desenhoW,
+        height: desenhoH,
+      });
+    });
+  }
+
+  const saida = await final.save();
+  return new Blob([saida.slice()], { type: "application/pdf" });
 }
 
 function quebrar(
@@ -465,8 +638,19 @@ function cardsSociosVibra(
 type ColunaPdf = {
   titulo: string;
   largura: number;
-  align?: "left" | "right";
+  align?: "left" | "right" | "center";
 };
+
+function linhasTituloColuna(doc: JsPdf, titulo: string, largura: number): string[] {
+  const pad = 2.2;
+  const util = Math.max(largura - pad, 6);
+  const bruto = limpar(titulo).replace(/\n+/g, " ").trim();
+  if (!bruto) return [""];
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.8);
+  const partes = doc.splitTextToSize(bruto, util) as string[];
+  return partes.length > 0 ? partes.slice(0, 3) : [bruto];
+}
 
 function desenharCabecalhoTabela(
   doc: JsPdf,
@@ -476,22 +660,34 @@ function desenharCabecalhoTabela(
   alturaLinha: number,
 ): number {
   const util = colunas.reduce((s, c) => s + c.largura, 0);
-  const altura = alturaLinha + 3;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.8);
+  const blocos = colunas.map((col) => linhasTituloColuna(doc, col.titulo, col.largura));
+  const maxLinhas = Math.max(1, ...blocos.map((linhas) => linhas.length));
+  const passo = Math.max(alturaLinha - 0.2, 2.8);
+  const altura = passo * maxLinhas + 3.4;
+
   doc.setFillColor(...COR.soft);
   doc.rect(margem, y - 3.2, util, altura, "F");
   doc.setFillColor(...COR.amarelo);
   doc.rect(margem, y - 3.2 + altura - 0.7, util, 0.7, "F");
+
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.8);
   doc.setTextColor(...COR.texto);
   let x = margem;
-  colunas.forEach((col) => {
-    const texto = limpar(col.titulo);
-    if (col.align === "right") {
-      doc.text(texto, x + col.largura - 1.2, y, { align: "right" });
-    } else {
-      doc.text(texto, x + 1.1, y);
-    }
+  colunas.forEach((col, index) => {
+    const linhas = blocos[index] ?? [""];
+    linhas.forEach((texto, i) => {
+      const py = y + i * passo;
+      if (col.align === "right") {
+        doc.text(texto, x + col.largura - 1.2, py, { align: "right" });
+      } else if (col.align === "center") {
+        doc.text(texto, x + col.largura / 2, py, { align: "center" });
+      } else {
+        doc.text(texto, x + 1.1, py);
+      }
+    });
     x += col.largura;
   });
   return y + altura;
@@ -528,12 +724,18 @@ function desenharLinhaTabela(
         if (linha.pill && linha.fundo && col.align !== "right") {
           const textoW = doc.getTextWidth(texto);
           const pillH = Math.max(3.6, size * 0.55);
+          const pillX =
+            col.align === "center"
+              ? x + col.largura / 2 - (textoW + 2.4) / 2
+              : x + pad - 0.6;
           doc.setFillColor(linha.fundo[0], linha.fundo[1], linha.fundo[2]);
-          doc.roundedRect(x + pad - 0.6, py - pillH + 1.1, textoW + 2.4, pillH, 0.9, 0.9, "F");
+          doc.roundedRect(pillX, py - pillH + 1.1, textoW + 2.4, pillH, 0.9, 0.9, "F");
         }
         doc.setTextColor(cor[0], cor[1], cor[2]);
         if (col.align === "right") {
           doc.text(texto, x + col.largura - pad, py, { align: "right" });
+        } else if (col.align === "center") {
+          doc.text(texto, x + col.largura / 2, py, { align: "center" });
         } else {
           doc.text(texto, x + pad, py);
         }
@@ -564,60 +766,7 @@ function garantirEspaco(
   return ny;
 }
 
-function rotuloStatusLinha(status: ConferenciaVibraLinha["status"]): string {
-  switch (status) {
-    case "sem_voo":
-      return "Sem voo";
-    case "sem_abast":
-      return "Sem abast.";
-    case "vizinho":
-      return "Outro dia";
-    case "atencao":
-      return "Atencao";
-    default:
-      return "Alocado";
-  }
-}
-
 function blocoVibra(linha: ConferenciaVibraLinha, colunas: ColunaPdf[], doc: JsPdf): BlocoCelula[] {
-  const corRota: [number, number, number] =
-    linha.matchTipo === "vizinho"
-      ? [47, 111, 237]
-      : linha.matchTipo === "elo"
-        ? [113, 113, 113]
-        : [33, 33, 33];
-
-  const trechoMeta = [
-    linha.matchTipo === "elo" && linha.icao ? `elo fora de ${linha.icao}` : null,
-    linha.matchTipo === "vizinho" && linha.abastDate
-      ? `${rotuloDeltaDia(linha.deltaDias)} vs ${formatDate(linha.abastDate)}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" | ");
-
-  const checagem: LinhaCelula[] = [
-    {
-      texto: rotuloStatusLinha(linha.status),
-      bold: true,
-      cor: corStatus(linha.status),
-      fundo: fundoStatus(linha.status),
-      pill: true,
-      size: 7.5,
-      gapApos: 0.8,
-    },
-  ];
-  if (linha.deltaLitrosGrupo != null) {
-    checagem.push({
-      texto: `D ${formatDelta(linha.deltaLitrosGrupo)} | calc. ${formatLitros(linha.litrosGrupoCalc)}`,
-      size: 6.5,
-      cor: COR.muted,
-    });
-  }
-  for (const pedaco of quebrar(doc, linha.detalhe, (colunas[8]?.largura ?? 40) - 3, 3)) {
-    if (pedaco) checagem.push({ texto: pedaco, size: 6.5, cor: COR.muted });
-  }
-
   const socioTexto = linha.rateioParticipacao
     ? "Participacao"
     : partnerShort(linha.partnerId);
@@ -627,17 +776,42 @@ function blocoVibra(linha: ConferenciaVibraLinha, colunas: ColunaPdf[], doc: JsP
   const socioFundo = linha.rateioParticipacao
     ? COR.bg
     : hexRgb(fundoCalendarioSocio(linha.partnerId));
+  const abastecido = linha.abastecimentoId != null;
+  const larguraTrecho = (colunas[1]?.largura ?? 60) - 3;
+  const trechoLinhas = quebrar(doc, linha.route, larguraTrecho, 3).map((texto, index) => ({
+    texto,
+    bold: index === 0,
+    size: index === 0 ? 7.5 : 6.8,
+  }));
+
+  const checagem: LinhaCelula[] = [
+    {
+      texto: rotuloStatusLinha(linha.status),
+      bold: true,
+      cor: corStatus(linha.status),
+      fundo: fundoStatus(linha.status),
+      pill: true,
+      size: 7.5,
+      gapApos: 0.6,
+    },
+  ];
+  if (linha.saldoAposTrecho != null) {
+    checagem.push({
+      texto:
+        linha.saldoAposTrecho > 1
+          ? `Sobram ${formatLitros(linha.saldoAposTrecho)}`
+          : "NF sem saldo",
+      size: 6.5,
+      cor: COR.muted,
+    });
+  }
+  for (const pedaco of quebrar(doc, linha.detalhe, (colunas[9]?.largura ?? 32) - 3, 2)) {
+    if (pedaco) checagem.push({ texto: pedaco, size: 6.5, cor: COR.muted });
+  }
 
   return [
     { linhas: [{ texto: formatDate(linha.date), bold: true }] },
-    {
-      linhas: [
-        { texto: rotaCurtaPdf(linha.route), bold: true, cor: corRota },
-        ...(trechoMeta
-          ? [{ texto: trechoMeta, size: 6.5, cor: corRota }]
-          : []),
-      ],
-    },
+    { linhas: trechoLinhas.length > 0 ? trechoLinhas : [{ texto: "-", bold: true }] },
     {
       linhas: [
         {
@@ -665,16 +839,27 @@ function blocoVibra(linha: ConferenciaVibraLinha, colunas: ColunaPdf[], doc: JsP
       ],
     },
     {
+      linhas: [
+        {
+          texto: abastecido ? "Sim" : "Nao",
+          bold: true,
+          cor: abastecido ? [21, 128, 61] : COR.muted,
+          fundo: abastecido ? [236, 253, 243] : COR.bg,
+          pill: true,
+        },
+      ],
+    },
+    {
       linhas: linha.referencia
         ? [
             { texto: `Ref. ${linha.referencia}`, bold: true },
             {
               texto: `${linha.icao ?? "-"}${linha.abastDate ? ` | ${formatDate(linha.abastDate)}` : ""}`,
               size: 6.5,
-              cor: [113, 113, 113],
+              cor: COR.muted,
             },
           ]
-        : [{ texto: "-", cor: [113, 113, 113] }],
+        : [{ texto: "-", cor: COR.muted }],
     },
     {
       linhas: [
@@ -692,10 +877,10 @@ function blocoVibra(linha: ConferenciaVibraLinha, colunas: ColunaPdf[], doc: JsP
               {
                 texto: formatPrecoLitro(linha.precoLitro),
                 size: 6.5,
-                cor: [113, 113, 113],
+                cor: COR.muted,
               },
             ]
-          : [{ texto: "-", cor: [113, 113, 113] }],
+          : [{ texto: "-", cor: COR.muted }],
     },
     { linhas: checagem },
   ];
@@ -717,15 +902,16 @@ export async function baixarPdfConferenciaVibra(params: {
   const subtitulo = `${monthsLabel(months)} · ${escopo(aircraftId)} · posição em ${formatDate(HOJE)}`;
 
   const colunas: ColunaPdf[] = [
-    { titulo: "DATA", largura: util * 0.08 },
-    { titulo: "TRECHO", largura: util * 0.2 },
-    { titulo: "TEMPO", largura: util * 0.07, align: "right" },
-    { titulo: "LITROS", largura: util * 0.08, align: "right" },
-    { titulo: "SOCIO", largura: util * 0.1 },
-    { titulo: "ABAST.", largura: util * 0.14 },
-    { titulo: "LITROS NF", largura: util * 0.08, align: "right" },
-    { titulo: "VALOR NF", largura: util * 0.1, align: "right" },
-    { titulo: "CHECAGEM", largura: util * 0.15 },
+    { titulo: "Data", largura: util * 0.06 },
+    { titulo: "Trecho", largura: util * 0.17 },
+    { titulo: "Tempo de Voo", largura: util * 0.07, align: "right" },
+    { titulo: "Consumo Previsto (LT)", largura: util * 0.09, align: "center" },
+    { titulo: "Socio", largura: util * 0.07, align: "center" },
+    { titulo: "Abastecido?", largura: util * 0.08, align: "center" },
+    { titulo: "NF alocada", largura: util * 0.1, align: "center" },
+    { titulo: "Litros NF", largura: util * 0.08, align: "right" },
+    { titulo: "Valor NF", largura: util * 0.1, align: "right" },
+    { titulo: "Checagem", largura: util * 0.18 },
   ];
 
   cabecalhoPagina(doc, null, margem);
@@ -744,7 +930,7 @@ export async function baixarPdfConferenciaVibra(params: {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(...COR.muted);
-  doc.text("CHECAGEM | VOO x ABASTECIMENTO", margem, y);
+  doc.text("VOO x ABASTECIMENTO", margem, y);
   y += 4;
 
   y = desenharCards(doc, y, margem, util, [
@@ -851,6 +1037,16 @@ export async function baixarPdfConferenciaVibra(params: {
       y = desenharLinhaTabela(doc, y, margem, colunas, celulas, alturaLinha, fundo);
     }
 
+    const vistosNf = new Set<string>();
+    let litrosNf = 0;
+    let valorNf = 0;
+    for (const item of linhas) {
+      if (!item.abastecimentoId || vistosNf.has(item.abastecimentoId)) continue;
+      vistosNf.add(item.abastecimentoId);
+      litrosNf += item.litrosAbast ?? 0;
+      valorNf += item.amount ?? 0;
+    }
+
     y = garantirEspaco(doc, y, 8, margem, titulo, colunas, alturaLinha);
     y = desenharLinhaTabela(
       doc,
@@ -871,8 +1067,13 @@ export async function baixarPdfConferenciaVibra(params: {
         { linhas: [{ texto: "" }] },
         { linhas: [{ texto: "" }] },
         { linhas: [{ texto: "" }] },
-        { linhas: [{ texto: formatLitros(dados.totalLitros), bold: true }] },
-        { linhas: [{ texto: formatBRL(dados.totalValor), bold: true }] },
+        { linhas: [{ texto: "" }] },
+        {
+          linhas: [{ texto: formatLitros(litrosNf), bold: true }],
+        },
+        {
+          linhas: [{ texto: formatBRL(valorNf), bold: true }],
+        },
         { linhas: [{ texto: "" }] },
       ],
       alturaLinha,
@@ -880,8 +1081,22 @@ export async function baixarPdfConferenciaVibra(params: {
     );
   }
 
+  const anexos = listarAnexosVibra(linhas);
+  if (anexos.length > 0) {
+    y = garantirEspaco(doc, y, 14, margem, titulo, colunas, alturaLinha);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...COR.texto);
+    doc.text(
+      limpar(`Anexos: ${anexos.length} comprovante(s) de abastecimento ao final deste PDF.`),
+      margem,
+      y,
+    );
+  }
+
   rodape(doc, margem);
-  const blob = doc.output("blob");
+  const relatorio = new Uint8Array(doc.output("arraybuffer"));
+  const blob = await mesclarComAnexosVibra(relatorio, anexos);
   baixarBlob(`conferencia-vibra-${monthsLabel(months).replace(/\s+/g, "-").toLowerCase()}.pdf`, blob);
 }
 
